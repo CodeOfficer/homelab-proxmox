@@ -22,8 +22,9 @@ Each file must stand alone and always be current:
 1. Always read the relevant docs/ file before making changes
 2. Update docs/ files immediately when information changes
 3. Keep docs/ files synchronized with reality
-4. NEVER say "this is documented in HOMELAB.md" - GO UPDATE IT NOW
+4. Update the appropriate file NOW, not later
 5. Treat docs/ files as the contract between sessions
+6. Validate no duplication exists between CLAUDE.md and docs/
 
 **NEVER:**
 - Duplicate information from docs/ into CLAUDE.md
@@ -69,10 +70,11 @@ Each file must stand alone and always be current:
 
 1. Mark tasks complete in `CLAUDE.md`
 2. Update all relevant docs/ files
-3. Document any new open questions
-4. Update "Last Updated" date in `CLAUDE.md`
-5. **Log the interaction to `logs/prompts.log`**
-6. **Commit changes to git with descriptive message**
+3. Validate single source of truth (no duplication between files)
+4. Document any new open questions
+5. Update "Last Updated" date in `CLAUDE.md`
+6. **Log the interaction to `logs/prompts.log`**
+7. **Commit changes to git with descriptive message**
 
 ## Prompt Logging Pattern
 
@@ -257,8 +259,10 @@ applications/<app-name>/
 5. **Clean Slate:** This is NOT a migration project
 6. **Read Before Write:** Always read docs/ files before making changes
 7. **Single Source of Truth:** docs/ files are the contract between sessions
-8. **Log Every Prompt:** Append to `logs/prompts.log` after each interaction
-9. **Commit After Tasks:** Create git commit when tasks are completed or plan is updated
+8. **Validate Files:** Check no duplication between CLAUDE.md and docs/
+9. **Log Every Prompt:** Append to `logs/prompts.log` after each interaction
+10. **Commit After Tasks:** Create git commit when tasks are completed or plan is updated
+11. **Skills Local:** Install skills to `.claude/` not `~/.claude/`
 
 ## Project Context
 
@@ -581,12 +585,25 @@ applications/<app-name>/
 
 ## Anti-Patterns to Avoid
 
-❌ Duplicating hardware specs (use docs/HARDWARE.md)
-❌ Duplicating network details (use docs/NETWORK.md)
+❌ Duplicating hardware specs (use `docs/HARDWARE.md`)
+❌ Duplicating network details (use `docs/NETWORK.md`)
+❌ Duplicating software versions (use `docs/SOFTWARE.md`)
 ❌ Documenting decisions in commit messages instead of CLAUDE.md
 ❌ Saying "I'll update later" (update NOW)
 ❌ Assuming docs are current without checking
 ❌ Hardcoding values "temporarily" (never temporary)
+❌ Installing skills globally to `~/.claude/` (use `.claude/`)
+❌ Skipping file validation after updates
+
+## File Update Validation Checklist
+
+After updating CLAUDE.md or docs/ files, verify:
+- [ ] No information duplicated between CLAUDE.md and docs/
+- [ ] Hardware specs only in `docs/HARDWARE.md`
+- [ ] Network config only in `docs/NETWORK.md`
+- [ ] Software versions only in `docs/SOFTWARE.md`
+- [ ] Architecture decisions in CLAUDE.md reference docs/ when needed
+- [ ] Each file can stand alone and be understood independently
 
 ## This File's Purpose
 
@@ -602,3 +619,28 @@ docs/ files exist to:
 - Network config (`docs/NETWORK.md`)
 - Software catalog (`docs/SOFTWARE.md`)
 - Reference links (`docs/LINKS.md`)
+
+## Skills Installation Pattern
+
+**CRITICAL:** When installing skills, ALWAYS use project-local `.claude/` directory
+
+### Pattern
+```bash
+# CORRECT: Install to project .claude/ folder
+claude skill add <skill-name> --local
+
+# WRONG: Don't install to global ~/.claude/
+claude skill add <skill-name>
+```
+
+### Rules
+- Skills go in `.claude/skills/` within this project
+- Never install skills globally to `~/.claude/`
+- Project-specific skills stay with project
+- Commit `.claude/` directory to git (except secrets)
+
+### Why
+- Skills are project-specific tools
+- Keep project self-contained
+- Other developers/sessions get same skills
+- No pollution of global environment
