@@ -57,23 +57,37 @@ Read and analyze the actual content (not just keywords) to detect duplication:
 
 ### 2. Prompt Logging Enforcement
 
-Ensure all user prompts are logged to `logs/prompts.log`.
+Ensure all user prompts are logged to `logs/prompts.log` with proper format.
 
-**Automated logging:**
-```bash
-# Log a prompt manually
-scripts/log_prompt.sh "user prompt text" "brief summary"
+**Required Format:**
 ```
+[YYYY-MM-DD HH:MM:SS] User: "prompt text"
+→ Response: brief summary
+
+[YYYY-MM-DD HH:MM:SS] User: "next prompt"
+→ Response: brief summary
+
+```
+
+**Critical Format Rules:**
+1. ✅ Use actual timestamps in HH:MM:SS format (e.g., `[2025-11-23 14:05:00]`)
+2. ❌ NEVER use shell syntax like `$(date +%H:%M:%S)` - this won't evaluate correctly
+3. ✅ ALWAYS include blank line after each entry (between entries)
+4. ✅ Keep response summaries brief (one line, ~10-20 words)
+5. ✅ Append-only (never modify existing entries)
 
 **Check if prompt was logged:**
 1. Read logs/prompts.log
 2. Verify today's date appears in recent entries
-3. Check format: `[YYYY-MM-DD HH:MM:SS] User: "prompt" → Response: summary`
+3. Check format compliance (actual timestamps, not shell variables)
+4. Verify blank line spacing is consistent
 
-**When logging is missing:**
+**When logging is missing or malformed:**
 1. Identify which prompts weren't logged
-2. Add missing entries with correct timestamps
-3. Ensure proper format and blank lines between entries
+2. Add missing entries with actual timestamps (not shell syntax)
+3. Fix any entries using `$(date ...)` syntax
+4. Ensure consistent blank line spacing between ALL entries
+5. Verify file is gitignored (logs/ directory not tracked)
 
 ### 3. Git Commit Validation
 
@@ -218,8 +232,13 @@ For each violation:
 2. ✅ Update docs/ files with any new information
 3. ✅ Update CLAUDE.md status and phase tracking
 4. ✅ Check for duplication (AI reads CLAUDE.md and docs/ files)
-5. ✅ Log the prompt: `scripts/log_prompt.sh "prompt" "summary"`
+5. ✅ Log the prompt with actual timestamp (NOT shell syntax) and blank line after
 6. ✅ Commit changes: `git add . && git commit -m "message"`
+
+**Logging format reminder:**
+- Use actual timestamps: `[2025-11-23 14:05:00]` ✅
+- NOT shell syntax: `[2025-11-23 $(date +%H:%M:%S)]` ❌
+- Blank line after each entry ✅
 
 **Validation command:**
 
