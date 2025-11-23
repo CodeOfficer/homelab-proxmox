@@ -730,6 +730,75 @@ docs/ files exist to:
 - Software catalog (`docs/SOFTWARE.md`)
 - Reference links (`docs/LINKS.md`)
 
+## Workflow Enforcement Primitives
+
+To ensure consistent workflow compliance, this project uses a combination of three Claude Code primitives:
+
+### 1. Hook: `user-prompt-submit-hook`
+
+**Location:** `.claude/hooks/user-prompt-submit-hook`
+
+**Purpose:** Automatic workflow checks after each user prompt
+
+**What it checks:**
+- Uncommitted changes (reminds to commit after completing work)
+- Missing prompt logs (verifies today's date appears in logs/prompts.log)
+- Outdated CLAUDE.md Last Updated date (checks if > 1 day old)
+- Hardcoded secrets in staged changes
+
+**Output:** Lightweight warnings and reminders, suggests running `/validate` for deep check
+
+### 2. Slash Command: `/validate`
+
+**Location:** `.claude/commands/validate.md`
+
+**Purpose:** Comprehensive workflow validation on-demand
+
+**What it validates:**
+1. Documentation compliance (single source of truth)
+2. Prompt logging completeness
+3. Git status and uncommitted changes
+4. Phase tracking and status currency
+5. Environment variable usage
+6. File structure compliance
+7. Workflow pattern adherence
+
+**Output:** Structured report with PASS/WARN/FAIL status, offers to fix issues
+
+### 3. Skill: `homelab-workflow`
+
+**Location:** `.claude/skills/homelab-workflow/`
+
+**Purpose:** AI-powered workflow enforcement and automatic fixes
+
+**Core capabilities:**
+1. **Documentation Compliance** - AI reads CLAUDE.md and docs/ files to detect content duplication (not just keywords)
+2. **Prompt Logging** - Ensures all interactions logged correctly
+3. **Git Commit Validation** - Checks for uncommitted work and generates proper commit messages
+4. **CLAUDE.md Status Updates** - Keeps phase tracking and status current
+5. **Environment Variable Scanning** - Flags hardcoded values
+6. **TodoWrite Compliance** - Ensures proper task tracking
+
+**Smart Features:**
+- Automatically discovers new docs/ files
+- Distinguishes mentions from duplication (AI understands context)
+- Can apply fixes automatically
+- Adapts to changes in project structure
+
+**Usage:** Invoke when completing tasks, updating docs, or when validation needed
+
+### Using the Primitives Together
+
+**Normal workflow:**
+1. Hook runs automatically after each prompt (lightweight checks)
+2. User runs `/validate` periodically for deep validation
+3. AI invokes `homelab-workflow` skill when fixing violations
+
+**When to use each:**
+- **Hook** → Always (automatic)
+- **`/validate`** → When you want comprehensive validation report
+- **Skill** → When intelligent fixes or content analysis needed
+
 ## Skills Installation Pattern
 
 **CRITICAL:** When installing skills, ALWAYS use project-local `.claude/` directory
