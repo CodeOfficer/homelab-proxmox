@@ -72,6 +72,7 @@ Each file must stand alone and always be current:
 3. Document any new open questions
 4. Update "Last Updated" date in `CLAUDE.md`
 5. **Log the interaction to `logs/prompts.log`**
+6. **Commit changes to git with descriptive message**
 
 ## Prompt Logging Pattern
 
@@ -100,6 +101,59 @@ Each file must stand alone and always be current:
 - Add blank line between entries
 - File is gitignored (personal log, not tracked)
 - Never delete or modify existing entries (append-only)
+
+## Git Commit Pattern
+
+**MUST ALWAYS DO:** Commit changes after completing tasks or updating the plan
+
+### When to Commit
+- After completing a task or set of related tasks
+- After updating `CLAUDE.md` with plan/status changes
+- After making changes to docs/ files
+- After infrastructure/code changes
+- When a logical unit of work is complete
+
+### Commit Message Format
+```
+<Short summary of changes>
+
+<Optional detailed description>
+- Bullet points for key changes
+- List important decisions made
+- Note any files created/modified
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### Examples
+```bash
+# Simple commit
+git commit -m "Add GPU passthrough documentation to HARDWARE.md"
+
+# Detailed commit with HEREDOC
+git commit -m "$(cat <<'EOF'
+Update CLAUDE.md with Phase 1 completion status
+
+- Marked Proxmox installation tasks as complete
+- Updated "Current Status" section
+- Documented IOMMU configuration decisions
+- Added open questions about storage strategy
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+```
+
+### Rules
+- Always run `git add .` before committing (or stage specific files)
+- Use descriptive commit messages (not "update" or "fix")
+- Include Co-Authored-By attribution
+- Don't commit `.envrc` or `logs/` (gitignored)
+- Commit atomically (related changes together)
 
 ## Environment Variable Enforcement
 
@@ -204,6 +258,7 @@ applications/<app-name>/
 6. **Read Before Write:** Always read docs/ files before making changes
 7. **Single Source of Truth:** docs/ files are the contract between sessions
 8. **Log Every Prompt:** Append to `logs/prompts.log` after each interaction
+9. **Commit After Tasks:** Create git commit when tasks are completed or plan is updated
 
 ## Project Context
 
