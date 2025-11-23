@@ -1,0 +1,16 @@
+{
+  // Disable rules for blank lines around headings
+  "MD022": false,
+
+  // Disable rules for blank lines around lists
+  "MD032": false,
+
+  // Disable rules for blank lines around fenced code blocks
+  "MD031": false,
+
+  // Disable rules requiring language specification for fenced code blocks
+  "MD040": false,
+
+  // Disable line length rule
+  "MD013": false
+}
