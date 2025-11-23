@@ -4,13 +4,28 @@ This document details the network configuration, including subnet design, IP add
 
 ## Network Overview
 
-**Primary Network**: `10.20.11.0/24` (VM-Servers network)
-- Single flat network for all homelab infrastructure
-- No VLAN segmentation (simplified design)
+**VLAN-Based Segmentation**: Network is properly segmented using VLANs managed by UDM Pro
+
+**Homelab Primary Network**: `10.20.11.0/24` (VLAN 11 - VM-Servers)
+- All Proxmox hosts, VMs, K3s cluster, and services on VLAN 11
 - Managed by UniFi Dream Machine Pro
-- Layer 3 switching via USW-Enterprise-24-PoE
+- Layer 3 switching via USW-Enterprise-24-PoE (VLAN-aware)
+- Proxmox nodes require VLAN-aware bridge configuration
 
 **External Access**: VPN via UDM Pro (WireGuard/L2TP)
+
+## VLAN Structure
+
+The network uses multiple VLANs for proper segmentation:
+
+| VLAN ID | Name                | Subnet           | Gateway      | Purpose                                   | Used By Homelab |
+| ------- | ------------------- | ---------------- | ------------ | ----------------------------------------- | --------------- |
+| `10`    | Core-Infrastructure | `10.20.10.0/24`  | `10.20.10.1` | Network equipment, core infrastructure    | No (separate)   |
+| `11`    | VM-Servers          | `10.20.11.0/24`  | `10.20.11.1` | **Proxmox cluster, VMs, K3s, services**   | **Yes (primary)** |
+| `12`    | Personal            | `10.20.12.0/24`  | `10.20.12.1` | Personal devices and workstations         | No              |
+| `13`    | IoT                 | `10.20.13.0/24`  | `10.20.13.1` | IoT devices, Home Assistant targets       | Via K8s ingress |
+
+**Note:** Homelab infrastructure exclusively uses **VLAN 11 (VM-Servers)**. Other VLANs are for non-homelab purposes and remain unchanged.
 
 ## IP Address Allocation
 
@@ -131,19 +146,34 @@ K3s Cluster
 ## Network Security
 
 ### Current State
-- Single network (no segmentation)
+- VLAN segmentation already implemented (VLANs 10, 11, 12, 13)
+- Homelab isolated on VLAN 11 (VM-Servers)
 - VPN required for remote access
-- UDM Pro firewall protects perimeter
+- UDM Pro firewall provides perimeter and inter-VLAN routing
+- Layer 3 switch enables VLAN isolation
 
 ### Future Considerations (Optional)
-- VLAN segmentation (Management, Server, IoT, Guest)
-- Network policies in K3s for pod isolation
+- Network policies in K3s for pod-level isolation
 - Additional firewall rules for service-level security
+- Inter-VLAN firewall rules for IoT access from homelab services
+
+## Proxmox VLAN Configuration
+
+Proxmox nodes must be configured for VLAN awareness:
+
+**Bridge Configuration:**
+- Create VLAN-aware bridge (vmbr0)
+- Tag VLAN 11 for VM network
+- Proxmox host management on VLAN 11
+- VMs can be assigned to VLAN 11 (or other VLANs if needed)
+
+**Phase 1 Task:** Configure VLAN-aware Linux bridge on all Proxmox nodes during installation.
 
 ## Notes
 
-- Network design prioritizes simplicity over complexity
+- Network already properly segmented with VLANs
+- All homelab infrastructure uses VLAN 11 (VM-Servers)
 - All infrastructure uses static IP addressing
 - VPN access provides secure remote connectivity
 - Let's Encrypt certificates avoid browser warnings
-- Can add VLAN segmentation later if needed
+- Existing VLAN structure provides good security boundaries

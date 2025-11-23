@@ -367,11 +367,14 @@ applications/<app-name>/
 - [ ] Test cluster functionality (VM migration, HA)
 
 #### 1.3 Network Configuration
-- [ ] Verify network bridges on all nodes (vmbr0 connected to 10.20.11.0/24)
+- [ ] Configure VLAN-aware bridge on all nodes (vmbr0 with VLAN 11 tag)
+- [ ] Verify Proxmox host management on VLAN 11 (10.20.11.0/24)
+- [ ] Test VLAN 11 connectivity between all three nodes
 - [ ] Configure DNS resolution (UDM Pro at 10.20.11.1)
-- [ ] Test connectivity from Proxmox nodes to storage (nas, synology)
+- [ ] Test connectivity from Proxmox nodes to storage (nas, synology on VLAN 11)
 - [ ] Configure NTP time synchronization
 - [ ] Update /etc/hosts with cluster node names
+- [ ] Document VLAN bridge configuration for VM deployments
 
 #### 1.4 Storage Configuration
 - [ ] Configure local-lvm storage on each node (VM disks)
@@ -555,15 +558,22 @@ applications/<app-name>/
 - Alternative: Could use Proxmox LXC with GPU, but VM is more flexible
 
 ### Network Segmentation
-**Decision:** Single flat network (10.20.11.0/24), no VLANs
+**Decision:** Use existing VLAN infrastructure, homelab on VLAN 11 (VM-Servers, 10.20.11.0/24)
 
 **Rationale:**
-- Simpler to manage and troubleshoot
-- Existing network already operational and stable
-- VPN provides security boundary for remote access
-- Can add VLAN segmentation later if needed
-- Reduces complexity during initial setup
-- UDM Pro firewall provides perimeter security
+- Network already properly segmented with VLANs (10, 11, 12, 13)
+- VLAN 11 (VM-Servers) dedicated to homelab infrastructure
+- Provides isolation from other network segments
+- Layer 3 switching enables secure inter-VLAN routing
+- VPN provides additional security boundary for remote access
+- Proxmox VLAN-aware bridges allow flexible VM networking
+- Good security posture without additional complexity
+
+**Existing VLAN Structure:**
+- VLAN 10: Core-Infrastructure (10.20.10.0/24) - network equipment
+- VLAN 11: VM-Servers (10.20.11.0/24) - **homelab primary**
+- VLAN 12: Personal (10.20.12.0/24) - personal devices
+- VLAN 13: IoT (10.20.13.0/24) - IoT devices (accessible via K8s ingress)
 
 ### Storage Strategy
 **Decision:** Local-lvm for VMs, UNAS Pro (NFS) for K8s PVs, Synology (NFS) for backups
@@ -671,7 +681,7 @@ applications/<app-name>/
 6. **GPU Workloads:** ✅ Ollama, Stable Diffusion WebUI, Jupyter Lab
 7. **LoadBalancer:** ✅ MetalLB Layer 2 mode
 8. **GitOps:** ✅ FluxCD
-9. **Network:** ✅ Single flat network (10.20.11.0/24), no VLANs
+9. **Network:** ✅ Use existing VLAN 11 (VM-Servers, 10.20.11.0/24) for homelab
 
 ---
 
