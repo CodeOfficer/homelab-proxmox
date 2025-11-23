@@ -272,84 +272,132 @@ applications/<app-name>/
 
 ---
 
-## Current Status: Planning Phase
+## Current Status: Phase 0 Complete - Ready for Implementation
 
 **Last Updated:** 2025-11-23
 
-### Completed ✅
-- Hardware specifications documented in `docs/HARDWARE.md`
-- Network architecture defined in `docs/NETWORK.md`
-- Reference homelab analyzed (`~/homelab-k3s`)
-- Initial Terraform structure created (for reference)
-- Environment variable template drafted
-- Makefile structure planned
+### Phase 0: Information Gathering ✅ COMPLETE
+- ✅ Hardware specifications fully documented in `docs/HARDWARE.md`
+- ✅ Network architecture fully documented in `docs/NETWORK.md`
+- ✅ Software stack defined in `docs/SOFTWARE.md`
+- ✅ All exact models, capacities, and configurations collected
+- ✅ IP addressing scheme confirmed (10.20.11.0/24)
+- ✅ Naming conventions established (*.home.arpa local, *.lab.codeofficer.com public)
+- ✅ Architecture decisions documented and confirmed
+- ✅ DNS strategy decided (UDM Pro + Cloudflare migration)
+- ✅ Certificate strategy decided (Let's Encrypt DNS-01)
+- ✅ Storage strategy decided (UNAS Pro primary, Synology backups)
 
-### Current Tasks 🔄
-- Document GPU passthrough strategy
-- Plan Proxmox cluster setup process
-- Define VM template creation workflow
-- Fill in missing hardware details
-
-### Pending ⏳
-- Proxmox cluster installation and configuration
-- GPU passthrough setup on pve-node-01
-- VM template creation (Ubuntu 24.04 cloud-init)
-- Terraform infrastructure deployment
-- K3s cluster bootstrap
-- Application deployments
+### Ready to Begin ⏭️
+- Phase 1: Foundation Setup (Proxmox installation, cluster config, GPU passthrough)
+- Prerequisites needed:
+  - Proxmox VE 8.x installation media
+  - Migrate codeofficer.com DNS to Cloudflare
+  - Physical access to nodes via JetKVM
 
 ---
 
 ## Project Phases
 
+### Phase 0: Information Gathering (✅ COMPLETE)
+
+**Goal:** Collect all hardware specs, network configuration, and make architecture decisions before implementation.
+
+#### 0.1 Hardware Documentation
+- [x] Document exact models of all compute nodes (Minisforum MS-01)
+- [x] Document storage devices (UNAS Pro, Synology DS713+)
+- [x] Document network equipment (UDM Pro, USW-Enterprise-24-PoE)
+- [x] Document GPU specifications (RTX 4000 Ada)
+- [x] Document JetKVM setup
+- [x] Document drive models and capacities
+
+#### 0.2 Network Planning
+- [x] Confirm network topology (single 10.20.11.0/24 network)
+- [x] Define IP addressing scheme for all devices
+- [x] Define naming conventions (*.home.arpa local, *.lab.codeofficer.com public)
+- [x] Plan DNS strategy (UDM Pro + Cloudflare)
+- [x] Plan MetalLB IP pool (10.20.11.200-220)
+
+#### 0.3 Architecture Decisions
+- [x] Decide cluster topology (2 control plane + 1 GPU worker)
+- [x] Decide K3s datastore (embedded etcd)
+- [x] Decide GPU passthrough strategy (full GPU to VM)
+- [x] Decide network design (no VLANs, keep it simple)
+- [x] Decide storage strategy (UNAS Pro primary, Synology backups)
+- [x] Decide certificate strategy (Let's Encrypt DNS-01)
+- [x] Decide GitOps tool (FluxCD)
+- [x] Decide LoadBalancer (MetalLB Layer 2)
+- [x] Decide monitoring approach (defer to Phase 4+)
+
+#### 0.4 Documentation
+- [x] Complete docs/HARDWARE.md with all specifications
+- [x] Complete docs/NETWORK.md with IP allocations
+- [x] Complete docs/SOFTWARE.md with software stack
+- [x] Update CLAUDE.md with all decisions
+
+**Status:** ✅ Phase 0 Complete - All information gathered and documented
+
+---
+
 ### Phase 1: Foundation Setup (NOT STARTED)
+
+#### 1.0 Prerequisites
+- [ ] Download Proxmox VE 8.x ISO
+- [ ] Create Proxmox installation USB media
+- [ ] Migrate codeofficer.com DNS from DNSimple to Cloudflare
+- [ ] Verify JetKVM access to all three nodes
+- [ ] Backup any critical data from XCP-ng VMs (if needed)
 
 #### 1.1 Proxmox Installation
 - [ ] Wipe existing XCP-ng from all three nodes
-- [ ] Install Proxmox VE 8.x on pve-node-01 (GPU node)
-- [ ] Install Proxmox VE 8.x on pve-node-02
-- [ ] Install Proxmox VE 8.x on pve-node-03
-- [ ] Verify BIOS settings (IOMMU, VT-d enabled)
-- [ ] Configure management network (VLAN 10)
+- [ ] Install Proxmox VE 8.x on pve-01 (10.20.11.11, GPU node)
+- [ ] Install Proxmox VE 8.x on pve-02 (10.20.11.12)
+- [ ] Install Proxmox VE 8.x on pve-03 (10.20.11.13)
+- [ ] Verify BIOS settings (IOMMU, VT-d enabled on pve-01)
+- [ ] Configure hostnames (pve-01.home.arpa, pve-02.home.arpa, pve-03.home.arpa)
+- [ ] Verify network connectivity and DNS resolution
 
 #### 1.2 Proxmox Cluster Configuration
-- [ ] Create Proxmox cluster (name: `homelab-cluster`)
-- [ ] Join pve-node-02 to cluster
-- [ ] Join pve-node-03 to cluster
+- [ ] Create Proxmox cluster on pve-01 (name: `homelab-cluster`)
+- [ ] Join pve-02 to cluster
+- [ ] Join pve-03 to cluster
 - [ ] Verify quorum (3 nodes)
 - [ ] Configure corosync network
 - [ ] Set up cluster resource synchronization
+- [ ] Test cluster functionality (VM migration, HA)
 
 #### 1.3 Network Configuration
-- [ ] Configure VLANs on Proxmox nodes (10, 20, 30, 40, 50, 99)
-- [ ] Create Linux bridges with VLAN awareness
-- [ ] Test connectivity between VLANs
-- [ ] Configure DNS resolution (pointing to UDM)
-- [ ] Set up static routes if needed
+- [ ] Verify network bridges on all nodes (vmbr0 connected to 10.20.11.0/24)
+- [ ] Configure DNS resolution (UDM Pro at 10.20.11.1)
+- [ ] Test connectivity from Proxmox nodes to storage (nas, synology)
+- [ ] Configure NTP time synchronization
+- [ ] Update /etc/hosts with cluster node names
 
 #### 1.4 Storage Configuration
-- [ ] Configure local-lvm storage on each node
-- [ ] Set up NFS storage from UNAS Pro (for ISOs, backups)
-- [ ] Configure iSCSI from Synology (for PVs)
-- [ ] Test storage performance
-- [ ] Plan backup strategy
+- [ ] Configure local-lvm storage on each node (VM disks)
+- [ ] Mount NFS from UNAS Pro (nas.home.arpa) for ISOs and templates
+- [ ] Mount NFS from Synology (synology.home.arpa) for VM backups
+- [ ] Configure Proxmox backup schedule to Synology
+- [ ] Test NFS mount performance and reliability
+- [ ] Document storage paths in .envrc.example
 
-#### 1.5 GPU Passthrough Setup (pve-node-01)
-- [ ] Enable IOMMU in GRUB config
-- [ ] Load VFIO modules
-- [ ] Blacklist nouveau driver
-- [ ] Identify GPU IOMMU group
-- [ ] Create PCI device mapping in Proxmox
-- [ ] Test GPU passthrough with test VM
-- [ ] Install NVIDIA drivers in test VM
-- [ ] Verify GPU visibility and functionality
+#### 1.5 GPU Passthrough Setup (pve-01 only)
+- [ ] Enable IOMMU in GRUB (/etc/default/grub: intel_iommu=on iommu=pt)
+- [ ] Update GRUB and reboot
+- [ ] Load VFIO modules (/etc/modules: vfio vfio_iommu_type1 vfio_pci vfio_virqfd)
+- [ ] Blacklist nouveau driver (/etc/modprobe.d/blacklist.conf)
+- [ ] Run `lspci -nnk` to identify GPU PCI ID
+- [ ] Check IOMMU groups (`find /sys/kernel/iommu_groups/ -type l`)
+- [ ] Create PCI device mapping in Proxmox web UI
+- [ ] Document GPU PCI ID in notes for VM template creation
 
 #### 1.6 API and Authentication
-- [ ] Create Terraform API token in Proxmox
-- [ ] Set appropriate permissions (PVEDatastoreUser, PVEVMAdmin, PVEPoolAdmin)
-- [ ] Test API access from local machine
-- [ ] Configure SSH key authentication
-- [ ] Document API endpoint in `.envrc`
+- [ ] Create Terraform API token in Proxmox (Datacenter > Permissions > API Tokens)
+- [ ] Set appropriate permissions (PVEDatastoreUser, PVEVMAdmin, PVEPoolAdmin, PVEAuditor)
+- [ ] Test API access with curl from local machine
+- [ ] Generate SSH keypair for VM access (`ssh-keygen -t ed25519 -C "homelab-proxmox"`)
+- [ ] Document API endpoint and token in `.envrc`
+- [ ] Add SSH public key to .envrc for cloud-init injection
 
 ### Phase 2: VM Template Creation (NOT STARTED)
 
@@ -507,71 +555,123 @@ applications/<app-name>/
 - Alternative: Could use Proxmox LXC with GPU, but VM is more flexible
 
 ### Network Segmentation
-**Decision:** Use VLANs for traffic isolation (see `docs/NETWORK.md`)
+**Decision:** Single flat network (10.20.11.0/24), no VLANs
 
 **Rationale:**
-- Management (VLAN 10): Proxmox hosts, infrastructure
-- Server (VLAN 20): K3s VMs
-- Kubernetes (VLAN 30): K3s service IPs, ingress
-- IoT (VLAN 40): Untrusted devices (Home Assistant targets)
-- Guest (VLAN 50): Visitor network
-- Clear separation of concerns, better security
+- Simpler to manage and troubleshoot
+- Existing network already operational and stable
+- VPN provides security boundary for remote access
+- Can add VLAN segmentation later if needed
+- Reduces complexity during initial setup
+- UDM Pro firewall provides perimeter security
 
 ### Storage Strategy
-**Decision:** Local-lvm for VMs, NFS for shared storage, iSCSI for high-performance PVs
+**Decision:** Local-lvm for VMs, UNAS Pro (NFS) for K8s PVs, Synology (NFS) for backups
 
 **Rationale:**
-- Local-lvm: Fast VM disk performance
-- NFS (UNAS Pro): Backups, ISOs, shared read-only data
-- iSCSI (Synology): High-performance persistent volumes
-- No Ceph (complexity not justified for 3 nodes)
+- **Local-lvm**: Fast VM disk performance on each node
+- **UNAS Pro (nas.home.arpa)**: Primary NFS storage for ISOs, templates, K8s persistent volumes, shared data (40TB usable, 10GbE, RAID 5)
+- **Synology (synology.home.arpa)**: Dedicated backup target for Proxmox VMs, etcd snapshots, critical configs (6TB usable, RAID 1, separate device for redundancy)
+- **Separation of concerns**: Production storage separate from backup storage
+- **No Ceph**: Complexity not justified for 3 nodes
+- **Protocols**: NFS for simplicity (SMB remains for Mac Time Machine backups)
 
 ### GitOps Tool
-**Decision:** TBD (FluxCD vs ArgoCD)
+**Decision:** FluxCD
 
-**Considerations:**
-- FluxCD: Lightweight, native Git integration, simpler
-- ArgoCD: Better UI, more features, larger community
-- **Recommendation:** Start with FluxCD (simpler), can migrate later
+**Rationale:**
+- Lightweight and Git-native (true GitOps)
+- Simpler than ArgoCD for homelab scale
+- Well-documented for K3s
+- Can migrate to ArgoCD later if UI/features needed
+- Fits "simplicity first" approach
+
+### LoadBalancer Service
+**Decision:** MetalLB in Layer 2 mode
+
+**Rationale:**
+- Most mature and popular for K3s bare metal
+- Simple IP pool configuration (10.20.11.200-220)
+- Layer 2 mode works out of the box
+- Can upgrade to BGP mode later with Enterprise switch Layer 3 capabilities
+- Large community and extensive documentation
+
+### TLS Certificates
+**Decision:** Let's Encrypt with DNS-01 challenge via Cloudflare
+
+**Rationale:**
+- Free, trusted certificates (no browser warnings)
+- Wildcard cert for `*.lab.codeofficer.com`
+- DNS-01 challenge doesn't require public exposure
+- Cloudflare free tier includes API access
+- cert-manager handles automatic renewal
+- Services accessible only via VPN but with valid certs
+
+**Configuration:**
+- Domain: codeofficer.com (migrate from DNSimple to Cloudflare)
+- Subdomain: `*.lab.codeofficer.com` points to internal IPs
+- Local DNS: `*.home.arpa` managed by UDM Pro
+
+### Monitoring Strategy
+**Decision:** Deploy Prometheus + Grafana in Phase 4+ (deferred)
+
+**Rationale:**
+- Start simple, add monitoring once cluster is stable
+- Proxmox has built-in monitoring for infrastructure
+- `kubectl top` sufficient for initial workloads
+- Easy to add later (just Helm charts)
+- Focus on core functionality first
+
+### Naming Conventions
+**Decision:**
+- Local hostnames: `*.home.arpa` (RFC 8375 compliant)
+- Public DNS: `*.lab.codeofficer.com`
+- Node naming: Short and consistent (pve-01, pve-02, pve-03)
+
+**Rationale:**
+- `home.arpa` is the standard for home networks
+- Avoids conflicts with `.local` (mDNS)
+- `.lab` subdomain clearly identifies homelab services
+- Short node names easier to type and remember
+
+### VM Resource Allocation
+**Decision:**
+- Control plane nodes: 4 vCPU, 8GB RAM, 50GB disk
+- GPU worker node: 8 vCPU, 16GB RAM, 100GB disk
+
+**Rationale:**
+- Leaves plenty of headroom on 96GB nodes
+- Control plane can handle moderate workload
+- GPU node sized for AI/ML workloads
+- Can adjust resources later if needed
 
 ---
 
 ## Information Still Needed
 
-### Hardware Details
-- [ ] UNAS Pro exact model and capacity
-- [ ] Synology NAS exact model and capacity
-- [ ] UniFi equipment exact models (UDM Pro vs SE? Switch model?)
-- [ ] JetKVM specific IP addresses and configuration
+✅ **Phase 0 Complete - All critical information collected**
 
-### Network Details
-- [ ] Confirm current UDM configuration and subnet
-- [ ] Verify VLAN support on switch
-- [ ] DNS server configuration (UDM built-in or Pi-hole?)
-- [ ] Current DHCP ranges and static assignments
-
-### Proxmox Questions
-- [ ] Current state: XCP-ng still running or wiped?
-- [ ] Proxmox installation media prepared?
-- [ ] Access to physical console (via JetKVM)?
-- [ ] BIOS access and current settings?
-
-### Application Requirements
-- [ ] Full list of applications to deploy
-- [ ] Resource requirements per application
-- [ ] External access requirements (ingress)
-- [ ] Data persistence needs
+### Optional Future Information
+- [ ] Specific application resource requirements (determined during Phase 5)
+- [ ] External ingress requirements per application (determined during deployment)
+- [ ] Detailed data persistence needs per application (determined during deployment)
 
 ---
 
 ## Open Questions
 
-1. **Storage:** Use NFS or iSCSI for Kubernetes PVs? Or local storage only?
-2. **Backups:** Where should Proxmox backups go? UNAS Pro or Synology?
-3. **DNS:** Use UDM DNS, or deploy Pi-hole in cluster?
-4. **Certificates:** Use self-signed, Let's Encrypt, or internal CA?
-5. **Monitoring:** Deploy full Prometheus/Grafana or use Proxmox built-in?
-6. **GPU Workloads:** Which specific AI/ML applications do you plan to run?
+✅ **All architectural questions resolved during Phase 0**
+
+### Decisions Made:
+1. **Storage:** ✅ NFS from UNAS Pro for K8s PVs, local-lvm for VM disks
+2. **Backups:** ✅ Synology (separate device for backup target)
+3. **DNS:** ✅ UDM Pro built-in DNS + Cloudflare for public DNS
+4. **Certificates:** ✅ Let's Encrypt with DNS-01 challenge
+5. **Monitoring:** ✅ Defer to Phase 4+ (start simple)
+6. **GPU Workloads:** ✅ Ollama, Stable Diffusion WebUI, Jupyter Lab
+7. **LoadBalancer:** ✅ MetalLB Layer 2 mode
+8. **GitOps:** ✅ FluxCD
+9. **Network:** ✅ Single flat network (10.20.11.0/24), no VLANs
 
 ---
 
