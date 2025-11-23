@@ -14,7 +14,7 @@
 # 1. Go to Datacenter > Permissions > API Tokens
 # 2. Create token for user (e.g., root@pam!terraform)
 # 3. Set privileges: PVEDatastoreUser, PVEVMAdmin, PVEPoolAdmin
-export TF_VAR_proxmox_api_url="https://10.10.10.10:8006/api2/json"
+export TF_VAR_proxmox_api_url="https://10.20.11.11:8006/api2/json"
 export TF_VAR_proxmox_api_token_id="root@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 export TF_VAR_proxmox_insecure="true"  # Set to "false" with valid SSL certs
 export TF_VAR_proxmox_ssh_user="root"
@@ -42,7 +42,7 @@ export TF_VAR_vm_ssh_password="your-secure-password-here"
 # -----------------------------------------------------------------------------
 # Network Configuration
 # -----------------------------------------------------------------------------
-export TF_VAR_dns_servers='["10.10.10.1"]'  # UDM as DNS
+export TF_VAR_dns_servers='["10.20.11.1"]'  # UDM Pro as DNS
 export TF_VAR_search_domain="home.arpa"
 
 # -----------------------------------------------------------------------------
@@ -53,49 +53,49 @@ export TF_VAR_storage_pool="local-lvm"
 # -----------------------------------------------------------------------------
 # K3s Server Nodes (Control Plane)
 # -----------------------------------------------------------------------------
-# Define 2 control plane nodes on pve-node-02 and pve-node-03
-# Using VLAN 20 (Server) from network.md
+# Define 2 control plane nodes on pve-02 and pve-03
+# Using VLAN 11 (VM-Servers) from docs/NETWORK.md
 export TF_VAR_k3s_server_nodes='[
   {
-    "name": "k3s-server-01",
-    "target_node": "pve-node-02",
+    "name": "k3s-cp-01",
+    "target_node": "pve-02",
     "vmid": 200,
-    "ip_address": "10.10.20.10",
-    "gateway": "10.10.20.1",
+    "ip_address": "10.20.11.80",
+    "gateway": "10.20.11.1",
     "cpu_cores": 4,
     "memory": 8192,
-    "disk_size": "32G",
-    "vlan_tag": 20
+    "disk_size": "50G",
+    "vlan_tag": 11
   },
   {
-    "name": "k3s-server-02",
-    "target_node": "pve-node-03",
+    "name": "k3s-cp-02",
+    "target_node": "pve-03",
     "vmid": 201,
-    "ip_address": "10.10.20.11",
-    "gateway": "10.10.20.1",
+    "ip_address": "10.20.11.81",
+    "gateway": "10.20.11.1",
     "cpu_cores": 4,
     "memory": 8192,
-    "disk_size": "32G",
-    "vlan_tag": 20
+    "disk_size": "50G",
+    "vlan_tag": 11
   }
 ]'
 
 # -----------------------------------------------------------------------------
 # K3s Agent Nodes (Workers)
 # -----------------------------------------------------------------------------
-# Define 1 worker node on pve-node-01 with GPU passthrough
-# Using VLAN 20 (Server) from network.md
+# Define 1 worker node on pve-01 with GPU passthrough
+# Using VLAN 11 (VM-Servers) from docs/NETWORK.md
 export TF_VAR_k3s_agent_nodes='[
   {
-    "name": "k3s-agent-01",
-    "target_node": "pve-node-01",
+    "name": "k3s-gpu-01",
+    "target_node": "pve-01",
     "vmid": 210,
-    "ip_address": "10.10.20.20",
-    "gateway": "10.10.20.1",
+    "ip_address": "10.20.11.85",
+    "gateway": "10.20.11.1",
     "cpu_cores": 8,
-    "memory": 32768,
-    "disk_size": "64G",
-    "vlan_tag": 20,
+    "memory": 16384,
+    "disk_size": "100G",
+    "vlan_tag": 11,
     "gpu_passthrough": true
   }
 ]'
@@ -141,10 +141,10 @@ export KUBECONFIG="${PWD}/infrastructure/terraform/kubeconfig"
 # Utility Exports
 # -----------------------------------------------------------------------------
 # First server IP for direct SSH access
-export FIRST_SERVER_IP="10.10.20.10"
+export FIRST_SERVER_IP="10.20.11.80"
 
 # First agent IP for testing
-export FIRST_AGENT_IP="10.10.20.20"
+export FIRST_AGENT_IP="10.20.11.85"
 
 # =============================================================================
 # End of Configuration
