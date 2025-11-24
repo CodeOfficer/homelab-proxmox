@@ -291,7 +291,7 @@ applications/<app-name>/
 ### Ready to Begin ⏭️
 - Phase 1: Foundation Setup (Proxmox installation, cluster config, GPU passthrough)
 - Prerequisites needed:
-  - Proxmox VE 8.x installation media
+  - Proxmox VE 9.1 installation media
   - Migrate codeofficer.com DNS to Cloudflare
   - Physical access to nodes via JetKVM
 
@@ -342,7 +342,7 @@ applications/<app-name>/
 ### Phase 1: Foundation Setup (NOT STARTED)
 
 #### 1.0 Prerequisites
-- [ ] Download Proxmox VE 8.x ISO
+- [ ] Download Proxmox VE 9.1 ISO
 - [ ] Create Proxmox installation USB media
 - [ ] Migrate codeofficer.com DNS from DNSimple to Cloudflare
 - [ ] Verify JetKVM access to all three nodes
@@ -350,9 +350,9 @@ applications/<app-name>/
 
 #### 1.1 Proxmox Installation
 - [ ] Wipe existing XCP-ng from all three nodes
-- [ ] Install Proxmox VE 8.x on pve-01 (10.20.11.11, GPU node)
-- [ ] Install Proxmox VE 8.x on pve-02 (10.20.11.12)
-- [ ] Install Proxmox VE 8.x on pve-03 (10.20.11.13)
+- [ ] Install Proxmox VE 9.1 on pve-01 (10.20.11.11, GPU node)
+- [ ] Install Proxmox VE 9.1 on pve-02 (10.20.11.12)
+- [ ] Install Proxmox VE 9.1 on pve-03 (10.20.11.13)
 - [ ] Verify BIOS settings (IOMMU, VT-d enabled on pve-01)
 - [ ] Configure hostnames (pve-01.home.arpa, pve-02.home.arpa, pve-03.home.arpa)
 - [ ] Verify network connectivity and DNS resolution

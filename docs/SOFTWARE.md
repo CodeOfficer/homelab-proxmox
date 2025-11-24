@@ -6,7 +6,7 @@ This document describes the core software stack and the catalog of applications 
 
 | Component            | Technology              | Target Version | Purpose                                        |
 | -------------------- | ----------------------- | -------------- | ---------------------------------------------- |
-| **Hypervisor**       | Proxmox VE              | 8.x latest     | Virtual machine and container management       |
+| **Hypervisor**       | Proxmox VE              | 9.1            | Virtual machine and container management       |
 | **Orchestration**    | HashiCorp Terraform     | Latest         | Infrastructure as Code provisioning            |
 | **Provisioner**      | Telmate/proxmox provider| Latest         | Terraform provider for Proxmox                 |
 | **Configuration**    | cloud-init              | Latest         | VM initialization and configuration            |
@@ -150,7 +150,7 @@ applications/<app-name>/
 ## Software Versions (to be determined during installation)
 
 Specific versions will be documented as components are installed:
-- Proxmox VE: TBD (target: 8.x latest)
+- Proxmox VE: 9.1
 - K3s: TBD (target: latest stable)
 - Terraform: TBD (target: 1.6+)
 - MetalLB: TBD
