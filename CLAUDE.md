@@ -272,7 +272,7 @@ applications/<app-name>/
 
 ---
 
-## Current Status: Phase 1 In Progress - Prerequisites Underway
+## Current Status: Phase 1 In Progress - Prerequisites Nearly Complete
 
 **Last Updated:** 2025-11-23
 
@@ -288,12 +288,14 @@ applications/<app-name>/
 - ✅ Certificate strategy decided (Let's Encrypt DNS-01)
 - ✅ Storage strategy decided (UNAS Pro primary, Synology backups)
 
-### Ready to Begin ⏭️
-- Phase 1: Foundation Setup (Proxmox installation, cluster config, GPU passthrough)
-- Prerequisites needed:
-  - Proxmox VE 9.1 installation media
-  - Migrate codeofficer.com DNS to Cloudflare
-  - Physical access to nodes via JetKVM
+### Phase 1.0 Prerequisites Progress ⏭️
+- ✅ Proxmox VE 9.1 installation media created
+- ✅ DNS migrated to Cloudflare (propagating)
+- ⏳ Verify JetKVM access to all three nodes
+- ⏳ Backup any critical data from XCP-ng VMs (if needed)
+
+### Ready for Phase 1.1: Proxmox Installation
+Once JetKVM access is verified and any critical data backed up, ready to begin Proxmox installation on all three nodes.
 
 ---
 
@@ -344,7 +346,14 @@ applications/<app-name>/
 #### 1.0 Prerequisites
 - [x] Download Proxmox VE 9.1 ISO
 - [x] Create Proxmox installation USB media (Balena Etcher on macOS)
-- [ ] Migrate codeofficer.com DNS from DNSimple to Cloudflare
+- [x] Migrate codeofficer.com DNS from DNSimple to Cloudflare
+  - Disabled DNSSEC at DNSimple
+  - Created free Cloudflare account
+  - Added domain to Cloudflare with all DNS records
+  - Changed nameservers to gerardo/sharon.ns.cloudflare.com
+  - DNS propagation in progress (0-48 hours)
+  - Email (Google Workspace) and website (GitHub Pages) verified working
+  - DKIM to be added after 24-72 hour Google Workspace waiting period
 - [ ] Verify JetKVM access to all three nodes
 - [ ] Backup any critical data from XCP-ng VMs (if needed)
 
