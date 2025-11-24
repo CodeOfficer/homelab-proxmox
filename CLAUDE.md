@@ -357,6 +357,27 @@ Once JetKVM access is verified and any critical data backed up, ready to begin P
 - [ ] Verify JetKVM access to all three nodes
 - [ ] Backup any critical data from XCP-ng VMs (if needed)
 
+#### 1.0.1 Post-Migration Follow-up (Do After DNS Propagates)
+
+**CRITICAL: DKIM Setup Required**
+- [ ] **Add DKIM record for Google Workspace email authentication**
+  - **When:** 24-72 hours after DNS migration (around Nov 26-27, 2025)
+  - **Why:** Improves email deliverability, prevents emails going to spam
+  - **How:**
+    1. Go to Google Workspace Admin Console
+    2. Apps → Google Workspace → Gmail → Authenticate email
+    3. Click "GENERATE NEW RECORD"
+    4. Copy DNS Host name and TXT record value
+    5. Add TXT record to Cloudflare DNS
+    6. Click "START AUTHENTICATION" in Google Workspace
+    7. Verify DKIM shows "Authenticating email" status
+  - **Status:** Waiting for Google Workspace 24-72 hour period
+  - **Reminder:** This MUST be completed for proper email security
+
+- [ ] Verify DNS propagation complete globally (use whatsmydns.net)
+- [ ] Test email deliverability and check spam score (mail-tester.com)
+- [ ] Create Cloudflare API token for cert-manager (needed for Phase 4)
+
 #### 1.1 Proxmox Installation
 - [ ] Wipe existing XCP-ng from all three nodes
 - [ ] Install Proxmox VE 9.1 on pve-01 (10.20.11.11, GPU node)
