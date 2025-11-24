@@ -8,6 +8,16 @@
 # =============================================================================
 
 # -----------------------------------------------------------------------------
+# Cloudflare API Configuration (for cert-manager DNS-01 challenges)
+# -----------------------------------------------------------------------------
+# API Token created with: Zone > DNS > Edit permissions for codeofficer.com
+# Used by cert-manager to manage DNS records for Let's Encrypt certificates
+export CLOUDFLARE_API_TOKEN="your-cloudflare-api-token-here"
+export CLOUDFLARE_ZONE_ID="your-zone-id-here"
+export CLOUDFLARE_ACCOUNT_ID="your-account-id-here"
+export CLOUDFLARE_EMAIL="your-cloudflare-email@example.com"
+
+# -----------------------------------------------------------------------------
 # Proxmox API Configuration
 # -----------------------------------------------------------------------------
 # Create API token in Proxmox:
