@@ -57,7 +57,9 @@ Read and analyze the actual content (not just keywords) to detect duplication:
 
 ### 2. Prompt Logging Enforcement
 
-Ensure all user prompts are logged to `logs/prompts.log` with proper format.
+**MANDATORY: Log EVERY SINGLE user prompt to `logs/prompts.log`**
+
+This is not optional. This is not "when convenient". **AFTER EVERY USER MESSAGE.**
 
 **Required Format:**
 ```
@@ -75,19 +77,21 @@ Ensure all user prompts are logged to `logs/prompts.log` with proper format.
 3. ✅ ALWAYS include blank line after each entry (between entries)
 4. ✅ Keep response summaries brief (one line, ~10-20 words)
 5. ✅ Append-only (never modify existing entries)
+6. ✅ **logs/ is gitignored** - never try to commit it (permanent knowledge, remember this)
 
 **Check if prompt was logged:**
 1. Read logs/prompts.log
-2. Verify today's date appears in recent entries
-3. Check format compliance (actual timestamps, not shell variables)
-4. Verify blank line spacing is consistent
+2. Verify MOST RECENT entry has a recent timestamp (within last few minutes)
+3. Check for shell syntax that won't evaluate (`$(date ...`))
+4. Check format compliance (actual timestamps, not shell variables)
+5. Verify blank line spacing is consistent
 
 **When logging is missing or malformed:**
 1. Identify which prompts weren't logged
 2. Add missing entries with actual timestamps (not shell syntax)
-3. Fix any entries using `$(date ...)` syntax
+3. Fix any entries using `$(date ...)` syntax - replace with actual time
 4. Ensure consistent blank line spacing between ALL entries
-5. Verify file is gitignored (logs/ directory not tracked)
+5. logs/ is gitignored (remember this permanently, don't rediscover it)
 
 ### 3. Git Commit Validation
 

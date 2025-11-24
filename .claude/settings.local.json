@@ -5,9 +5,15 @@
       "Bash(git commit:*)",
       "Bash(git add:*)",
       "Bash(logs/prompts.log)",
-      "Skill(example-skills:skill-creator)"
+      "Skill(example-skills:skill-creator)",
+      "Bash(find:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
+  },
+  "sandbox": {
+    "enabled": false,
+    "autoAllowBashIfSandboxed": false
   }
 }
