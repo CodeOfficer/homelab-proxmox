@@ -80,6 +80,8 @@ Each file must stand alone and always be current:
 
 **MUST ALWAYS DO:** After each user prompt, append to `logs/prompts.log`
 
+**CRITICAL:** logs/ directory is gitignored - never attempt to commit it. Logging is append-only to local file for session continuity.
+
 ### Format
 ```
 [YYYY-MM-DD HH:MM:SS] User: "<user's prompt text>"
@@ -97,12 +99,14 @@ Each file must stand alone and always be current:
 ```
 
 ### Rules
-- Append timestamp + user prompt immediately when received
+- Append timestamp + user prompt **AFTER EVERY SINGLE USER MESSAGE** (non-negotiable)
+- Use actual time values, NOT shell syntax like `$(date +%H:%M:%SS)` (this doesn't evaluate)
 - Add response summary line when work is complete
 - Keep summaries brief (one line, ~10-20 words)
 - Add blank line between entries
-- File is gitignored (personal log, not tracked)
+- **logs/ is gitignored** - this is personal log, not tracked in git
 - Never delete or modify existing entries (append-only)
+- Hook validates MOST RECENT entry has recent timestamp (not just any entry today)
 
 ## Git Commit Pattern
 
