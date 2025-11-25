@@ -1,6 +1,6 @@
 # Claude Code Instructions for Homelab Proxmox Project
 
-This file contains ONLY workflow patterns, conventions, and enforcement rules. All project-specific information lives in `docs/` files.
+This file contains ONLY workflow patterns, conventions, enforcement rules, project plan, and current status. All project-specific reference information lives in `docs/` files.
 
 ## Documentation as Single Source of Truth
 
@@ -267,18 +267,114 @@ applications/<app-name>/
 9. **Log Every Prompt:** Append to `logs/prompts.log` after each interaction
 10. **Commit After Tasks:** Create git commit when tasks are completed or plan is updated
 11. **Skills Local:** Install skills to `.claude/` not `~/.claude/`
+12. **CLAUDE.md High-Level Only:** Only checkbox-style tasks, NO detailed implementation code
+13. **Detailed Docs Pattern:** Use `infrastructure/*/README.md` for step-by-step guides with code examples
+14. **Minimize Files:** Don't create unnecessary documentation files (no docs/IMPLEMENTATION.md)
 
 ## Project Context
 
 - **What:** Proxmox-based homelab with K3s and GPU passthrough
-- **Status:** Planning Phase
+- **Status:** Phase 1 Complete, Starting Phase 2 (Template Building)
 - **Reference Repo:** `~/homelab-k3s` (patterns only, not migration)
 
 ---
 
-## Current Status: Phase 1.5 Complete - GPU Passthrough Configured
+## The Pattern Going Forward
 
-**Last Updated:** 2025-11-25
+**CRITICAL:** This pattern MUST be followed for all documentation.
+
+### File Organization Pattern
+
+```
+homelab-proxmox/
+├── CLAUDE.md                           # HIGH-LEVEL plan tracking ONLY
+│   └── Contains: phases, checkboxes, status, architecture decisions
+│
+├── docs/                               # Reference specifications
+│   ├── HARDWARE.md                     # Physical hardware specs
+│   ├── NETWORK.md                      # Network architecture
+│   ├── SOFTWARE.md                     # Software catalog
+│   ├── OPERATIONS.md                   # Operational procedures
+│   └── LINKS.md                        # Reference links
+│
+└── infrastructure/                     # Implementation code + detailed guides
+    ├── packer/
+    │   ├── README.md                   # Detailed Packer implementation guide
+    │   └── *.pkr.hcl                   # Packer code
+    │
+    ├── terraform/
+    │   └── *.tf                        # Terraform code
+    │
+    └── ansible/                        # (Future: Phase 3.5)
+        ├── README.md                   # Detailed Ansible implementation guide
+        └── *.yml                       # Ansible code
+```
+
+### Documentation Rules
+
+**CLAUDE.md (this file):**
+- ✅ High-level checkbox-style tasks ONLY
+- ✅ Architecture decisions with rationale
+- ✅ Current status and next steps
+- ✅ Workflow patterns and conventions
+- ❌ NO detailed implementation steps
+- ❌ NO code examples (keep those in infrastructure/*/README.md)
+- ❌ NO duplicate content from docs/
+
+**docs/*.md files:**
+- ✅ Reference specifications (hardware, network, software)
+- ✅ Stand-alone information that doesn't change often
+- ❌ NO implementation guides
+- ❌ NO how-to instructions
+
+**infrastructure/*/README.md files:**
+- ✅ Detailed step-by-step implementation guides
+- ✅ Complete code examples to copy/paste
+- ✅ Technology-specific troubleshooting
+- ✅ Prerequisites and setup instructions
+- ✅ Debug commands and validation steps
+
+### When Creating New Documentation
+
+**Ask yourself:**
+1. Is this a high-level plan/status update? → **CLAUDE.md**
+2. Is this reference information (hardware/network/software)? → **docs/*.md**
+3. Is this a detailed how-to guide for a specific technology? → **infrastructure/*/README.md**
+4. Does this duplicate existing content? → **Don't create it**
+
+**Examples:**
+- "Add checkbox for Phase 3.1" → **CLAUDE.md**
+- "Document UNAS Pro specifications" → **docs/HARDWARE.md**
+- "How to build Packer template with full code" → **infrastructure/packer/README.md**
+- "Detailed Ansible playbook examples" → **infrastructure/ansible/README.md** (when created)
+
+### Minimize Unnecessary Files
+
+- ❌ NO `docs/IMPLEMENTATION.md` (detailed guides belong in infrastructure/)
+- ❌ NO global plan files in `~/.claude/plans/` (use CLAUDE.md)
+- ❌ NO separate "detailed plan" files (high-level in CLAUDE.md, details in README.md)
+- ✅ Only create files that serve a clear, non-duplicate purpose
+
+---
+
+## Current Status: Phase 1.5 Complete - Ready for Phase 2 Template Building
+
+**Last Updated:** 2025-11-25 13:25:00
+
+**Session Summary:**
+- Completed architecture decision: Terraform + Ansible + Flux stack
+- Updated documentation (CLAUDE.md, docs/SOFTWARE.md) with new architecture
+- Clarified file organization pattern (see "The Pattern Going Forward" section below)
+- Removed unnecessary docs/IMPLEMENTATION.md file
+- Refined Phase 3 plan structure (separated Terraform VM provisioning from Ansible K3s installation)
+
+**What's Ready:**
+- ✅ All 3 Proxmox nodes installed and clustered
+- ✅ Network configured (VLAN-aware bridges, DNS, NTP)
+- ✅ Storage configured (UNAS Pro NFS mounted)
+- ✅ GPU passthrough configured on pve-01
+- ✅ Packer configuration created for VM template
+- ✅ Architecture decision made and documented
 
 ### Phase 0: Information Gathering ✅ COMPLETE
 - ✅ Hardware specifications fully documented in `docs/HARDWARE.md`
@@ -356,13 +452,14 @@ applications/<app-name>/
   - Update Makefile with Ansible workflow
   - Deploy infrastructure with new Terraform + Ansible workflow
 
-**Next Steps:**
-1. Refactor `infrastructure/modules/k3s-cluster/main.tf` (remove remote-exec provisioners)
-2. Create `infrastructure/ansible/` structure with playbooks and inventory
-3. Add Ansible integration to Makefile
-4. Create Proxmox API token and configure `.envrc`
-5. Build template: `make template`
-6. Deploy cluster: `make cluster` (runs Terraform + Ansible + kubectl setup)
+**Next Steps for Next Session:**
+1. **First:** Create Proxmox API token and configure `.envrc` (Phase 1.6 API and Authentication)
+2. **Then:** Build VM template with Packer (Phase 2.2-2.3)
+3. **Then:** Refactor Terraform module to remove remote-exec (Phase 3.1)
+4. **Then:** Create Ansible integration (Phase 3.5)
+5. **Finally:** Deploy cluster with `make cluster`
+
+See detailed tasks in Phase 1.6, Phase 2, and Phase 3 sections below.
 
 **Access Points:**
 - Proxmox Web: https://10.20.11.11:8006 (or .12/.13)
@@ -911,6 +1008,8 @@ applications/<app-name>/
 ❌ Hardcoding values "temporarily" (never temporary)
 ❌ Installing skills globally to `~/.claude/` (use `.claude/`)
 ❌ Skipping file validation after updates
+❌ Creating unnecessary files (docs/IMPLEMENTATION.md, global plan files)
+❌ Putting detailed implementation steps in CLAUDE.md (use infrastructure/*/README.md)
 
 ## File Update Validation Checklist
 
@@ -925,17 +1024,24 @@ After updating CLAUDE.md or docs/ files, verify:
 ## This File's Purpose
 
 CLAUDE.md exists to:
-- Track project plan, phases, todos, and status
+- Track project plan, phases, todos, and status (HIGH-LEVEL CHECKBOXES ONLY)
 - Document architecture decisions with rationale
 - Enforce workflow patterns and conventions
 - Define directory structure and code patterns
 - Maintain information gaps and open questions
+- Track current session state and next steps
 
 docs/ files exist to:
 - Hardware specs (`docs/HARDWARE.md`)
 - Network config (`docs/NETWORK.md`)
 - Software catalog (`docs/SOFTWARE.md`)
 - Reference links (`docs/LINKS.md`)
+
+infrastructure/*/README.md files exist to:
+- Detailed implementation guides for specific technology
+- Step-by-step instructions with code examples
+- Technology-specific troubleshooting
+- Examples: `infrastructure/packer/README.md`, `infrastructure/ansible/README.md` (future)
 
 ## Workflow Enforcement Primitives
 
