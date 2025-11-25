@@ -1,0 +1,26 @@
+# Packer Variables Example
+# Copy this file to variables.pkrvars.hcl and fill in your values
+# Most variables can be set via environment variables instead
+
+# Proxmox connection (prefer using environment variables for these)
+# proxmox_api_url          = "https://10.20.11.11:8006/api2/json"
+# proxmox_api_token_id     = "root@pam!packer"
+# proxmox_api_token_secret = "your-secret-token-here"
+
+# Proxmox node to build on
+proxmox_node = "pve-01"
+
+# Template configuration
+template_name        = "ubuntu-2404-k3s-template"
+template_description = "Ubuntu 24.04 LTS template for K3s - built with Packer"
+
+# VM ID for the template (should not conflict with existing VMs)
+vm_id = 9000
+
+# Ubuntu cloud image (defaults to latest 24.04)
+# iso_url      = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+# iso_checksum = "file:https://cloud-images.ubuntu.com/noble/current/SHA256SUMS"
+
+# SSH credentials for provisioning
+ssh_username = "ubuntu"
+ssh_password = "ubuntu"

@@ -1,6 +1,7 @@
 .PHONY: help init plan apply destroy infra setup-kube test clean
 .PHONY: deploy deploy-all deploy-infrastructure deploy-applications
 .PHONY: logs status kubectl ssh-server ssh-agent
+.PHONY: template template-validate template-init template-clean
 
 # =============================================================================
 # Homelab Proxmox Infrastructure Management
@@ -19,6 +20,9 @@ NC := \033[0m # No Color
 # Terraform directory
 TF_DIR := infrastructure/terraform
 
+# Packer directory
+PKR_DIR := infrastructure/packer
+
 # =============================================================================
 # Help
 # =============================================================================
@@ -36,6 +40,37 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
 	@echo ""
+
+# =============================================================================
+# Template Management (Packer)
+# =============================================================================
+
+template-init: ## Initialize Packer plugins
+	@echo "$(BLUE)Initializing Packer...$(NC)"
+	cd $(PKR_DIR) && packer init .
+
+template-validate: template-init ## Validate Packer configuration
+	@echo "$(BLUE)Validating Packer configuration...$(NC)"
+	cd $(PKR_DIR) && packer validate ubuntu-k3s.pkr.hcl
+
+template: template-validate ## Build VM template with Packer
+	@echo "$(BLUE)Building VM template...$(NC)"
+	@echo "$(YELLOW)This will create template on Proxmox (VMID: 9000)$(NC)"
+	cd $(PKR_DIR) && packer build ubuntu-k3s.pkr.hcl
+	@echo ""
+	@echo "$(GREEN)Template built successfully!$(NC)"
+	@echo "$(YELLOW)Template name: ubuntu-2404-k3s-template$(NC)"
+	@echo "$(YELLOW)VM ID: 9000$(NC)"
+
+template-clean: ## Remove template from Proxmox (VMID 9000)
+	@echo "$(YELLOW)Removing template from Proxmox...$(NC)"
+	@read -p "Delete template VMID 9000? Type 'yes' to confirm: " confirm; \
+	if [ "$$confirm" = "yes" ]; then \
+		ssh root@10.20.11.11 "qm destroy 9000"; \
+		echo "$(GREEN)Template deleted$(NC)"; \
+	else \
+		echo "$(YELLOW)Aborted$(NC)"; \
+	fi
 
 # =============================================================================
 # Infrastructure Deployment

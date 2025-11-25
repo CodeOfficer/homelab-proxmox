@@ -25,9 +25,22 @@ export CLOUDFLARE_EMAIL="your-cloudflare-email@example.com"
 # 2. Create token for user (e.g., root@pam!terraform)
 # 3. Set privileges: PVEDatastoreUser, PVEVMAdmin, PVEPoolAdmin
 export TF_VAR_proxmox_api_url="https://10.20.11.11:8006/api2/json"
-export TF_VAR_proxmox_api_token_id="root@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+export TF_VAR_proxmox_api_token_id="root@pam!terraform"
+export TF_VAR_proxmox_api_token_secret="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 export TF_VAR_proxmox_insecure="true"  # Set to "false" with valid SSL certs
 export TF_VAR_proxmox_ssh_user="root"
+
+# -----------------------------------------------------------------------------
+# Packer Configuration (for VM template creation)
+# -----------------------------------------------------------------------------
+# Uses same Proxmox credentials as Terraform
+# Create separate API token if desired: root@pam!packer
+export PKR_VAR_proxmox_api_url="${TF_VAR_proxmox_api_url}"
+export PKR_VAR_proxmox_api_token_id="${TF_VAR_proxmox_api_token_id}"
+export PKR_VAR_proxmox_api_token_secret="${TF_VAR_proxmox_api_token_secret}"
+export PKR_VAR_proxmox_node="pve-01"
+export PKR_VAR_template_name="ubuntu-2404-k3s-template"
+export PKR_VAR_vm_id="9000"
 
 # -----------------------------------------------------------------------------
 # K3s Cluster Configuration

@@ -343,8 +343,14 @@ applications/<app-name>/
 - ✅ Configuration documented in docs/OPERATIONS.md
 - ✅ Hardware specs updated in docs/HARDWARE.md
 
-### Ready for Phase 2: VM Template Creation
-**Current State:** Foundation complete. All Proxmox nodes operational, storage configured, GPU passthrough ready. Ready to create Ubuntu VM templates for K3s deployment.
+### Phase 2: VM Template Creation (IN PROGRESS)
+- ✅ Packer configuration created (infrastructure-as-code approach)
+- ✅ Provisioning script written (qemu-guest-agent, cloud-init, K3s prerequisites)
+- ✅ Makefile targets added (`make template`)
+- ✅ Documentation complete (README.md)
+- ⏸️ Ready for user to configure `.envrc` and run Packer build
+
+**Next Steps:** User needs to create Proxmox API token and run `make template` to build the VM template.
 
 **Access Points:**
 - Proxmox Web: https://10.20.11.11:8006 (or .12/.13)
@@ -508,29 +514,41 @@ applications/<app-name>/
 - [ ] Document API endpoint and token in `.envrc`
 - [ ] Add SSH public key to .envrc for cloud-init injection
 
-### Phase 2: VM Template Creation (NOT STARTED)
+### Phase 2: VM Template Creation (IN PROGRESS)
 
-#### 2.1 Template VM Creation
-- [ ] Download Ubuntu 24.04 LTS cloud image
-- [ ] Create VM from cloud image (VMID 9000)
-- [ ] Configure cloud-init
-- [ ] Install qemu-guest-agent
-- [ ] Configure serial console
-- [ ] Optimize for cloning
+**Approach:** Using Packer for infrastructure-as-code template creation
 
-#### 2.2 Template Customization
-- [ ] Pre-install common packages (curl, wget, etc.)
-- [ ] Configure default user (ubuntu)
-- [ ] Set up SSH key injection
-- [ ] Configure network defaults
-- [ ] Enable automatic security updates
+#### 2.1 Packer Configuration ✅ COMPLETE
+- [x] Create Packer directory structure (`infrastructure/packer/`)
+- [x] Write Packer HCL configuration (`ubuntu-k3s.pkr.hcl`)
+- [x] Write provisioning script (`scripts/setup.sh`)
+- [x] Create variables file example (`variables.pkrvars.hcl.example`)
+- [x] Update `.envrc.example` with Packer environment variables
+- [x] Add Makefile targets (`make template`, `make template-validate`)
+- [x] Document Packer usage in README.md
 
-#### 2.3 Template Testing
-- [ ] Clone test VM from template
+#### 2.2 Prerequisites for Template Build
+- [ ] Create Proxmox API token for Packer (or reuse Terraform token)
+- [ ] Copy `.envrc.example` to `.envrc` and configure:
+  - `PKR_VAR_proxmox_api_url`
+  - `PKR_VAR_proxmox_api_token_id`
+  - `PKR_VAR_proxmox_api_token_secret`
+- [ ] Run `direnv allow` to load environment variables
+- [ ] Install Packer (`brew install packer` on macOS)
+
+#### 2.3 Template Build
+- [ ] Initialize Packer plugins (`make template-init`)
+- [ ] Validate Packer configuration (`make template-validate`)
+- [ ] Build template (`make template`)
+- [ ] Verify template exists in Proxmox (VMID 9000)
+
+#### 2.4 Template Testing
+- [ ] Clone test VM from template via Proxmox UI
 - [ ] Verify cloud-init functionality
-- [ ] Test SSH access
-- [ ] Verify network configuration
-- [ ] Convert to template
+- [ ] Test SSH access with cloud-init injected key
+- [ ] Verify qemu-guest-agent is running
+- [ ] Verify K3s prerequisites (IP forwarding, kernel modules)
+- [ ] Delete test VM after validation
 
 ### Phase 3: Terraform Infrastructure (NOT STARTED)
 
