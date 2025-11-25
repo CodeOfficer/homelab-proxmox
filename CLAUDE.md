@@ -343,14 +343,27 @@ applications/<app-name>/
 - ✅ Configuration documented in docs/OPERATIONS.md
 - ✅ Hardware specs updated in docs/HARDWARE.md
 
-### Phase 2: VM Template Creation (IN PROGRESS)
+### Phase 2: Infrastructure Stack & VM Template (IN PROGRESS)
 - ✅ Packer configuration created (infrastructure-as-code approach)
 - ✅ Provisioning script written (qemu-guest-agent, cloud-init, K3s prerequisites)
 - ✅ Makefile targets added (`make template`)
-- ✅ Documentation complete (README.md)
-- ⏸️ Ready for user to configure `.envrc` and run Packer build
+- ✅ Packer documentation complete (infrastructure/packer/README.md)
+- ✅ **Architecture decision made: Terraform + Ansible + Flux stack**
+- ✅ **Implementation plan created** (refactor Terraform, add Ansible integration)
+- ⏸️ Ready for implementation:
+  - Refactor Terraform module (remove remote-exec K3s installation)
+  - Create Ansible directory structure with k3s-ansible
+  - Update Makefile with Ansible workflow
+  - Build VM template with Packer
+  - Deploy infrastructure with new Terraform + Ansible workflow
 
-**Next Steps:** User needs to create Proxmox API token and run `make template` to build the VM template.
+**Next Steps:**
+1. Refactor `infrastructure/modules/k3s-cluster/main.tf` (remove remote-exec provisioners)
+2. Create `infrastructure/ansible/` structure with playbooks and inventory
+3. Add Ansible integration to Makefile
+4. Create Proxmox API token and configure `.envrc`
+5. Build template: `make template`
+6. Deploy cluster: `make cluster` (runs Terraform + Ansible + kubectl setup)
 
 **Access Points:**
 - Proxmox Web: https://10.20.11.11:8006 (or .12/.13)
@@ -795,6 +808,29 @@ applications/<app-name>/
 - Install on one node at a time (move USB between nodes)
 - Use JetKVM to monitor and control boot process
 - JetKVM disconnects during reboot are expected and harmless
+
+### Infrastructure Tooling Stack
+**Decision:** Terraform + Ansible + Flux
+
+**Rationale:**
+- **Terraform**: VM provisioning only (creates VMs, configures networking, storage, GPU passthrough)
+- **Ansible**: K3s cluster configuration (uses official k3s-ansible from SUSE/Rancher)
+- **Flux**: GitOps application deployment (native Helm chart support)
+- Community standard pattern for homelab K3s clusters
+- Idempotent configuration management (can re-run Ansible safely to fix issues)
+- Clear separation of concerns:
+  - Terraform answers: "What VMs exist?"
+  - Ansible answers: "What software is configured?"
+  - Flux answers: "What apps are running?"
+- Native Helm charts in Flux (not Terraform Helm provider wrapper)
+- Easier to maintain: Can update K3s config without destroying VMs
+- Better debugging: Each tool has clear, isolated responsibility
+- Aligns with "simple and conventional" goal - this is THE homelab pattern
+
+**Alternative Considered:** Terraform-only with remote-exec provisioners
+- Rejected: Not idempotent, hard to debug, not community standard
+- Problem: If K3s installation fails, must destroy/recreate VMs
+- Terraform remote-exec is anti-pattern for configuration management
 
 ---
 

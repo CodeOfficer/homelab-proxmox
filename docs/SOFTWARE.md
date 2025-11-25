@@ -7,9 +7,10 @@ This document describes the core software stack and the catalog of applications 
 | Component            | Technology              | Target Version | Purpose                                        |
 | -------------------- | ----------------------- | -------------- | ---------------------------------------------- |
 | **Hypervisor**       | Proxmox VE              | 9.1            | Virtual machine and container management       |
-| **Orchestration**    | HashiCorp Terraform     | Latest         | Infrastructure as Code provisioning            |
-| **Provisioner**      | Telmate/proxmox provider| Latest         | Terraform provider for Proxmox                 |
-| **Configuration**    | cloud-init              | Latest         | VM initialization and configuration            |
+| **VM Template**      | HashiCorp Packer        | Latest         | Automated VM template building                 |
+| **VM Provisioning**  | HashiCorp Terraform     | Latest         | Infrastructure as Code - VM creation           |
+| **Configuration**    | Ansible + k3s-ansible   | Latest         | K3s cluster installation and configuration     |
+| **Cloud-init**       | cloud-init              | Latest         | VM first-boot initialization                   |
 | **Kubernetes**       | K3s                     | Latest stable  | Lightweight Kubernetes distribution            |
 | **Container Runtime**| containerd              | (embedded)     | Included with K3s                              |
 
@@ -129,23 +130,47 @@ applications/<app-name>/
 
 ## Infrastructure as Code
 
+### Three-Layer Architecture
+
+**Layer 1: VM Template Building (Packer)**
+- Builds immutable VM templates with K3s prerequisites
+- Template stored in Proxmox as VMID 9000
+- Includes: qemu-guest-agent, cloud-init, system optimizations
+
+**Layer 2: VM Provisioning (Terraform)**
+- Creates VMs from template
+- Configures networking, storage, GPU passthrough
+- Manages infrastructure state
+
+**Layer 3: Cluster Configuration (Ansible)**
+- Installs K3s using official k3s-ansible role
+- Configures cluster networking and components
+- Idempotent configuration management
+
+**Layer 4: Application Deployment (Flux)**
+- GitOps continuous deployment
+- Native Helm chart support
+- Automated synchronization from Git
+
 ### Terraform Modules
 
 | Module        | Purpose                                      |
 | ------------- | -------------------------------------------- |
 | `proxmox-vm`  | Reusable VM creation module                  |
-| `k3s-cluster` | K3s cluster bootstrap                        |
+| `k3s-cluster` | K3s cluster VM provisioning                  |
 
 ### Makefile Commands
 
-| Command              | Purpose                                |
-| -------------------- | -------------------------------------- |
-| `make help`          | Show available commands                |
-| `make init`          | Initialize Terraform                   |
-| `make plan`          | Plan infrastructure changes            |
-| `make apply`         | Apply infrastructure                   |
-| `make infra`         | Full infrastructure deployment         |
-| `make deploy APP=x`  | Deploy specific application            |
+| Command               | Purpose                                |
+| --------------------- | -------------------------------------- |
+| `make help`           | Show available commands                |
+| `make template`       | Build VM template with Packer          |
+| `make init`           | Initialize Terraform                   |
+| `make plan`           | Plan infrastructure changes            |
+| `make apply`          | Apply infrastructure (VMs only)        |
+| `make cluster`        | Deploy full cluster (Terraform + Ansible) |
+| `make infra`          | Alias for cluster deployment           |
+| `make deploy APP=x`   | Deploy specific application            |
 
 ## Software Versions (to be determined during installation)
 
@@ -162,10 +187,12 @@ Specific versions will be documented as components are installed:
 ## Reference Architecture
 
 This homelab follows Infrastructure as Code principles:
-- Declarative configuration (Terraform + Helm)
+- Declarative configuration (Packer + Terraform + Ansible + Flux)
 - Version controlled (Git)
 - Reproducible deployments
 - Environment variable driven secrets
+- Idempotent configuration management
 - GitOps for application lifecycle
+- Clear separation of concerns (VMs, configuration, applications)
 
-All patterns inspired by `~/homelab-k3s` reference repository, adapted for Proxmox context.
+All patterns inspired by `~/homelab-k3s` reference repository and community conventions, adapted for Proxmox context.
