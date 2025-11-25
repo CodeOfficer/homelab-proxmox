@@ -349,12 +349,11 @@ applications/<app-name>/
 - ✅ Makefile targets added (`make template`)
 - ✅ Packer documentation complete (infrastructure/packer/README.md)
 - ✅ **Architecture decision made: Terraform + Ansible + Flux stack**
-- ✅ **Implementation plan created** (refactor Terraform, add Ansible integration)
-- ⏸️ Ready for implementation:
+- ⏸️ Ready for implementation (see Phase 2 and Phase 3 detailed tasks below):
+  - Build VM template with Packer
   - Refactor Terraform module (remove remote-exec K3s installation)
   - Create Ansible directory structure with k3s-ansible
   - Update Makefile with Ansible workflow
-  - Build VM template with Packer
   - Deploy infrastructure with new Terraform + Ansible workflow
 
 **Next Steps:**
@@ -563,37 +562,67 @@ applications/<app-name>/
 - [ ] Verify K3s prerequisites (IP forwarding, kernel modules)
 - [ ] Delete test VM after validation
 
-### Phase 3: Terraform Infrastructure (NOT STARTED)
+### Phase 3: Terraform Infrastructure - VM Provisioning Only (NOT STARTED)
 
-#### 3.1 Environment Setup
-- [ ] Copy `.envrc.example` to `.envrc`
-- [ ] Fill in all required variables
-- [ ] Configure Proxmox API credentials
-- [ ] Define K3s node configurations
-- [ ] Set up application secrets
+**Scope:** Terraform provisions VMs only. K3s installation handled by Ansible in Phase 3.5.
+
+#### 3.1 Refactor Terraform Module
+- [ ] Remove remote-exec provisioners from `infrastructure/modules/k3s-cluster/main.tf`
+- [ ] Add outputs for Ansible inventory (`server_nodes`, `agent_nodes`)
+- [ ] Create `infrastructure/terraform/outputs.tf` with `ansible_inventory` output
+- [ ] Validate Terraform changes (`make validate`)
+
+#### 3.2 Environment Setup
+- [ ] Copy `.envrc.example` to `.envrc` (if not done)
+- [ ] Fill in Proxmox API credentials
+- [ ] Define K3s node configurations (IP addresses, resources)
 - [ ] Run `direnv allow`
 
-#### 3.2 Terraform Initialization
-- [ ] Review Terraform configurations
-- [ ] Run `terraform init`
-- [ ] Run `terraform validate`
-- [ ] Run `terraform plan`
-- [ ] Review planned changes
+#### 3.3 Terraform Deployment
+- [ ] Run `make init` (initialize Terraform)
+- [ ] Run `make plan` (review VM changes)
+- [ ] Run `make apply` (provision VMs only)
+- [ ] Verify VMs created in Proxmox
+- [ ] Test SSH access to VMs
+- [ ] Verify cloud-init configured networking
 
-#### 3.3 Infrastructure Deployment
-- [ ] Deploy K3s server VMs (2 nodes on pve-node-02, pve-node-03)
-- [ ] Deploy K3s agent VM (1 node on pve-node-01 with GPU)
-- [ ] Verify VM creation and network connectivity
-- [ ] Monitor K3s installation logs
-- [ ] Verify cluster formation
+### Phase 3.5: Ansible Configuration - K3s Installation (NOT STARTED)
 
-#### 3.4 Cluster Validation
-- [ ] Retrieve kubeconfig
-- [ ] Run `kubectl get nodes`
-- [ ] Verify all nodes in Ready state
-- [ ] Check system pods in kube-system
+**Scope:** Ansible installs and configures K3s cluster using official k3s-ansible role.
+
+#### 3.5.1 Ansible Structure Setup
+- [ ] Create `infrastructure/ansible/` directory
+- [ ] Create `requirements.yml` (k3s-ansible role)
+- [ ] Create `ansible.cfg`
+- [ ] Create `inventory/group_vars/all.yml` (K3s configuration)
+- [ ] Create `inventory/group_vars/k3s_agent.yml` (GPU node labels)
+- [ ] Create `playbooks/site.yml` (main playbook)
+- [ ] Create `generate-inventory.py` script
+- [ ] Make script executable (`chmod +x`)
+- [ ] Document Ansible usage in `infrastructure/ansible/README.md`
+
+#### 3.5.2 Ansible Makefile Integration
+- [ ] Add `ansible-deps` target (install Galaxy dependencies)
+- [ ] Add `generate-inventory` target (create inventory from Terraform)
+- [ ] Add `ansible-configure` target (run playbooks)
+- [ ] Add `cluster` target (full deployment: Terraform + Ansible)
+- [ ] Update help text with new commands
+
+#### 3.5.3 K3s Cluster Deployment
+- [ ] Install Ansible dependencies (`make ansible-deps`)
+- [ ] Generate inventory (`make generate-inventory`)
+- [ ] Review inventory file (`infrastructure/ansible/inventory/hosts.yml`)
+- [ ] Run Ansible dry-run (`make ansible-check`)
+- [ ] Deploy K3s cluster (`make ansible-configure`)
+- [ ] Retrieve kubeconfig (automatic via playbook)
+
+#### 3.5.4 Cluster Validation
+- [ ] Set KUBECONFIG environment variable
+- [ ] Run `kubectl get nodes` (verify all nodes Ready)
+- [ ] Check system pods (`kubectl get pods -n kube-system`)
 - [ ] Test cluster DNS
-- [ ] Verify GPU visibility on agent node
+- [ ] Verify GPU node labels (`kubectl get node k3s-gpu-01 --show-labels`)
+- [ ] Run full health check (`make test`)
 
 ### Phase 4: K3s Configuration (NOT STARTED)
 
@@ -634,11 +663,12 @@ applications/<app-name>/
 - [ ] Stable Diffusion WebUI
 - [ ] Jupyter Lab (GPU-enabled)
 
-#### 5.4 GitOps Setup
-- [ ] Choose GitOps tool (FluxCD vs ArgoCD)
-- [ ] Deploy GitOps controller
-- [ ] Configure application sync
-- [ ] Set up automatic deployments
+#### 5.4 GitOps Setup (FluxCD)
+- [ ] Bootstrap Flux to GitHub repository
+- [ ] Create cluster manifests directory structure
+- [ ] Configure Flux to watch Git repository
+- [ ] Create HelmRelease resources for applications
+- [ ] Test Git-based deployment workflow
 
 ### Phase 6: Operations and Optimization (NOT STARTED)
 
