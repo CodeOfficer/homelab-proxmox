@@ -11,7 +11,8 @@
       "Bash(echo \"[2025-11-24 17:25:00] User: \"\"ok this is fantastic!!!! all 3 nodes have promox installed and i am logged into each of their web interfaces\"\"\n→ Response: Marked Phase 1.1 complete, created todo list for Phase 1.2 cluster configuration\")",
       "Bash(echo \"[2025-11-24 17:30:00] User: \"\"ok looks like it worked\"\" (showed cluster with all 3 nodes)\n→ Response: Verified cluster operational, marked Phase 1.2 complete, all nodes green and healthy\")",
       "Bash(ssh root@10.20.11.13 \"hostname && ip addr show && echo ''---BRIDGES---'' && ip link show type bridge && echo ''---ROUTES---'' && ip route\")",
-      "Bash(ssh:*)"
+      "Bash(ssh:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

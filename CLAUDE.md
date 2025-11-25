@@ -276,7 +276,7 @@ applications/<app-name>/
 
 ---
 
-## Current Status: Phase 1.3 Complete - Network Configuration Done
+## Current Status: Phase 1.4 Complete - Storage Configured (Synology Deferred)
 
 **Last Updated:** 2025-11-25
 
@@ -324,23 +324,28 @@ applications/<app-name>/
 - ✅ NTP synchronization verified (chrony active and synced)
 - ✅ Network configuration documented in docs/OPERATIONS.md
 
-### Ready for Phase 1.4: Storage Configuration
-**Current State:** Network fully configured and operational. All nodes can communicate, DNS resolving, time synchronized.
+### Phase 1.4: Storage Configuration ✅ PARTIAL COMPLETE (Synology Deferred)
+- ✅ UNAS Pro moved to VLAN 10 (10.20.10.20, nas.lab)
+- ✅ NFS storage mounted from UNAS (nas-vmstorage, 37TB)
+- ✅ Storage accessible from all three Proxmox nodes
+- ✅ Read/write access verified
+- ⏸️ Synology migration deferred to future session
+
+### Ready for Phase 1.5: GPU Passthrough Setup
+**Current State:** Storage configured and operational. Ready to configure GPU passthrough on pve-01 for AI/ML workloads.
 
 **Next Session Tasks:**
-1. Configure local-lvm storage on each node (VM disks)
-2. Mount NFS from UNAS Pro (nas.home.arpa) for ISOs and templates
-3. Mount NFS from Synology (synology.home.arpa) for VM backups
-4. Configure Proxmox backup schedule to Synology
-5. Test NFS mount performance and reliability
-6. Document storage paths in .envrc.example
+1. Enable IOMMU in GRUB on pve-01
+2. Load VFIO modules and blacklist nouveau driver
+3. Identify GPU PCI ID and IOMMU groups
+4. Create PCI device mapping in Proxmox
+5. Document GPU configuration for VM templates
 
 **Access Points:**
-- pve-01: https://10.20.11.11:8006 (GPU node)
-- pve-02: https://10.20.11.12:8006
-- pve-03: https://10.20.11.13:8006
-- Any node can manage entire cluster
-- SSH: `ssh root@10.20.11.11` (or .12/.13) - no password required
+- Proxmox Web: https://10.20.11.11:8006 (or .12/.13)
+- SSH: `ssh root@10.20.11.11` (or .12/.13)
+- UNAS Pro: https://10.20.10.20
+- NFS Storage: 10.20.10.20:/volume/.../VMStorage/.data
 
 ---
 
@@ -467,13 +472,15 @@ applications/<app-name>/
 - [ ] Test connectivity from Proxmox nodes to storage (nas, synology on VLAN 11) - deferred to Phase 1.4
 - [ ] Update /etc/hosts with cluster node names - deferred (not needed with DNS working)
 
-#### 1.4 Storage Configuration
-- [ ] Configure local-lvm storage on each node (VM disks)
-- [ ] Mount NFS from UNAS Pro (nas.home.arpa) for ISOs and templates
-- [ ] Mount NFS from Synology (synology.home.arpa) for VM backups
-- [ ] Configure Proxmox backup schedule to Synology
-- [ ] Test NFS mount performance and reliability
-- [ ] Document storage paths in .envrc.example
+#### 1.4 Storage Configuration ✅ PARTIAL COMPLETE
+- [x] Verify local-zfs storage on each node (VM disks) - already configured during install
+- [x] Move UNAS Pro to VLAN 10 (10.20.10.20/nas.lab)
+- [x] Mount NFS from UNAS Pro for ISOs, templates, and backups (nas-vmstorage)
+- [x] Test NFS read/write access and verify on all nodes
+- [x] Document storage configuration in docs/OPERATIONS.md
+- [ ] Move Synology to VLAN 10 (10.20.10.10) - deferred for future session
+- [ ] Mount NFS from Synology for additional backups - deferred
+- [ ] Configure Proxmox backup schedule - deferred to Phase 6
 
 #### 1.5 GPU Passthrough Setup (pve-01 only)
 - [ ] Enable IOMMU in GRUB (/etc/default/grub: intel_iommu=on iommu=pt)

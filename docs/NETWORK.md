@@ -25,21 +25,32 @@ The network uses multiple VLANs for proper segmentation:
 | `12`    | Personal            | `10.20.12.0/24`  | `10.20.12.1` | Personal devices and workstations         | No              |
 | `13`    | IoT                 | `10.20.13.0/24`  | `10.20.13.1` | IoT devices, Home Assistant targets       | Via K8s ingress |
 
-**Note:** Homelab infrastructure exclusively uses **VLAN 11 (VM-Servers)**. Other VLANs are for non-homelab purposes and remain unchanged.
+**Note:** Homelab infrastructure uses **VLAN 10 (Core-Infrastructure)** for storage devices and **VLAN 11 (VM-Servers)** for Proxmox nodes and VMs. Inter-VLAN routing enabled via Layer 3 switch. Other VLANs are for non-homelab purposes.
 
 ## IP Address Allocation
 
-### Infrastructure (10.20.11.1-10.20.11.30)
+### Core Infrastructure - VLAN 10 (10.20.10.0/24)
 
 | IP Address    | Hostname              | Description                    | Device Type       |
 | ------------- | --------------------- | ------------------------------ | ----------------- |
-| `10.20.11.1`  | `udm.home.arpa`       | UniFi Dream Machine Pro        | Gateway/Router    |
-| `10.20.11.2`  | `switch.home.arpa`    | USW-Enterprise-24-PoE          | Switch            |
-| `10.20.11.10` | `synology.home.arpa`  | Synology DS713+ (Backup NAS)   | Storage           |
+| `10.20.10.1`  | `udm.home.arpa`       | UniFi Dream Machine Pro        | Gateway/Router    |
+| `10.20.10.2`  | `switch.home.arpa`    | USW-Enterprise-24-PoE          | Switch            |
+| `10.20.10.10` | `synology.lab`        | Synology DS713+ (Backup NAS)   | Storage           |
+| `10.20.10.20` | `nas.lab`             | UNAS Pro (Primary NAS)         | Storage           |
+
+**Note:**
+- Storage devices on VLAN 10 per network design
+- DNS uses `.lab` suffix temporarily (UniFi limitation with nested subdomains)
+- **TODO:** Synology currently on legacy network, needs migration to 10.20.10.10
+
+### VM Servers - VLAN 11 (10.20.11.0/24)
+
+| IP Address    | Hostname              | Description                    | Device Type       |
+| ------------- | --------------------- | ------------------------------ | ----------------- |
+| `10.20.11.1`  | -                     | Gateway (routes to VLAN 10)    | Virtual Gateway   |
 | `10.20.11.11` | `pve-01.home.arpa`    | Proxmox Node 1 (GPU)           | Compute           |
 | `10.20.11.12` | `pve-02.home.arpa`    | Proxmox Node 2                 | Compute           |
 | `10.20.11.13` | `pve-03.home.arpa`    | Proxmox Node 3                 | Compute           |
-| `10.20.11.20` | `nas.home.arpa`       | UNAS Pro (Primary NAS)         | Storage           |
 | `10.20.11.21` | `kvm-01.home.arpa`    | JetKVM for pve-01              | Out-of-Band Mgmt  |
 | `10.20.11.22` | `kvm-02.home.arpa`    | JetKVM for pve-02              | Out-of-Band Mgmt  |
 | `10.20.11.23` | `kvm-03.home.arpa`    | JetKVM for pve-03              | Out-of-Band Mgmt  |

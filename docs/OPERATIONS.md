@@ -132,7 +132,54 @@ df -h
 # Check ZFS pools (if using ZFS)
 zpool status
 zpool list
+
+# Check NFS mounts
+df -h | grep nfs
+mount | grep nfs
 ```
+
+### Storage Configuration
+
+**Local Storage (each node):**
+- **local-zfs**: VM disks (ZFS pool, ~900GB per node)
+- **local**: ISOs, templates, backups (directory storage)
+
+**Network Storage (NFS from UNAS Pro):**
+- **nas-vmstorage**: Shared storage for ISOs, templates, backups
+  - Server: 10.20.10.20 (nas.lab)
+  - Export: `/volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/VMStorage/.data`
+  - Mount: `/mnt/pve/nas-vmstorage`
+  - Capacity: 37TB total, ~31TB available
+  - Content types: ISO images, VM templates, backups
+  - Available on all three nodes
+
+### NFS Storage Operations
+
+**Test NFS connectivity:**
+```bash
+# Show available NFS exports from UNAS
+showmount -e 10.20.10.20
+
+# Test mount manually
+mount -t nfs 10.20.10.20:/volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/VMStorage/.data /mnt/test
+```
+
+**Add NFS storage (if removed):**
+```bash
+pvesm add nfs nas-vmstorage \
+  --path /mnt/pve/nas-vmstorage \
+  --server 10.20.10.20 \
+  --export /volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/VMStorage/.data \
+  --content iso,vztmpl,backup \
+  --nodes pve-01,pve-02,pve-03
+```
+
+**Remove NFS storage:**
+```bash
+pvesm remove nas-vmstorage
+```
+
+**Note:** UNAS Pro is on VLAN 10 (Core-Infrastructure). Proxmox nodes on VLAN 11 access it via Layer 3 routing through the switch.
 
 ### System Updates
 
