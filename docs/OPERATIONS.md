@@ -181,6 +181,150 @@ pvesm remove nas-vmstorage
 
 **Note:** UNAS Pro is on VLAN 10 (Core-Infrastructure). Proxmox nodes on VLAN 11 access it via Layer 3 routing through the switch.
 
+---
+
+## GPU Passthrough Configuration (pve-01 only)
+
+### eGPU Hardware Details
+
+**Device:** NVIDIA RTX 4000 Ada Generation
+**Connection:** Thunderbolt 4 via Sonnet Breakaway Box Developer Edition
+**PCI Address:** 0000:2f:00.0 (GPU), 0000:2f:00.1 (Audio)
+**PCI IDs:** 10de:27b2 (GPU), 10de:22bc (Audio)
+**IOMMU Group:** 17 (GPU and audio controller isolated together)
+
+### Configuration Files
+
+**GRUB Configuration (`/etc/default/grub`):**
+```bash
+GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt"
+```
+
+**VFIO Modules (`/etc/modules-load.d/vfio.conf`):**
+```
+vfio
+vfio_iommu_type1
+vfio_pci
+vfio_virqfd
+```
+
+**Nouveau Blacklist (`/etc/modprobe.d/blacklist-nouveau.conf`):**
+```
+blacklist nouveau
+options nouveau modeset=0
+```
+
+**Thunderbolt Auto-Authorization (`/etc/udev/rules.d/99-thunderbolt-egpu.rules`):**
+```
+# Auto-authorize Sonnet Breakaway Box eGPU enclosure
+ACTION=="add", SUBSYSTEM=="thunderbolt", ATTR{device_name}=="Breakaway Box Developer Edition", ATTR{authorized}=="0", ATTR{authorized}="1"
+```
+
+### Proxmox PCI Device Mapping
+
+**Mapping ID:** `rtx4000ada`
+**Description:** NVIDIA RTX 4000 Ada Generation (eGPU via Thunderbolt)
+
+**View mapping:**
+```bash
+pvesh get /cluster/mapping/pci --output-format json-pretty
+```
+
+### Verifying GPU Configuration
+
+**Check IOMMU is enabled:**
+```bash
+dmesg | grep -i iommu | head -20
+# Should show: "DMAR-IR: IOAPIC" and "iommu: Default domain type: Translated"
+```
+
+**Check VFIO modules loaded:**
+```bash
+lsmod | grep vfio
+# Should show: vfio_pci, vfio_iommu_type1, vfio, etc.
+```
+
+**Check nouveau driver is NOT loaded:**
+```bash
+lsmod | grep nouveau
+# Should return nothing
+```
+
+**Check Thunderbolt authorization:**
+```bash
+cat /sys/bus/thunderbolt/devices/1-1/authorized
+# Should return: 1
+cat /sys/bus/thunderbolt/devices/1-1/device_name
+# Should return: Breakaway Box Developer Edition
+```
+
+**Verify GPU is detected:**
+```bash
+lspci -nn | grep -i nvidia
+# Should show:
+# 2f:00.0 VGA compatible controller [0300]: NVIDIA Corporation AD104GL [RTX 4000 Ada Generation] [10de:27b2]
+# 2f:00.1 Audio device [0403]: NVIDIA Corporation AD104 High Definition Audio Controller [10de:22bc]
+```
+
+**Check IOMMU groups:**
+```bash
+for d in /sys/kernel/iommu_groups/*/devices/*; do
+    n=${d#*/iommu_groups/*}; n=${n%%/*}
+    printf 'IOMMU Group %s ' "$n"
+    lspci -nns "${d##*/}"
+done | grep 2f:00
+# Should show GPU and audio in IOMMU Group 17
+```
+
+### Using GPU in VMs
+
+**Option 1: Via PCI Device Mapping (Recommended)**
+- In VM Hardware tab, click "Add" → "PCI Device"
+- Select "Mapping: rtx4000ada"
+- Enable "All Functions" to include audio controller
+- Enable "Primary GPU" if using for display output
+- Enable "PCI-Express" for better performance
+
+**Option 2: Via CLI**
+```bash
+# Add GPU passthrough to VM (replace VMID with actual VM ID)
+qm set VMID -hostpci0 mapping=rtx4000ada,pcie=1
+```
+
+### Troubleshooting
+
+**GPU not detected after reboot:**
+1. Check Thunderbolt enclosure is powered on
+2. Verify Thunderbolt authorization:
+   ```bash
+   cat /sys/bus/thunderbolt/devices/1-1/authorized
+   # If 0, manually authorize:
+   echo 1 > /sys/bus/thunderbolt/devices/1-1/authorized
+   ```
+3. Check GPU appears in lspci:
+   ```bash
+   lspci -nn | grep -i nvidia
+   ```
+
+**VM fails to start with GPU:**
+1. Ensure UEFI BIOS is selected (not SeaBIOS)
+2. Enable "Primary GPU" in PCI device settings
+3. Check VM logs: `qm showcmd VMID`
+4. Verify IOMMU group isolation
+
+**Performance issues:**
+- Ensure "PCI-Express" is enabled in VM hardware
+- Use virtio drivers for disk and network
+- Consider CPU pinning for better performance
+
+### Important Notes
+
+- **eGPU Connection:** GPU must remain connected via Thunderbolt during VM operation
+- **Hot-plug:** Thunderbolt eGPU supports hot-plug, but not recommended during VM operation
+- **Power:** Ensure Sonnet Breakaway Box is powered on before booting pve-01
+- **Boot Order:** GPU must be authorized before VM starts (automated via udev rule)
+- **Driver Installation:** Install NVIDIA drivers inside the VM, not on Proxmox host
+
 ### System Updates
 
 ```bash

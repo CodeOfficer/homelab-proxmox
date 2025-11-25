@@ -276,7 +276,7 @@ applications/<app-name>/
 
 ---
 
-## Current Status: Phase 1.4 Complete - Storage Configured (Synology Deferred)
+## Current Status: Phase 1.5 Complete - GPU Passthrough Configured
 
 **Last Updated:** 2025-11-25
 
@@ -331,15 +331,20 @@ applications/<app-name>/
 - ✅ Read/write access verified
 - ⏸️ Synology migration deferred to future session
 
-### Ready for Phase 1.5: GPU Passthrough Setup
-**Current State:** Storage configured and operational. Ready to configure GPU passthrough on pve-01 for AI/ML workloads.
+### Phase 1.5: GPU Passthrough Setup ✅ COMPLETE
+- ✅ IOMMU enabled in GRUB on pve-01 (intel_iommu=on iommu=pt)
+- ✅ VFIO modules configured and loaded
+- ✅ Nouveau driver blacklisted
+- ✅ Thunderbolt eGPU enclosure detected (Sonnet Breakaway Box)
+- ✅ GPU identified: RTX 4000 Ada (PCI ID: 10de:27b2, Address: 2f:00.0)
+- ✅ IOMMU Group 17 verified (GPU + audio isolated)
+- ✅ Thunderbolt auto-authorization configured via udev
+- ✅ PCI device mapping created (ID: rtx4000ada)
+- ✅ Configuration documented in docs/OPERATIONS.md
+- ✅ Hardware specs updated in docs/HARDWARE.md
 
-**Next Session Tasks:**
-1. Enable IOMMU in GRUB on pve-01
-2. Load VFIO modules and blacklist nouveau driver
-3. Identify GPU PCI ID and IOMMU groups
-4. Create PCI device mapping in Proxmox
-5. Document GPU configuration for VM templates
+### Ready for Phase 2: VM Template Creation
+**Current State:** Foundation complete. All Proxmox nodes operational, storage configured, GPU passthrough ready. Ready to create Ubuntu VM templates for K3s deployment.
 
 **Access Points:**
 - Proxmox Web: https://10.20.11.11:8006 (or .12/.13)
@@ -482,15 +487,18 @@ applications/<app-name>/
 - [ ] Mount NFS from Synology for additional backups - deferred
 - [ ] Configure Proxmox backup schedule - deferred to Phase 6
 
-#### 1.5 GPU Passthrough Setup (pve-01 only)
-- [ ] Enable IOMMU in GRUB (/etc/default/grub: intel_iommu=on iommu=pt)
-- [ ] Update GRUB and reboot
-- [ ] Load VFIO modules (/etc/modules: vfio vfio_iommu_type1 vfio_pci vfio_virqfd)
-- [ ] Blacklist nouveau driver (/etc/modprobe.d/blacklist.conf)
-- [ ] Run `lspci -nnk` to identify GPU PCI ID
-- [ ] Check IOMMU groups (`find /sys/kernel/iommu_groups/ -type l`)
-- [ ] Create PCI device mapping in Proxmox web UI
-- [ ] Document GPU PCI ID in notes for VM template creation
+#### 1.5 GPU Passthrough Setup (pve-01 only) ✅ COMPLETE
+- [x] Enable IOMMU in GRUB (/etc/default/grub: intel_iommu=on iommu=pt)
+- [x] Update GRUB and reboot
+- [x] Load VFIO modules (/etc/modules-load.d/vfio.conf)
+- [x] Blacklist nouveau driver (/etc/modprobe.d/blacklist-nouveau.conf)
+- [x] Configure Thunderbolt auto-authorization (/etc/udev/rules.d/99-thunderbolt-egpu.rules)
+- [x] Authorize Thunderbolt eGPU enclosure (Sonnet Breakaway Box)
+- [x] Identify GPU PCI ID (10de:27b2) and address (2f:00.0)
+- [x] Verify IOMMU Group 17 isolation (GPU + audio)
+- [x] Create PCI device mapping in Proxmox (rtx4000ada)
+- [x] Document configuration in docs/OPERATIONS.md
+- [x] Update hardware specs in docs/HARDWARE.md
 
 #### 1.6 API and Authentication
 - [ ] Create Terraform API token in Proxmox (Datacenter > Permissions > API Tokens)

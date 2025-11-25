@@ -23,12 +23,13 @@ There are 3 primary compute nodes in this cluster, all identical Minisforum MS-0
 - **RAM**: 96 GB DDR5-4800 (ECC supported)
 - **Storage**: Kingston NV2 1TB M.2 2280 NVMe (PCIe 4.0 Gen 4x4, up to 3500 MB/s) - Model: SNV2S/1000G
 - **Network**: Dual Intel 2.5GbE NICs
-- **Expansion**: PCIe 4.0 x16 slot (node-01 uses for RTX 4000 Ada)
+- **Expansion**: PCIe 4.0 x16 slot, Thunderbolt 4 ports
 - **Form Factor**: Compact workstation with excellent cooling
 - **Management**: Each node has dedicated JetKVM for out-of-band access
 
 ### GPU Specifications: NVIDIA RTX 4000 Ada (node-01 only)
 
+- **Connection**: External GPU via Thunderbolt 4 (Sonnet Breakaway Box Developer Edition)
 - **Architecture**: Ada Lovelace
 - **CUDA Cores**: 6,144
 - **Tensor Cores**: 192 (4th gen)
@@ -36,10 +37,13 @@ There are 3 primary compute nodes in this cluster, all identical Minisforum MS-0
 - **VRAM**: 20 GB GDDR6 with ECC
 - **Memory Bandwidth**: 360 GB/s
 - **TDP**: 130W
-- **Interface**: PCIe Gen 4 x16
+- **Interface**: PCIe Gen 4 x16 (via Thunderbolt 4)
+- **PCI ID**: 10de:27b2
+- **IOMMU Group**: 17 (isolated with audio controller)
 - **Display**: 4x Mini DisplayPort 1.4a
 - **Compute**: CUDA 8.9, DirectX 12 Ultimate
 - **Use Cases**: AI inference, LLM hosting, computer vision, GPU compute
+- **Note**: Requires Thunderbolt authorization on boot (automated via udev rule)
 
 ## Storage
 
