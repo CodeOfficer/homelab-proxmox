@@ -276,9 +276,9 @@ applications/<app-name>/
 
 ---
 
-## Current Status: Phase 1.2 Complete - Proxmox Cluster Operational
+## Current Status: Phase 1.3 Complete - Network Configuration Done
 
-**Last Updated:** 2025-11-24
+**Last Updated:** 2025-11-25
 
 ### Phase 0: Information Gathering ✅ COMPLETE
 - ✅ Hardware specifications fully documented in `docs/HARDWARE.md`
@@ -315,21 +315,32 @@ applications/<app-name>/
 - ✅ All nodes showing online (green) in cluster view
 - ✅ Centralized management now available from any node
 
-### Ready for Phase 1.3: Network Configuration
-**Current State:** 3-node cluster operational and stable. All nodes accessible via web interface.
+### Phase 1.3: Network Configuration ✅ COMPLETE
+- ✅ SSH key authentication configured on all nodes (password-less access)
+- ✅ Network bridges verified (vmbr0 on all nodes)
+- ✅ VLAN-aware enabled on all bridges (bridge-vlan-aware yes)
+- ✅ Connectivity tested between all nodes (0% packet loss)
+- ✅ DNS resolution confirmed (10.20.11.1 via UDM Pro, search domain: home.arpa)
+- ✅ NTP synchronization verified (chrony active and synced)
+- ✅ Network configuration documented in docs/OPERATIONS.md
+
+### Ready for Phase 1.4: Storage Configuration
+**Current State:** Network fully configured and operational. All nodes can communicate, DNS resolving, time synchronized.
 
 **Next Session Tasks:**
-1. Verify current network bridge configuration (vmbr0 likely already configured correctly)
-2. Test connectivity between all three nodes
-3. Configure DNS resolution if needed
-4. Set up NTP time synchronization
-5. Document any network adjustments needed for VLAN 11
+1. Configure local-lvm storage on each node (VM disks)
+2. Mount NFS from UNAS Pro (nas.home.arpa) for ISOs and templates
+3. Mount NFS from Synology (synology.home.arpa) for VM backups
+4. Configure Proxmox backup schedule to Synology
+5. Test NFS mount performance and reliability
+6. Document storage paths in .envrc.example
 
 **Access Points:**
 - pve-01: https://10.20.11.11:8006 (GPU node)
 - pve-02: https://10.20.11.12:8006
 - pve-03: https://10.20.11.13:8006
 - Any node can manage entire cluster
+- SSH: `ssh root@10.20.11.11` (or .12/.13) - no password required
 
 ---
 
@@ -445,15 +456,16 @@ applications/<app-name>/
 - [x] Set up cluster resource synchronization (automatic)
 - [ ] Test cluster functionality (VM migration, HA) - deferred to later phases
 
-#### 1.3 Network Configuration
-- [ ] Configure VLAN-aware bridge on all nodes (vmbr0 with VLAN 11 tag)
-- [ ] Verify Proxmox host management on VLAN 11 (10.20.11.0/24)
-- [ ] Test VLAN 11 connectivity between all three nodes
-- [ ] Configure DNS resolution (UDM Pro at 10.20.11.1)
-- [ ] Test connectivity from Proxmox nodes to storage (nas, synology on VLAN 11)
-- [ ] Configure NTP time synchronization
-- [ ] Update /etc/hosts with cluster node names
-- [ ] Document VLAN bridge configuration for VM deployments
+#### 1.3 Network Configuration ✅ COMPLETE
+- [x] Configure VLAN-aware bridge on all nodes (vmbr0 with VLAN 11 tag)
+- [x] Verify Proxmox host management on VLAN 11 (10.20.11.0/24)
+- [x] Test VLAN 11 connectivity between all three nodes
+- [x] Configure DNS resolution (UDM Pro at 10.20.11.1)
+- [x] Configure NTP time synchronization (chrony active and synced)
+- [x] Configure SSH key authentication on all nodes
+- [x] Document network configuration in docs/OPERATIONS.md
+- [ ] Test connectivity from Proxmox nodes to storage (nas, synology on VLAN 11) - deferred to Phase 1.4
+- [ ] Update /etc/hosts with cluster node names - deferred (not needed with DNS working)
 
 #### 1.4 Storage Configuration
 - [ ] Configure local-lvm storage on each node (VM disks)
