@@ -278,7 +278,7 @@ applications/<app-name>/
 
 ## Current Status: Phase 1 In Progress - Prerequisites Nearly Complete
 
-**Last Updated:** 2025-11-23
+**Last Updated:** 2025-11-24
 
 ### Phase 0: Information Gathering ✅ COMPLETE
 - ✅ Hardware specifications fully documented in `docs/HARDWARE.md`
@@ -293,13 +293,14 @@ applications/<app-name>/
 - ✅ Storage strategy decided (UNAS Pro primary, Synology backups)
 
 ### Phase 1.0 Prerequisites Progress ⏭️
-- ✅ Proxmox VE 9.1 installation media created
+- ✅ Proxmox VE 9.1 USB installation media created (Balena Etcher)
 - ✅ DNS migrated to Cloudflare (propagating)
-- ⏳ Verify JetKVM access to all three nodes
+- ✅ JetKVM access verified (10.20.11.21-23) - using for monitoring/control, not virtual media
+- ✅ USB installation approach confirmed (see Architecture Decision: Installation Method)
 - ⏳ Backup any critical data from XCP-ng VMs (if needed)
 
 ### Ready for Phase 1.1: Proxmox Installation
-Once JetKVM access is verified and any critical data backed up, ready to begin Proxmox installation on all three nodes.
+Once any critical data is backed up, ready to begin Proxmox installation using USB thumb drive on all three nodes. JetKVM will be used to monitor boot process and access BIOS.
 
 ---
 
@@ -358,7 +359,11 @@ Once JetKVM access is verified and any critical data backed up, ready to begin P
   - DNS propagation in progress (0-48 hours)
   - Email (Google Workspace) and website (GitHub Pages) verified working
   - DKIM to be added after 24-72 hour Google Workspace waiting period
-- [ ] Verify JetKVM access to all three nodes
+- [x] Verify JetKVM access to all three nodes (10.20.11.21-23)
+  - JetKVM will be used for monitoring boot process and BIOS access
+  - NOT using JetKVM virtual media (loses power during MS-01 reboot)
+  - Installation via USB thumb drive instead (see Installation Method decision)
+- [x] Confirm physical access to MS-01 nodes for USB installation
 - [ ] Backup any critical data from XCP-ng VMs (if needed)
 
 #### 1.0.1 Post-Migration Follow-up (Do After DNS Propagates)
@@ -382,7 +387,16 @@ Once JetKVM access is verified and any critical data backed up, ready to begin P
 - [ ] Test email deliverability and check spam score (mail-tester.com)
 - [ ] Create Cloudflare API token for cert-manager (needed for Phase 4)
 
-#### 1.1 Proxmox Installation
+#### 1.1 Proxmox Installation (USB Thumb Drive Method)
+**Installation Process:**
+1. Plug USB thumb drive into MS-01 node
+2. Use JetKVM to watch boot screen and select USB boot device
+3. Start Proxmox installation
+4. JetKVM may disconnect during reboots (expected - powered by node)
+5. Reconnect JetKVM after reboot to verify installation complete
+6. Remove USB, move to next node, repeat
+
+**Tasks:**
 - [ ] Wipe existing XCP-ng from all three nodes
 - [ ] Install Proxmox VE 9.1 on pve-01 (10.20.11.11, GPU node)
 - [ ] Install Proxmox VE 9.1 on pve-02 (10.20.11.12)
@@ -688,6 +702,23 @@ Once JetKVM access is verified and any critical data backed up, ready to begin P
 - Control plane can handle moderate workload
 - GPU node sized for AI/ML workloads
 - Can adjust resources later if needed
+
+### Installation Method
+**Decision:** Use USB thumb drive for Proxmox installation (not JetKVM virtual media)
+
+**Rationale:**
+- JetKVM is powered by the MS-01 nodes it manages
+- When MS-01 reboots during installation, JetKVM loses power
+- Virtual media disconnects when JetKVM loses power → installation fails
+- USB thumb drive persists through reboots (physical connection to node)
+- JetKVM still valuable for monitoring boot process, accessing BIOS, and post-install management
+- Trade-off: Need physical access to plug in USB, but installation is reliable
+
+**Implementation:**
+- USB created with Balena Etcher on macOS
+- Install on one node at a time (move USB between nodes)
+- Use JetKVM to monitor and control boot process
+- JetKVM disconnects during reboot are expected and harmless
 
 ---
 
