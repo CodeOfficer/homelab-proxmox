@@ -4,7 +4,12 @@
 *.tfstate.*
 *.tfvars
 *.tfplan
+tfplan
 .terraform.lock.hcl
+
+# Packer
+downloaded_iso_path/
+packer_cache/
 
 # Environment files
 .envrc
