@@ -6,7 +6,7 @@ This directory contains Packer configuration to build an Ubuntu 24.04 LTS VM tem
 
 **Template Name:** `ubuntu-2404-k3s-template`
 **VM ID:** 9000
-**Base Image:** Ubuntu 24.04 LTS Cloud Image
+**Base Image:** Ubuntu 24.04.1 Server ISO (autoinstall)
 **Builder:** Proxmox ISO
 
 ## What Gets Installed
@@ -76,17 +76,16 @@ packer fmt ubuntu-k3s.pkr.hcl
 
 ## Build Process
 
-1. **Download Ubuntu cloud image** from canonical
-2. **Create VM** (ID 9000) on specified Proxmox node
-3. **Configure hardware:** UEFI, 2 CPU, 2GB RAM, 20GB disk
-4. **Enable cloud-init** for future customization
-5. **Run provisioning script:**
+1. **Boot Ubuntu Server ISO** with autoinstall configuration
+2. **Create VM** (ID 9000) on pve-01 with UEFI, 2 CPU, 4GB RAM, 20GB disk
+3. **Automated OS install** via cloud-init autoinstall
+4. **Run provisioning script:**
    - Update system packages
    - Install qemu-guest-agent and essentials
-   - Configure K3s prerequisites
-   - Optimize system settings
-6. **Clean up** cloud-init data, logs, caches
-7. **Convert to template** in Proxmox
+   - Configure K3s prerequisites (kernel modules, sysctl)
+   - Optimize system settings (disable swap, increase limits)
+5. **Clean up** cloud-init data, logs, machine-id
+6. **Convert to template** in Proxmox
 
 ## Template Specifications
 
@@ -94,8 +93,8 @@ packer fmt ubuntu-k3s.pkr.hcl
 |---------|-------|
 | BIOS | OVMF (UEFI) |
 | CPU | 2 cores, 1 socket |
-| Memory | 2048 MB |
-| Disk | 20GB (virtio-scsi, thin provisioned) |
+| Memory | 4096 MB |
+| Disk | 20GB (virtio-scsi-single, raw) |
 | Network | virtio on vmbr0 |
 | Cloud-init | Enabled |
 | QEMU Agent | Enabled |
@@ -185,6 +184,6 @@ ssh root@10.20.11.11 "qm list | grep 9000"
 ## Next Steps
 
 After template is created:
-1. Proceed to Phase 3: Terraform Infrastructure
-2. Run `terraform init` and `terraform plan`
-3. Deploy K3s cluster VMs from template
+1. Run `make apply` to provision VMs from template
+2. Run `make ansible-k3s` to install K3s cluster
+3. Run `make kubeconfig` to fetch cluster credentials

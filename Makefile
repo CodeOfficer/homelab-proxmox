@@ -3,7 +3,7 @@
 .PHONY: logs status kubectl ssh-server ssh-agent
 .PHONY: template template-validate template-init template-clean
 .PHONY: iso-upload iso-check
-.PHONY: ansible-deps ansible-inventory ansible-k3s kubeconfig
+.PHONY: ansible-deps ansible-k3s kubeconfig
 
 # =============================================================================
 # Homelab Proxmox Infrastructure Management
@@ -208,17 +208,7 @@ ansible-deps: ## Install Ansible dependencies (k3s-ansible role)
 	$(DIRENV) ansible-galaxy install -r $(ANSIBLE_DIR)/requirements.yml
 	@echo "$(GREEN)Ansible dependencies installed!$(NC)"
 
-ansible-inventory: ## Generate Ansible inventory from Terraform outputs
-	@echo "$(BLUE)Generating Ansible inventory...$(NC)"
-	@if [ ! -f "$(TF_DIR)/terraform.tfstate" ]; then \
-		echo "$(RED)Error: Terraform state not found. Run 'make apply' first.$(NC)"; \
-		exit 1; \
-	fi
-	$(DIRENV) terraform -chdir=$(TF_DIR) output -json ansible_inventory > $(ANSIBLE_DIR)/inventory.json
-	$(ANSIBLE_DIR)/scripts/generate-inventory.sh
-	@echo "$(GREEN)Inventory generated: $(ANSIBLE_DIR)/inventory/hosts.yml$(NC)"
-
-ansible-k3s: ansible-deps ansible-inventory ## Install K3s on VMs using Ansible
+ansible-k3s: ansible-deps ## Install K3s on VMs using Ansible
 	@echo "$(BLUE)Installing K3s cluster...$(NC)"
 	$(DIRENV) ansible-playbook -i $(ANSIBLE_DIR)/inventory/hosts.yml $(ANSIBLE_DIR)/playbooks/k3s-install.yml
 	@echo "$(GREEN)K3s cluster installed!$(NC)"

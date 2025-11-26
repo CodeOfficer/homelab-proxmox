@@ -67,7 +67,7 @@ variable "ssh_password" {
 variable "storage_pool" {
   type        = string
   description = "Proxmox storage pool for VM disks"
-  default     = "local-lvm"
+  default     = "local-zfs"
 }
 
 variable "iso_storage_pool" {

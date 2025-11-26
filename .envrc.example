@@ -43,7 +43,7 @@ export PKR_VAR_proxmox_node="pve-01"
 export PKR_VAR_template_name="ubuntu-2404-k3s-template"
 export PKR_VAR_vm_id="9000"
 export PKR_VAR_ssh_password="ubuntu"  # Temporary password for template build
-export PKR_VAR_storage_pool="local-lvm"
+export PKR_VAR_storage_pool="local-zfs"
 export PKR_VAR_iso_storage_pool="local"
 
 # -----------------------------------------------------------------------------
@@ -76,13 +76,15 @@ export TF_VAR_search_domain="home.arpa"
 # -----------------------------------------------------------------------------
 # Storage Configuration
 # -----------------------------------------------------------------------------
-export TF_VAR_storage_pool="local-lvm"
+# Available storage pools:
+#   - local-zfs: Fast local NVMe ZFS (~950GB) - for VM disks, templates
+#   - nas-vmstorage: NFS from UNAS Pro (~37TB) - for backups, shared storage
+export TF_VAR_storage_pool="local-zfs"
 
 # -----------------------------------------------------------------------------
 # K3s Server Nodes (Control Plane)
 # -----------------------------------------------------------------------------
-# Define 2 control plane nodes on pve-02 and pve-03
-# Using VLAN 11 (VM-Servers) from docs/NETWORK.md
+# 2 control plane nodes on pve-02 and pve-03 (VLAN 11)
 export TF_VAR_k3s_server_nodes='[
   {
     "name": "k3s-cp-01",
@@ -92,8 +94,7 @@ export TF_VAR_k3s_server_nodes='[
     "gateway": "10.20.11.1",
     "cpu_cores": 4,
     "memory": 8192,
-    "disk_size": "50G",
-    "vlan_tag": 11
+    "disk_size": "50G"
   },
   {
     "name": "k3s-cp-02",
@@ -103,16 +104,14 @@ export TF_VAR_k3s_server_nodes='[
     "gateway": "10.20.11.1",
     "cpu_cores": 4,
     "memory": 8192,
-    "disk_size": "50G",
-    "vlan_tag": 11
+    "disk_size": "50G"
   }
 ]'
 
 # -----------------------------------------------------------------------------
 # K3s Agent Nodes (Workers)
 # -----------------------------------------------------------------------------
-# Define 1 worker node on pve-01 with GPU passthrough
-# Using VLAN 11 (VM-Servers) from docs/NETWORK.md
+# 1 GPU worker node on pve-01 (VLAN 11)
 export TF_VAR_k3s_agent_nodes='[
   {
     "name": "k3s-gpu-01",
@@ -123,7 +122,6 @@ export TF_VAR_k3s_agent_nodes='[
     "cpu_cores": 8,
     "memory": 16384,
     "disk_size": "100G",
-    "vlan_tag": 11,
     "gpu_passthrough": true
   }
 ]'

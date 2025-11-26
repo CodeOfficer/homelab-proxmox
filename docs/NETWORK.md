@@ -106,7 +106,6 @@ grafana.lab.codeofficer.com        A  10.20.11.203
 
 ### Firewall
 - **Device**: UDM Pro
-- **Configuration**: TBD (Phase 1)
 - **VPN Access**: WireGuard/L2TP for remote access
 
 ### NFS/SMB
@@ -170,15 +169,13 @@ K3s Cluster
 
 ## Proxmox VLAN Configuration
 
-Proxmox nodes must be configured for VLAN awareness:
+All Proxmox nodes configured with VLAN-aware networking:
 
-**Bridge Configuration:**
-- Create VLAN-aware bridge (vmbr0)
-- Tag VLAN 11 for VM network
+**Bridge Configuration (vmbr0):**
+- VLAN-aware bridge on all nodes
+- VLAN 11 tagged for VM network
 - Proxmox host management on VLAN 11
-- VMs can be assigned to VLAN 11 (or other VLANs if needed)
-
-**Phase 1 Task:** Configure VLAN-aware Linux bridge on all Proxmox nodes during installation.
+- VMs assigned to VLAN 11 via cloud-init
 
 ## Notes
 

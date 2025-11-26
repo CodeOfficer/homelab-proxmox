@@ -50,7 +50,7 @@ variable "k3s_cluster_domain" {
 variable "vm_template_name" {
   description = "Name of the VM template to clone"
   type        = string
-  default     = "ubuntu-2404-cloud-init"
+  default     = "ubuntu-2404-k3s-template"
 }
 
 variable "vm_ssh_user" {
@@ -108,7 +108,7 @@ variable "k3s_agent_nodes" {
 variable "dns_servers" {
   description = "List of DNS servers"
   type        = list(string)
-  default     = ["10.10.10.1"] # UDM as DNS
+  default     = ["10.20.11.1"] # UDM Pro as DNS
 }
 
 variable "search_domain" {
@@ -121,7 +121,7 @@ variable "search_domain" {
 variable "storage_pool" {
   description = "Proxmox storage pool for VM disks"
   type        = string
-  default     = "local-lvm"
+  default     = "local-zfs"
 }
 
 # VM Template

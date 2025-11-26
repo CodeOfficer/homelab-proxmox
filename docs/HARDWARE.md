@@ -6,11 +6,11 @@ This document outlines the physical hardware used in the homelab.
 
 There are 3 primary compute nodes in this cluster, all identical Minisforum MS-01 Workstations.
 
-| Hostname            | Make/Model      | CPU                    | RAM   | Storage    | GPU                   | Management | Purpose              |
-| ------------------- | --------------- | ---------------------- | ----- | ---------- | --------------------- | ---------- | -------------------- |
-| `pve-node-01`       | Minisforum MS-01| Intel i9-12900H (14C/20T) | 96 GB | 1TB NVMe   | NVIDIA RTX 4000 ADA   | JetKVM     | AI/ML Workloads, GPU VMs |
-| `pve-node-02`       | Minisforum MS-01| Intel i9-12900H (14C/20T) | 96 GB | 1TB NVMe   | —                     | JetKVM     | k3s Control Plane    |
-| `pve-node-03`       | Minisforum MS-01| Intel i9-12900H (14C/20T) | 96 GB | 1TB NVMe   | —                     | JetKVM     | k3s Control Plane    |
+| Hostname   | Make/Model       | CPU                       | RAM   | Storage    | GPU                 | Management | Purpose              |
+| ---------- | ---------------- | ------------------------- | ----- | ---------- | ------------------- | ---------- | -------------------- |
+| `pve-01`   | Minisforum MS-01 | Intel i9-12900H (14C/20T) | 96 GB | 1TB NVMe   | NVIDIA RTX 4000 Ada | JetKVM     | GPU Worker Node      |
+| `pve-02`   | Minisforum MS-01 | Intel i9-12900H (14C/20T) | 96 GB | 1TB NVMe   | —                   | JetKVM     | K3s Control Plane    |
+| `pve-03`   | Minisforum MS-01 | Intel i9-12900H (14C/20T) | 96 GB | 1TB NVMe   | —                   | JetKVM     | K3s Control Plane    |
 
 ### Detailed Specifications: Minisforum MS-01
 
@@ -27,7 +27,7 @@ There are 3 primary compute nodes in this cluster, all identical Minisforum MS-0
 - **Form Factor**: Compact workstation with excellent cooling
 - **Management**: Each node has dedicated JetKVM for out-of-band access
 
-### GPU Specifications: NVIDIA RTX 4000 Ada (node-01 only)
+### GPU Specifications: NVIDIA RTX 4000 Ada (pve-01 only)
 
 - **Connection**: External GPU via Thunderbolt 4 (Sonnet Breakaway Box Developer Edition)
 - **Architecture**: Ada Lovelace

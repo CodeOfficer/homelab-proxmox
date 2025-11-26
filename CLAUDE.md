@@ -109,41 +109,18 @@ make test                     # Cluster health checks
 
 ## Completed Phases
 
-### Phase 0: Information Gathering
-All hardware, network, and software documented in `docs/`.
+| Phase | Description | Key Artifacts |
+|-------|-------------|---------------|
+| 0 | Information gathering | `docs/HARDWARE.md`, `docs/NETWORK.md`, `docs/SOFTWARE.md` |
+| 1 | Proxmox foundation | 3-node cluster, NFS storage, GPU passthrough on pve-01 |
+| 2 | VM template | `ubuntu-2404-k3s-template` (VMID 9000) via Packer |
+| 3 | K3s cluster | 2 control plane nodes (k3s-cp-01, k3s-cp-02) with embedded etcd |
+| 3.5 | GPU worker | k3s-gpu-01 with RTX 4000 Ada, NVIDIA driver/toolkit |
 
-### Phase 1: Proxmox Foundation
-- Proxmox VE 9.1 on all 3 nodes (pve-01/02/03)
-- Cluster "homelab-cluster" formed
-- VLAN-aware networking configured
-- NFS storage mounted (nas-vmstorage, 37TB)
-- GPU passthrough configured (RTX 4000 Ada on pve-01)
-- API tokens created
-
-### Phase 2: VM Template
-- Packer configuration: `infrastructure/packer/ubuntu-k3s.pkr.hcl`
-- Template: `ubuntu-2404-k3s-template` (VMID 9000)
-- Ubuntu 24.04 Server with autoinstall
-- Pre-configured: cloud-init, qemu-guest-agent, K3s prerequisites
-
-### Phase 3: K3s Cluster
-- K3s v1.33.6+k3s1 installed via official script
-- 2 control plane nodes with embedded etcd:
-  - k3s-cp-01 (VM 200) at 10.20.11.80 on pve-02
-  - k3s-cp-02 (VM 201) at 10.20.11.81 on pve-03
-- System components running: CoreDNS, metrics-server, Traefik, local-path-provisioner
-- Kubeconfig: `infrastructure/terraform/kubeconfig`
-
-### Phase 3.5: GPU Worker Node
-- k3s-gpu-01 (VM 210) at 10.20.11.85 on pve-01 (GPU passthrough)
-- NVIDIA RTX 4000 Ada Generation (20GB VRAM)
-- Driver 570.195.03, CUDA 12.8
-- NVIDIA Container Toolkit + Device Plugin installed
-- GPU resource: `nvidia.com/gpu: 1` available in cluster
-- Fixes applied:
-  - Packer user-data: `net.ifnames=0 biosdevname=0` for q35 NIC naming
-  - Terraform module: `bios = "ovmf"` + `efi_disk` for GPU passthrough
-  - Device plugin: RuntimeClass `nvidia` required for GPU detection
+**Technical Notes (GPU Passthrough):**
+- VM requires: `bios = "ovmf"` + `efi_disk`
+- Kernel params: `net.ifnames=0 biosdevname=0` (for q35 NIC naming)
+- Device plugin needs: `runtimeClassName: nvidia`
 
 ---
 
