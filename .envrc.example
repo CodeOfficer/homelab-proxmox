@@ -24,7 +24,8 @@ export CLOUDFLARE_EMAIL="your-cloudflare-email@example.com"
 # 1. Go to Datacenter > Permissions > API Tokens
 # 2. Create token for user (e.g., root@pam!terraform)
 # 3. Set privileges: PVEDatastoreUser, PVEVMAdmin, PVEPoolAdmin
-export TF_VAR_proxmox_api_url="https://10.20.11.11:8006/api2/json"
+export PROXMOX_NODE_IP="10.20.11.11"  # First Proxmox node (pve-01)
+export TF_VAR_proxmox_api_url="https://${PROXMOX_NODE_IP}:8006/api2/json"
 export TF_VAR_proxmox_api_token_id="root@pam!terraform"
 export TF_VAR_proxmox_api_token_secret="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 export TF_VAR_proxmox_insecure="true"  # Set to "false" with valid SSL certs
@@ -41,26 +42,30 @@ export PKR_VAR_proxmox_api_token_secret="${TF_VAR_proxmox_api_token_secret}"
 export PKR_VAR_proxmox_node="pve-01"
 export PKR_VAR_template_name="ubuntu-2404-k3s-template"
 export PKR_VAR_vm_id="9000"
+export PKR_VAR_ssh_password="ubuntu"  # Temporary password for template build
+export PKR_VAR_storage_pool="local-lvm"
+export PKR_VAR_iso_storage_pool="local"
 
 # -----------------------------------------------------------------------------
 # K3s Cluster Configuration
 # -----------------------------------------------------------------------------
 export TF_VAR_k3s_cluster_name="homelab"
-export TF_VAR_k3s_version="v1.28.5+k3s1"
+export TF_VAR_k3s_version="v1.33.6+k3s1"
 export TF_VAR_k3s_cluster_domain="k3s.home.arpa"
 
 # -----------------------------------------------------------------------------
 # VM Template Configuration
 # -----------------------------------------------------------------------------
-# VM template should be created first using Packer or manually
-# See: docs/setup.md for VM template creation instructions
-export TF_VAR_vm_template_name="ubuntu-2404-cloud-init"
+# VM template created by Packer (make template)
+# Must match PKR_VAR_template_name and PKR_VAR_vm_id above
+export TF_VAR_vm_template_name="ubuntu-2404-k3s-template"
 export TF_VAR_vm_template_vmid="9000"
 export TF_VAR_vm_ssh_user="ubuntu"
 export TF_VAR_vm_ssh_password="your-secure-password-here"
 
-# SSH public key for VM access (optional, but recommended)
-# export TF_VAR_vm_ssh_keys='["ssh-rsa AAAA... user@host"]'
+# SSH public key for VM access (REQUIRED)
+# Get your public key: cat ~/.ssh/id_ed25519.pub
+export TF_VAR_vm_ssh_keys='["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDI6acDm78Cj0ntqjVqYsNTbJNvB/nUOyvk9JBnDXfhv codeofficer@gmail.com"]'
 
 # -----------------------------------------------------------------------------
 # Network Configuration
@@ -128,7 +133,8 @@ export TF_VAR_k3s_agent_nodes='[
 # -----------------------------------------------------------------------------
 # GPU device mapping name configured in Proxmox
 # Create mapping: Datacenter > Resource Mappings > PCI Devices
-export TF_VAR_gpu_mapping_name="gpu0"
+# Must match the name created in Proxmox (e.g., "rtx4000ada")
+export TF_VAR_gpu_mapping_name="rtx4000ada"
 
 # -----------------------------------------------------------------------------
 # Application Secrets (for Kubernetes deployments)

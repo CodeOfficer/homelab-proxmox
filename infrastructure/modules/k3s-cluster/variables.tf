@@ -50,6 +50,12 @@ variable "vm_template_name" {
   type        = string
 }
 
+variable "vm_template_node" {
+  description = "Proxmox node where the template is located"
+  type        = string
+  default     = "pve-01"
+}
+
 variable "vm_ssh_user" {
   description = "SSH username for VMs"
   type        = string

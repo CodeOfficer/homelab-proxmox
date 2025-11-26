@@ -1,0 +1,28 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  storage:
+    layout:
+      name: lvm
+  identity:
+    hostname: ubuntu-template
+    # Password: ubuntu (must match ssh_password in packer variables)
+    password: "$6$xyz$lrzkz89JCrvzOPr56aXfFFqGZpBReOx5ndDu9m5CwVFWjZsEIhvVm.I5B4zMxJdcdTyAvncwjKT.dWcD/ZHIo."
+    username: ubuntu
+  ssh:
+    install-server: yes
+    allow-pw: yes
+  packages:
+    - qemu-guest-agent
+    - cloud-init
+  late-commands:
+    - echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/ubuntu
+    - chmod 440 /target/etc/sudoers.d/ubuntu
+    - systemctl enable qemu-guest-agent --root=/target
+    # Fix NIC naming for q35 machine type + cloud-init compatibility
+    # q35 uses predictable naming (enp6s18), cloud-init expects eth0
+    - sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0"/' /target/etc/default/grub
+    - curtin in-target -- update-grub

@@ -66,9 +66,20 @@ This document describes the core software stack and the catalog of applications 
 
 | Component             | Technology                  | Purpose                          |
 | --------------------- | --------------------------- | -------------------------------- |
-| **Device Plugin**     | NVIDIA GPU Device Plugin    | Exposes GPUs to Kubernetes       |
-| **Driver**            | NVIDIA Driver (in guest VM) | GPU driver in k3s-gpu-01 VM      |
-| **Runtime**           | NVIDIA Container Runtime    | GPU access for containers        |
+| **Device Plugin**     | NVIDIA k8s-device-plugin    | Exposes `nvidia.com/gpu` resource |
+| **Driver**            | nvidia-headless-570-server-open | Host driver in k3s-gpu-01 VM |
+| **Container Toolkit** | nvidia-container-toolkit    | CDI + nvidia-container-runtime   |
+| **RuntimeClass**      | `nvidia`                    | Required for GPU workloads       |
+
+**GPU Pod Requirements:**
+```yaml
+spec:
+  runtimeClassName: nvidia  # Required
+  containers:
+  - resources:
+      limits:
+        nvidia.com/gpu: 1
+```
 
 ## Application Catalog
 
@@ -172,17 +183,19 @@ applications/<app-name>/
 | `make infra`          | Alias for cluster deployment           |
 | `make deploy APP=x`   | Deploy specific application            |
 
-## Software Versions (to be determined during installation)
+## Software Versions
 
-Specific versions will be documented as components are installed:
-- Proxmox VE: 9.1
-- K3s: TBD (target: latest stable)
-- Terraform: TBD (target: 1.6+)
-- MetalLB: TBD
-- cert-manager: TBD
-- FluxCD: TBD
-
-**Update this document as versions are locked in during Phase 1-3.**
+| Component | Version | Notes |
+|-----------|---------|-------|
+| Proxmox VE | 9.1 | All 3 nodes |
+| K3s | v1.33.6+k3s1 | Stable channel |
+| containerd | 2.1.5-k3s1.33 | Bundled with K3s |
+| NVIDIA Driver | 570.195.03 | Ubuntu nvidia-headless-570-server-open |
+| CUDA | 12.8 | Via driver |
+| NVIDIA Container Toolkit | 1.18.0 | libnvidia-container |
+| NVIDIA Device Plugin | v0.17.0 | k8s-device-plugin |
+| Ubuntu | 24.04.3 LTS | VM template base |
+| Kernel | 6.8.0-88-generic | VM kernel |
 
 ## Reference Architecture
 

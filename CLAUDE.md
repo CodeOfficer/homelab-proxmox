@@ -6,121 +6,162 @@
 - `docs/NETWORK.md` - Network architecture, VLANs, IP addressing
 - `docs/SOFTWARE.md` - Software stack, versions
 - `docs/LINKS.md` - Reference links
-- `CLAUDE.md` (this file) - Project status, phases, architecture decisions
+- `CLAUDE.md` (this file) - Project status, workflow, architecture
 
-**Rules:** Never duplicate docs/ content here. Update docs/ immediately when info changes. Read before writing.
-
-## Workflow
-
-1. Read CLAUDE.md status section at session start
-2. Update status/phases as work progresses
-3. Log interactions to `logs/prompts.log` (gitignored)
-4. Commit after completing tasks
-5. Never hardcode values - use `.envrc`
+**Rules:** Never duplicate docs/ content here. Update docs/ when info changes. Read before writing.
 
 ## Repository Structure
 
 ```
 homelab-proxmox/
-├── docs/                     # Reference specs (ALWAYS CURRENT)
+├── docs/                     # Reference specs
 ├── infrastructure/
-│   ├── packer/              # VM template (README.md has detailed guide)
+│   ├── packer/              # VM template creation
 │   ├── terraform/           # VM provisioning
-│   └── ansible/             # K3s configuration (future)
-├── applications/            # K8s apps
-├── scripts/                 # Automation
+│   ├── ansible/             # K3s installation
+│   └── modules/             # Terraform modules
+├── applications/            # K8s app manifests (future)
+├── scripts/                 # Automation scripts
 ├── .envrc.example          # Environment template
-└── Makefile                # Command interface
+├── Makefile                # Command interface
+└── CLAUDE.md               # This file
 ```
+
+---
+
+## Workflow
+
+The complete orchestration workflow:
+
+```bash
+# 1. Setup environment
+cp .envrc.example .envrc     # Configure credentials
+direnv allow                  # Load environment
+
+# 2. Verify prerequisites
+make check                    # Verify Proxmox API, SSH, tools
+
+# 3. Build infrastructure
+make iso-upload               # Upload Ubuntu ISO (one-time)
+make template                 # Build VM template with Packer
+make apply                    # Provision VMs with Terraform
+
+# 4. Install K3s
+make ansible-k3s              # Install K3s cluster via Ansible
+make kubeconfig               # Fetch cluster credentials
+
+# 5. Verify
+make test                     # Cluster health checks
+```
+
+### Make Targets Reference
+
+| Target | Description |
+|--------|-------------|
+| `make check` | Verify prerequisites (API, SSH, tools) |
+| `make iso-upload` | Download/upload Ubuntu ISO to Proxmox |
+| `make template` | Build VM template with Packer |
+| `make apply` | Provision VMs with Terraform |
+| `make ansible-k3s` | Install K3s cluster |
+| `make kubeconfig` | Fetch kubeconfig from cluster |
+| `make test` | Run cluster health checks |
+| `make destroy` | Tear down all infrastructure |
 
 ---
 
 ## Current Status
 
-**Last Updated:** 2025-11-25
+**Last Updated:** 2025-11-26
 
 **Completed:**
-- Phase 0: Information gathering (all docs complete)
-- Phase 1.0-1.5: Proxmox installed, clustered, network/storage/GPU configured
-- Packer configuration created
+- Phase 0: Information gathering (docs complete)
+- Phase 1: Proxmox cluster configured (3 nodes, storage, GPU passthrough)
+- Phase 2: VM template built (`ubuntu-2404-k3s-template`, VMID 9000)
+- Phase 3: K3s cluster operational (2 control plane nodes)
+- Phase 3.5: GPU worker node operational with NVIDIA RTX 4000 Ada
+- Kubeconfig saved to `infrastructure/terraform/kubeconfig`
 
-**In Progress:** Phase 2 - VM Template Building
-
-**Next Steps:**
-1. Create Proxmox API token, configure `.envrc`
-2. Build VM template with Packer (`make template`)
-3. Refactor Terraform (remove remote-exec)
-4. Create Ansible integration for K3s
-5. Deploy cluster (`make cluster`)
+**Next Steps (Priority Order):**
+1. Configure MetalLB (Phase 4)
+2. Set up cert-manager with Cloudflare DNS-01
+3. Bootstrap FluxCD
 
 ---
 
 ## Pending Tasks
 
-### Phase 1.6: API and Authentication
-- [ ] Create Proxmox API token (Datacenter > Permissions > API Tokens)
-- [ ] Set permissions (PVEDatastoreUser, PVEVMAdmin, PVEPoolAdmin, PVEAuditor)
-- [ ] Test API access with curl
-- [ ] Generate SSH keypair for VM access
-- [ ] Configure `.envrc` with credentials
-
-### Phase 2: VM Template Creation
-- [ ] Install Packer (`brew install packer`)
-- [ ] Initialize Packer plugins (`make template-init`)
-- [ ] Validate configuration (`make template-validate`)
-- [ ] Build template (`make template`)
-- [ ] Test: clone VM, verify cloud-init, SSH, qemu-guest-agent
-
-### Phase 3: Terraform VM Provisioning
-- [ ] Remove remote-exec from Terraform module
-- [ ] Add Ansible inventory outputs
-- [ ] Run `make init`, `make plan`, `make apply`
-- [ ] Verify VMs created, SSH access works
-
-### Phase 3.5: Ansible K3s Installation
-- [ ] Create `infrastructure/ansible/` structure
-- [ ] Add k3s-ansible role via requirements.yml
-- [ ] Create inventory generation script
-- [ ] Add Makefile targets (ansible-deps, generate-inventory, ansible-configure)
-- [ ] Deploy K3s (`make ansible-configure`)
-- [ ] Validate: `kubectl get nodes`, system pods running
-
 ### Phase 4: K3s Configuration
 - [ ] Configure MetalLB (IP pool: 10.20.11.200-220)
 - [ ] Set up cert-manager with Cloudflare DNS-01
-- [ ] Install NVIDIA device plugin
-- [ ] Test GPU scheduling
 
 ### Phase 5: Application Deployments
-- [ ] Bootstrap FluxCD to GitHub repo
-- [ ] Deploy: PostgreSQL, Redis, MinIO (infrastructure namespace)
-- [ ] Deploy: n8n, Home Assistant (applications namespace)
-- [ ] Deploy: Ollama, Stable Diffusion, Jupyter (ai namespace)
+- [ ] Bootstrap FluxCD
+- [ ] Deploy infrastructure services (PostgreSQL, Redis, MinIO)
+- [ ] Deploy applications (n8n, Home Assistant)
+- [ ] Deploy AI workloads (Ollama, Jupyter)
 
 ### Phase 6: Operations
 - [ ] Configure Proxmox backup schedules
 - [ ] Set up etcd snapshots
-- [ ] Security hardening (firewall, Network Policies, RBAC)
-
-### Deferred Tasks
-- [ ] DKIM setup for Google Workspace (after Nov 26-27)
-- [ ] Synology migration to VLAN 10
-- [ ] Cloudflare API token for cert-manager
+- [ ] Security hardening
 
 ---
 
-## Completed Phases (Summary)
+## Completed Phases
 
-### Phase 0: Information Gathering ✅
-All hardware, network, and software documented in docs/.
+### Phase 0: Information Gathering
+All hardware, network, and software documented in `docs/`.
 
-### Phase 1.0-1.5: Foundation ✅
-- Proxmox VE 9.1 installed on all 3 nodes (pve-01/02/03)
-- Cluster "homelab-cluster" formed (3-node quorum)
-- Network: VLAN-aware bridges, DNS (UDM Pro), NTP (chrony)
-- Storage: UNAS Pro NFS mounted (nas-vmstorage, 37TB)
-- GPU: RTX 4000 Ada passthrough configured on pve-01 (IOMMU, VFIO, Thunderbolt)
+### Phase 1: Proxmox Foundation
+- Proxmox VE 9.1 on all 3 nodes (pve-01/02/03)
+- Cluster "homelab-cluster" formed
+- VLAN-aware networking configured
+- NFS storage mounted (nas-vmstorage, 37TB)
+- GPU passthrough configured (RTX 4000 Ada on pve-01)
+- API tokens created
 
-### Phase 2.1: Packer Configuration ✅
-- Template config: `infrastructure/packer/ubuntu-k3s.pkr.hcl`
-- Detailed guide: `infrastructure/packer/README.md`
+### Phase 2: VM Template
+- Packer configuration: `infrastructure/packer/ubuntu-k3s.pkr.hcl`
+- Template: `ubuntu-2404-k3s-template` (VMID 9000)
+- Ubuntu 24.04 Server with autoinstall
+- Pre-configured: cloud-init, qemu-guest-agent, K3s prerequisites
+
+### Phase 3: K3s Cluster
+- K3s v1.33.6+k3s1 installed via official script
+- 2 control plane nodes with embedded etcd:
+  - k3s-cp-01 (VM 200) at 10.20.11.80 on pve-02
+  - k3s-cp-02 (VM 201) at 10.20.11.81 on pve-03
+- System components running: CoreDNS, metrics-server, Traefik, local-path-provisioner
+- Kubeconfig: `infrastructure/terraform/kubeconfig`
+
+### Phase 3.5: GPU Worker Node
+- k3s-gpu-01 (VM 210) at 10.20.11.85 on pve-01 (GPU passthrough)
+- NVIDIA RTX 4000 Ada Generation (20GB VRAM)
+- Driver 570.195.03, CUDA 12.8
+- NVIDIA Container Toolkit + Device Plugin installed
+- GPU resource: `nvidia.com/gpu: 1` available in cluster
+- Fixes applied:
+  - Packer user-data: `net.ifnames=0 biosdevname=0` for q35 NIC naming
+  - Terraform module: `bios = "ovmf"` + `efi_disk` for GPU passthrough
+  - Device plugin: RuntimeClass `nvidia` required for GPU detection
+
+---
+
+## Architecture Decisions
+
+### Infrastructure Stack
+- **Packer**: Creates VM templates from Ubuntu Server ISO
+- **Terraform**: Provisions VMs from template, manages state
+- **K3s**: Installed via official script (https://get.k3s.io)
+- **FluxCD**: GitOps for application deployments (future)
+
+### K3s Cluster Design
+- 2 server nodes (control plane) on pve-02, pve-03
+- 1 agent node (GPU worker) on pve-01
+- Embedded etcd for HA
+- MetalLB for LoadBalancer services
+
+### Network Design
+- VLAN 11 (10.20.11.0/24) for VMs
+- Static IPs via cloud-init
+- UDM Pro as DNS/gateway

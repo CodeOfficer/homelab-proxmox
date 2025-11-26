@@ -17,3 +17,8 @@ output "kubeconfig_path" {
   description = "Path to kubeconfig file"
   value       = "${path.module}/kubeconfig"
 }
+
+output "ansible_inventory" {
+  description = "Structured data for Ansible inventory generation"
+  value       = module.k3s_cluster.ansible_inventory
+}

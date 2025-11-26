@@ -14,8 +14,11 @@ module "k3s_cluster" {
 
   # VM configuration
   vm_template_name = var.vm_template_name
+  vm_template_vmid = var.vm_template_vmid
+  vm_template_node = var.vm_template_node
   vm_ssh_user      = var.vm_ssh_user
   vm_ssh_password  = var.vm_ssh_password
+  vm_ssh_keys      = var.vm_ssh_keys
 
   # Node configurations
   k3s_server_nodes = var.k3s_server_nodes
@@ -27,4 +30,7 @@ module "k3s_cluster" {
 
   # Storage
   storage_pool = var.storage_pool
+
+  # GPU Passthrough
+  gpu_mapping_name = var.gpu_mapping_name
 }

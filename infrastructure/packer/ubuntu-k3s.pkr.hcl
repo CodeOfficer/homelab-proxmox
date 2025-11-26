@@ -1,10 +1,10 @@
 # Packer configuration for Ubuntu 24.04 K3s template
-# This creates a VM template in Proxmox optimized for K3s deployment
+# Uses Ubuntu Server ISO with autoinstall (not cloud images)
 
 packer {
   required_plugins {
     proxmox = {
-      version = ">= 1.1.8"
+      version = ">= 1.2.0"
       source  = "github.com/hashicorp/proxmox"
     }
   }
@@ -46,18 +46,6 @@ variable "template_description" {
   default     = "Ubuntu 24.04 LTS template for K3s - built with Packer"
 }
 
-variable "iso_url" {
-  type        = string
-  description = "URL to Ubuntu 24.04 cloud image"
-  default     = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
-}
-
-variable "iso_checksum" {
-  type        = string
-  description = "Checksum for Ubuntu image (leave empty for latest)"
-  default     = "file:https://cloud-images.ubuntu.com/noble/current/SHA256SUMS"
-}
-
 variable "vm_id" {
   type        = number
   description = "VM ID for the template"
@@ -72,9 +60,20 @@ variable "ssh_username" {
 
 variable "ssh_password" {
   type        = string
-  description = "Temporary SSH password for provisioning"
-  default     = "ubuntu"
+  description = "SSH password for provisioning"
   sensitive   = true
+}
+
+variable "storage_pool" {
+  type        = string
+  description = "Proxmox storage pool for VM disks"
+  default     = "local-lvm"
+}
+
+variable "iso_storage_pool" {
+  type        = string
+  description = "Proxmox storage pool for ISO images"
+  default     = "local"
 }
 
 # Source configuration
@@ -91,21 +90,35 @@ source "proxmox-iso" "ubuntu-k3s" {
   vm_name              = var.template_name
   template_description = var.template_description
 
-  # ISO configuration
-  iso_url          = var.iso_url
-  iso_checksum     = var.iso_checksum
-  iso_storage_pool = "local"
-  unmount_iso      = true
+  # Ubuntu 24.04 Server ISO - pre-downloaded to Proxmox storage
+  # Download manually: ssh root@pve-01 'cd /var/lib/vz/template/iso && wget https://releases.ubuntu.com/24.04.1/ubuntu-24.04.1-live-server-amd64.iso'
+  boot_iso {
+    type     = "scsi"
+    iso_file = "${var.iso_storage_pool}:iso/ubuntu-24.04.1-live-server-amd64.iso"
+    unmount  = true
+  }
+
+  # HTTP server for autoinstall cloud-init files
+  http_directory = "${path.root}/http"
+
+  # Boot command for Ubuntu autoinstall (UEFI)
+  # Pattern from working homelab-k3s config
+  boot_wait = "10s"
+  boot_command = [
+    "e<down><down><down><end>",
+    " autoinstall ds=nocloud-net\\;s=http://{{.HTTPIP}}:{{.HTTPPort}}/ ---",
+    "<f10>",
+  ]
 
   # Hardware configuration
   cores   = 2
   sockets = 1
-  memory  = 2048
+  memory  = 4096
 
-  # BIOS settings
+  # BIOS settings (UEFI)
   bios = "ovmf"
   efi_config {
-    efi_storage_pool  = "local-zfs"
+    efi_storage_pool  = var.storage_pool
     efi_type          = "4m"
     pre_enrolled_keys = true
   }
@@ -115,7 +128,7 @@ source "proxmox-iso" "ubuntu-k3s" {
   disks {
     type         = "scsi"
     disk_size    = "20G"
-    storage_pool = "local-zfs"
+    storage_pool = var.storage_pool
     format       = "raw"
     io_thread    = true
     discard      = true
@@ -128,18 +141,15 @@ source "proxmox-iso" "ubuntu-k3s" {
     firewall = false
   }
 
-  # Cloud-init configuration
-  cloud_init              = true
-  cloud_init_storage_pool = "local-zfs"
-
   # SSH configuration for provisioning
-  ssh_username = var.ssh_username
-  ssh_password = var.ssh_password
-  ssh_timeout  = "20m"
+  ssh_username         = var.ssh_username
+  ssh_password         = var.ssh_password
+  ssh_timeout          = "30m"
+  ssh_handshake_attempts = 100
 
-  # Additional settings
+  # QEMU guest agent
   qemu_agent = true
-  os         = "l26"  # Linux kernel 2.6+
+  os         = "l26"
 }
 
 # Build configuration
@@ -150,8 +160,8 @@ build {
   # Wait for cloud-init to complete
   provisioner "shell" {
     inline = [
-      "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for cloud-init...'; sleep 1; done",
-      "sudo cloud-init status --wait"
+      "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for cloud-init...'; sleep 5; done",
+      "echo 'Cloud-init finished'"
     ]
   }
 

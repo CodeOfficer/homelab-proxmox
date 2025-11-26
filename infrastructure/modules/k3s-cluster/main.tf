@@ -27,8 +27,9 @@ resource "proxmox_virtual_environment_vm" "k3s_server_init" {
   description = "K3s control plane - initial server"
 
   clone {
-    vm_id = var.vm_template_vmid
-    full  = true
+    vm_id     = var.vm_template_vmid
+    node_name = var.vm_template_node
+    full      = true
   }
 
   cpu {
@@ -53,6 +54,8 @@ resource "proxmox_virtual_environment_vm" "k3s_server_init" {
   }
 
   initialization {
+    datastore_id = var.storage_pool
+
     ip_config {
       ipv4 {
         address = "${local.first_server.ip_address}/24"
@@ -72,29 +75,8 @@ resource "proxmox_virtual_environment_vm" "k3s_server_init" {
     }
   }
 
-  # Install K3s on first server
-  provisioner "remote-exec" {
-    inline = [
-      "set -e",
-      "echo 'Installing K3s server (initial node)...'",
-      "curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='${var.k3s_version}' sh -s - server \\",
-      "  --cluster-init \\",
-      "  --tls-san ${var.k3s_cluster_domain} \\",
-      "  --tls-san ${local.first_server.ip_address} \\",
-      "  --token ${local.k3s_token} \\",
-      "  --write-kubeconfig-mode 644",
-      "echo 'Waiting for K3s to be ready...'",
-      "until kubectl get nodes &>/dev/null; do sleep 2; done",
-      "echo 'K3s server initialized successfully'"
-    ]
-
-    connection {
-      type     = "ssh"
-      user     = var.vm_ssh_user
-      password = var.vm_ssh_password
-      host     = local.first_server.ip_address
-    }
-  }
+  # K3s installation is handled by Ansible (Phase 3.5)
+  # This module only provisions VMs with cloud-init
 
   depends_on = [random_password.k3s_token]
 }
@@ -109,8 +91,9 @@ resource "proxmox_virtual_environment_vm" "k3s_server_additional" {
   description = "K3s control plane - additional server"
 
   clone {
-    vm_id = var.vm_template_vmid
-    full  = true
+    vm_id     = var.vm_template_vmid
+    node_name = var.vm_template_node
+    full      = true
   }
 
   cpu {
@@ -135,6 +118,8 @@ resource "proxmox_virtual_environment_vm" "k3s_server_additional" {
   }
 
   initialization {
+    datastore_id = var.storage_pool
+
     ip_config {
       ipv4 {
         address = "${local.additional_servers[count.index].ip_address}/24"
@@ -154,26 +139,7 @@ resource "proxmox_virtual_environment_vm" "k3s_server_additional" {
     }
   }
 
-  # Join cluster as additional server
-  provisioner "remote-exec" {
-    inline = [
-      "set -e",
-      "echo 'Installing K3s server (joining cluster)...'",
-      "curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='${var.k3s_version}' sh -s - server \\",
-      "  --server https://${local.first_server.ip_address}:6443 \\",
-      "  --token ${local.k3s_token} \\",
-      "  --tls-san ${var.k3s_cluster_domain} \\",
-      "  --tls-san ${local.additional_servers[count.index].ip_address}",
-      "echo 'K3s server joined successfully'"
-    ]
-
-    connection {
-      type     = "ssh"
-      user     = var.vm_ssh_user
-      password = var.vm_ssh_password
-      host     = local.additional_servers[count.index].ip_address
-    }
-  }
+  # K3s installation is handled by Ansible (Phase 3.5)
 
   depends_on = [proxmox_virtual_environment_vm.k3s_server_init]
 }
@@ -188,8 +154,9 @@ resource "proxmox_virtual_environment_vm" "k3s_agent" {
   description = "K3s worker node${var.k3s_agent_nodes[count.index].gpu_passthrough ? " (GPU enabled)" : ""}"
 
   clone {
-    vm_id = var.vm_template_vmid
-    full  = true
+    vm_id     = var.vm_template_vmid
+    node_name = var.vm_template_node
+    full      = true
   }
 
   cpu {
@@ -199,6 +166,19 @@ resource "proxmox_virtual_environment_vm" "k3s_agent" {
 
   memory {
     dedicated = var.k3s_agent_nodes[count.index].memory
+  }
+
+  # q35 machine type + OVMF BIOS required for GPU passthrough
+  machine = var.k3s_agent_nodes[count.index].gpu_passthrough ? "q35" : null
+  bios    = var.k3s_agent_nodes[count.index].gpu_passthrough ? "ovmf" : null
+
+  # EFI disk for OVMF boot (required when bios = ovmf)
+  dynamic "efi_disk" {
+    for_each = var.k3s_agent_nodes[count.index].gpu_passthrough ? [1] : []
+    content {
+      datastore_id = var.storage_pool
+      type         = "4m"
+    }
   }
 
   network_device {
@@ -225,6 +205,8 @@ resource "proxmox_virtual_environment_vm" "k3s_agent" {
   }
 
   initialization {
+    datastore_id = var.storage_pool
+
     ip_config {
       ipv4 {
         address = "${var.k3s_agent_nodes[count.index].ip_address}/24"
@@ -244,39 +226,9 @@ resource "proxmox_virtual_environment_vm" "k3s_agent" {
     }
   }
 
-  # Install K3s agent
-  provisioner "remote-exec" {
-    inline = [
-      "set -e",
-      "echo 'Installing K3s agent...'",
-      "curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='${var.k3s_version}' K3S_URL=https://${local.first_server.ip_address}:6443 K3S_TOKEN=${local.k3s_token} sh -",
-      "echo 'K3s agent joined successfully'"
-    ]
-
-    connection {
-      type     = "ssh"
-      user     = var.vm_ssh_user
-      password = var.vm_ssh_password
-      host     = var.k3s_agent_nodes[count.index].ip_address
-    }
-  }
+  # K3s installation is handled by Ansible (Phase 3.5)
 
   depends_on = [proxmox_virtual_environment_vm.k3s_server_init]
 }
 
-# Retrieve kubeconfig from first server
-resource "null_resource" "kubeconfig" {
-  provisioner "local-exec" {
-    command = <<-EOT
-      ssh -o StrictHostKeyChecking=no ${var.vm_ssh_user}@${local.first_server.ip_address} \
-        'sudo cat /etc/rancher/k3s/k3s.yaml' | \
-        sed 's/127.0.0.1/${var.k3s_cluster_domain}/g' > ${path.root}/kubeconfig
-      chmod 600 ${path.root}/kubeconfig
-    EOT
-  }
-
-  depends_on = [
-    proxmox_virtual_environment_vm.k3s_server_init,
-    proxmox_virtual_environment_vm.k3s_server_additional
-  ]
-}
+# NOTE: Kubeconfig retrieval is handled by Ansible after K3s installation (Phase 3.5)

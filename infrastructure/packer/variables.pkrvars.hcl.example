@@ -17,10 +17,11 @@ template_description = "Ubuntu 24.04 LTS template for K3s - built with Packer"
 # VM ID for the template (should not conflict with existing VMs)
 vm_id = 9000
 
-# Ubuntu cloud image (defaults to latest 24.04)
-# iso_url      = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
-# iso_checksum = "file:https://cloud-images.ubuntu.com/noble/current/SHA256SUMS"
+# Storage pools
+storage_pool     = "local-lvm"
+iso_storage_pool = "local"
 
 # SSH credentials for provisioning
+# IMPORTANT: ssh_password must be "ubuntu" to match the hash in http/user-data
 ssh_username = "ubuntu"
 ssh_password = "ubuntu"

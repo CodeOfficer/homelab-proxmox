@@ -53,6 +53,44 @@ ssh root@pve-03.home.arpa
 
 ---
 
+## SSH Access to K3s VMs
+
+### SSH Key Configuration
+
+**Key used for VMs:** `~/.ssh/id_ed25519`
+**User:** `ubuntu`
+
+VMs are provisioned via cloud-init with the SSH public key from `TF_VAR_vm_ssh_keys`.
+
+### Connecting to VMs
+
+```bash
+# Direct SSH (must specify key to avoid conflicts with ~/.ssh/config)
+ssh -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519 ubuntu@10.20.11.80  # k3s-cp-01
+ssh -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519 ubuntu@10.20.11.81  # k3s-cp-02
+ssh -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519 ubuntu@10.20.11.85  # k3s-gpu-01
+```
+
+### SSH Config Override Issue
+
+If `~/.ssh/config` defines `IdentityFile` for all hosts, SSH may try wrong keys first and fail with "Too many authentication failures". Use `-o IdentitiesOnly=yes` to force the specified key.
+
+### Ansible SSH Configuration
+
+Ansible inventory must include explicit SSH settings to avoid key conflicts:
+
+```yaml
+all:
+  vars:
+    ansible_user: ubuntu
+    ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519'
+```
+
+The `-i` flag in `ansible_ssh_common_args` is redundant but ensures the key is used even if other SSH config interferes.
+
+---
+
 ## Common Administrative Tasks
 
 ### Checking Cluster Status

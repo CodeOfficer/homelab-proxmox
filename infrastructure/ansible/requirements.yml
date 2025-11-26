@@ -1,0 +1,11 @@
+# Ansible Galaxy Requirements
+# Install with: ansible-galaxy install -r requirements.yml
+
+roles:
+  # K3s installation role
+  - name: xanmanning.k3s
+    version: v3.4.0
+
+collections:
+  - name: ansible.posix
+  - name: community.general

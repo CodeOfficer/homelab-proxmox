@@ -38,12 +38,19 @@ There are 3 primary compute nodes in this cluster, all identical Minisforum MS-0
 - **Memory Bandwidth**: 360 GB/s
 - **TDP**: 130W
 - **Interface**: PCIe Gen 4 x16 (via Thunderbolt 4)
-- **PCI ID**: 10de:27b2
-- **IOMMU Group**: 17 (isolated with audio controller)
+- **PCI ID**: `10de:27b2`
+- **PCI Address**: `0000:2f:00`
+- **IOMMU Group**: 17
+- **Proxmox Mapping**: `rtx4000ada` (Datacenter > Resource Mappings > PCI)
 - **Display**: 4x Mini DisplayPort 1.4a
 - **Compute**: CUDA 8.9, DirectX 12 Ultimate
 - **Use Cases**: AI inference, LLM hosting, computer vision, GPU compute
-- **Note**: Requires Thunderbolt authorization on boot (automated via udev rule)
+
+**GPU Passthrough Requirements:**
+- VM machine type: `q35`
+- VM BIOS: `ovmf` (UEFI)
+- EFI disk required for OVMF boot
+- Kernel params in VM: `net.ifnames=0 biosdevname=0` (for cloud-init NIC naming)
 
 ## Storage
 
@@ -79,6 +86,60 @@ There are 3 primary compute nodes in this cluster, all identical Minisforum MS-0
   - K8s etcd snapshots
   - Critical configuration backups
   - Disaster recovery storage
+
+### Proxmox Storage Pools
+
+| Pool Name | Type | Location | Capacity | Content Types | Purpose |
+|-----------|------|----------|----------|---------------|---------|
+| `local` | Directory | `/var/lib/vz` | ~100GB | ISO, templates | ISO images, container templates |
+| `local-zfs` | ZFS | Local NVMe | ~950GB | VM disks, images | Fast VM storage, template builds |
+| `nas-vmstorage` | NFS | UNAS Pro | ~37TB | VM disks, ISO, backups | Shared cluster storage |
+
+#### local-zfs (Fast Local Storage)
+- **Type**: ZFS pool on local NVMe
+- **Performance**: ~3500 MB/s, <0.1ms latency
+- **Scope**: Per-node (not shared)
+- **Use Cases**:
+  - VM template builds (fast I/O for OS install)
+  - High-performance VM disks
+  - Temporary/scratch storage
+- **Note**: Templates built here must be migrated to shared storage for cluster-wide access
+
+#### nas-vmstorage (Shared NFS Storage)
+- **Type**: NFS mount from UNAS Pro
+- **Server**: 10.20.10.20 (UNAS Pro)
+- **Export Path**: `/volume1/pve-vmstorage`
+- **Mount Point**: `/mnt/pve/nas-vmstorage`
+- **Performance**: ~1000 MB/s (10GbE), 1-5ms latency
+- **Scope**: Cluster-wide (all nodes see same content)
+- **Content Types**: `images,iso,backup,vztmpl`
+- **Use Cases**:
+  - VM templates (shared across cluster)
+  - VM disks for live migration
+  - ISO images (shared)
+  - Backups
+- **Folder Structure**:
+  ```
+  /mnt/pve/nas-vmstorage/
+  ├── dump/           # VM backups
+  ├── images/         # VM disk images (VMID folders)
+  │   └── 9000/       # Template disk
+  ├── iso/            # ISO images (if stored here)
+  └── template/       # Container templates
+  ```
+
+#### Storage Strategy: Build Local, Share Global
+For VM template creation:
+1. **Build** on `local-zfs` (fast NVMe, ~10-15 min)
+2. **Migrate** disk to `nas-vmstorage` after build
+3. **Result**: Template accessible from all cluster nodes
+
+```bash
+# After template build completes:
+qm move-disk 9000 scsi0 nas-vmstorage --delete
+```
+
+This approach avoids slow NFS I/O during intensive build operations while still achieving cluster-wide template availability.
 
 ## Networking
 

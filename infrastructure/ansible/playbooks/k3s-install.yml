@@ -1,0 +1,110 @@
+# K3s Cluster Installation Playbook
+# Installs K3s on server (control plane) and agent (worker) nodes
+
+- name: Install K3s Cluster
+  hosts: all
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Wait for nodes to be ready
+      wait_for_connection:
+        timeout: 300
+
+    - name: Gather facts
+      setup:
+
+  roles:
+    - role: xanmanning.k3s
+
+- name: Configure GPU node
+  hosts: gpu_nodes
+  become: true
+  tasks:
+    # Step 1: Install NVIDIA GPU drivers
+    - name: Install NVIDIA driver prerequisites
+      apt:
+        name:
+          - ubuntu-drivers-common
+          - curl
+          - gnupg
+        state: present
+        update_cache: true
+
+    - name: Check if NVIDIA driver is installed
+      command: nvidia-smi
+      register: nvidia_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Auto-install NVIDIA drivers (headless/server)
+      command: ubuntu-drivers install --gpgpu
+      register: driver_install
+      when: nvidia_check.rc != 0
+
+    - name: Install nvidia-utils for nvidia-smi
+      apt:
+        name: nvidia-utils-570-server
+        state: present
+      when: nvidia_check.rc != 0
+
+    - name: Reboot after driver install
+      reboot:
+        reboot_timeout: 300
+      when: driver_install is changed
+
+    - name: Wait for system to come back
+      wait_for_connection:
+        timeout: 300
+      when: driver_install is changed
+
+    - name: Verify nvidia-smi works
+      command: nvidia-smi
+      register: nvidia_smi_verify
+      changed_when: false
+
+    # Step 2: Install NVIDIA container toolkit
+    - name: Add NVIDIA container toolkit GPG key
+      shell: |
+        curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+        gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+    - name: Add NVIDIA container toolkit repository
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/stable/deb/amd64 /"
+        state: present
+        filename: nvidia-container-toolkit
+
+    - name: Install NVIDIA container toolkit
+      apt:
+        name: nvidia-container-toolkit
+        state: present
+        update_cache: true
+      notify: restart k3s agent
+
+    # Step 3: K3s auto-detects NVIDIA runtime - no nvidia-ctk configure needed
+    # Just verify it was detected after restart
+    - name: Flush handlers to restart K3s
+      meta: flush_handlers
+
+    - name: Wait for K3s agent to be ready
+      pause:
+        seconds: 10
+
+    - name: Verify K3s detected NVIDIA runtime
+      shell: grep nvidia /var/lib/rancher/k3s/agent/etc/containerd/config.toml
+      register: nvidia_runtime_check
+      changed_when: false
+      failed_when: false
+
+    - name: Display NVIDIA runtime detection status
+      debug:
+        msg: "{{ 'NVIDIA runtime detected by K3s' if nvidia_runtime_check.rc == 0 else 'WARNING: NVIDIA runtime not yet detected - may need K3s restart' }}"
+
+  handlers:
+    - name: restart k3s agent
+      systemd:
+        name: k3s-agent
+        state: restarted

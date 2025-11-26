@@ -10,6 +10,12 @@ variable "proxmox_api_token_id" {
   sensitive   = true
 }
 
+variable "proxmox_api_token_secret" {
+  description = "Proxmox API token secret (UUID)"
+  type        = string
+  sensitive   = true
+}
+
 variable "proxmox_insecure" {
   description = "Skip TLS verification for Proxmox API"
   type        = bool
@@ -32,7 +38,7 @@ variable "k3s_cluster_name" {
 variable "k3s_version" {
   description = "K3s version to install"
   type        = string
-  default     = "v1.28.5+k3s1"
+  default     = "v1.33.6+k3s1"
 }
 
 variable "k3s_cluster_domain" {
@@ -57,6 +63,12 @@ variable "vm_ssh_password" {
   description = "SSH password for VMs (used for initial provisioning)"
   type        = string
   sensitive   = true
+}
+
+variable "vm_ssh_keys" {
+  description = "List of SSH public keys for VM access"
+  type        = list(string)
+  default     = []
 }
 
 # K3s Server Nodes (Control Plane)
@@ -110,4 +122,24 @@ variable "storage_pool" {
   description = "Proxmox storage pool for VM disks"
   type        = string
   default     = "local-lvm"
+}
+
+# VM Template
+variable "vm_template_vmid" {
+  description = "VMID of the VM template to clone"
+  type        = number
+  default     = 9000
+}
+
+variable "vm_template_node" {
+  description = "Proxmox node where the template is located"
+  type        = string
+  default     = "pve-01"
+}
+
+# GPU Passthrough
+variable "gpu_mapping_name" {
+  description = "Name of the GPU PCI device mapping in Proxmox"
+  type        = string
+  default     = "rtx4000ada"
 }
