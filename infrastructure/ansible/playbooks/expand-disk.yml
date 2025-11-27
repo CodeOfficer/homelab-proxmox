@@ -1,0 +1,47 @@
+---
+# Expand filesystem after disk resize
+# Run: ansible-playbook -i inventory/hosts.yml playbooks/expand-disk.yml
+# Idempotent: safe to run multiple times
+
+- name: Expand filesystem to fill disk
+  hosts: k3s_cluster
+  become: true
+  tasks:
+    - name: Install cloud-guest-utils (provides growpart)
+      apt:
+        name: cloud-guest-utils
+        state: present
+        update_cache: false
+
+    - name: Grow partition 3 to fill disk
+      command: growpart /dev/sda 3
+      register: growpart_result
+      changed_when: "'CHANGED' in growpart_result.stdout"
+      failed_when: false
+
+    - name: Resize physical volume
+      command: pvresize /dev/sda3
+      register: pvresize_result
+      changed_when: "'resized' in pvresize_result.stdout"
+      failed_when: false
+
+    - name: Extend logical volume to use all free space
+      command: lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv
+      register: lvextend_result
+      changed_when: "'successfully resized' in lvextend_result.stdout"
+      failed_when: false
+
+    - name: Resize ext4 filesystem
+      command: resize2fs /dev/ubuntu-vg/ubuntu-lv
+      register: resize2fs_result
+      changed_when: "'blocks long' in resize2fs_result.stderr"
+      failed_when: false
+
+    - name: Show final disk space
+      command: df -h /
+      register: df_output
+      changed_when: false
+
+    - name: Display disk space
+      debug:
+        msg: "{{ df_output.stdout_lines }}"

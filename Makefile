@@ -3,7 +3,7 @@
 .PHONY: logs status kubectl ssh-server ssh-agent
 .PHONY: template template-validate template-init template-clean
 .PHONY: iso-upload iso-check
-.PHONY: ansible-deps ansible-k3s kubeconfig
+.PHONY: ansible-deps ansible-k3s ansible-expand-disk kubeconfig
 
 # =============================================================================
 # Homelab Proxmox Infrastructure Management
@@ -214,6 +214,11 @@ ansible-k3s: ansible-deps ## Install K3s on VMs using Ansible
 	@echo "$(GREEN)K3s cluster installed!$(NC)"
 	@echo ""
 	@echo "$(YELLOW)Next: make kubeconfig$(NC)"
+
+ansible-expand-disk: ## Expand filesystem after disk resize (idempotent)
+	@echo "$(BLUE)Expanding filesystems to fill disks...$(NC)"
+	$(DIRENV) ansible-playbook -i $(ANSIBLE_DIR)/inventory/hosts.yml $(ANSIBLE_DIR)/playbooks/expand-disk.yml
+	@echo "$(GREEN)Filesystems expanded!$(NC)"
 
 kubeconfig: ## Fetch kubeconfig from K3s cluster
 	@echo "$(BLUE)Fetching kubeconfig...$(NC)"

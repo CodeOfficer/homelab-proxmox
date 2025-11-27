@@ -82,28 +82,38 @@ make test                     # Cluster health checks
 - Kubeconfig saved to `infrastructure/terraform/kubeconfig`
 
 **Next Steps (Priority Order):**
-1. Configure MetalLB (Phase 4)
-2. Set up cert-manager with Cloudflare DNS-01
-3. Bootstrap FluxCD
+1. Phase 4: K3s Services & Demo Apps
+2. Phase 5: Platform Services (Harbor, GitOps)
+3. Phase 6: Operations
 
 ---
 
 ## Pending Tasks
 
-### Phase 4: K3s Configuration
-- [ ] Configure MetalLB (IP pool: 10.20.11.200-220)
-- [ ] Set up cert-manager with Cloudflare DNS-01
+### Phase 4: K3s Services & Demo Apps
+- [ ] 4.1: Install MetalLB (IP pool: 10.20.11.200-220)
+- [ ] 4.2: Install cert-manager with Cloudflare DNS-01
+- [ ] 4.3: Configure DNS records (`*.lab.codeofficer.com` → Traefik)
+- [ ] 4.4: Deploy hello-world (2 replicas, HTTPS verified)
+- [ ] 4.5: Deploy Ollama on GPU node
+- [ ] 4.6: Mac tooling (k9s, kubectl, helm)
 
-### Phase 5: Application Deployments
-- [ ] Bootstrap FluxCD
-- [ ] Deploy infrastructure services (PostgreSQL, Redis, MinIO)
-- [ ] Deploy applications (n8n, Home Assistant)
-- [ ] Deploy AI workloads (Ollama, Jupyter)
+### Phase 5: Platform Services (Future)
+- [ ] 5.1: NFS StorageClass for persistent volumes
+- [ ] 5.2: Harbor container registry (in K3s)
+- [ ] 5.3: FluxCD for GitOps
 
-### Phase 6: Operations
+### Phase 6: Operations (Future)
 - [ ] Configure Proxmox backup schedules
 - [ ] Set up etcd snapshots
 - [ ] Security hardening
+
+### Dependency Tiers (Bootstrap Safety)
+| Tier | Services | Image Source |
+|------|----------|--------------|
+| 0 - Core | MetalLB, cert-manager, Traefik | Public (ghcr.io, quay.io) |
+| 1 - Platform | Harbor, Gitea, monitoring | Public (docker.io) |
+| 2 - Apps | Custom apps | Harbor |
 
 ---
 

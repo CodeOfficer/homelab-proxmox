@@ -1,0 +1,81 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ollama
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: ollama
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      runtimeClassName: nvidia
+      nodeSelector:
+        kubernetes.io/hostname: k3s-gpu-01
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest
+          ports:
+            - containerPort: 11434
+          resources:
+            requests:
+              memory: "4Gi"
+              cpu: "1"
+              nvidia.com/gpu: "1"
+            limits:
+              memory: "16Gi"
+              cpu: "4"
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+      volumes:
+        - name: ollama-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: ollama
+spec:
+  selector:
+    app: ollama
+  ports:
+    - port: 11434
+      targetPort: 11434
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ollama
+  namespace: ollama
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - ollama.codeofficer.com
+      secretName: ollama-tls
+  rules:
+    - host: ollama.codeofficer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ollama
+                port:
+                  number: 11434
