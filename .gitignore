@@ -20,6 +20,7 @@ secrets/
 *.secret
 *.key
 *.pem
+applications/*/secret.yaml
 
 # Kubernetes
 kubeconfig

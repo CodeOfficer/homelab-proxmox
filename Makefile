@@ -1,5 +1,5 @@
-.PHONY: help check init plan apply destroy infra setup-kube test clean
-.PHONY: deploy deploy-all deploy-infrastructure deploy-applications
+.PHONY: help check init plan apply destroy infra setup-kube test clean setup-mac
+.PHONY: deploy deploy-all deploy-infrastructure deploy-applications deploy-k8s
 .PHONY: logs status kubectl ssh-server ssh-agent
 .PHONY: template template-validate template-init template-clean
 .PHONY: iso-upload iso-check
@@ -57,6 +57,25 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
 	@echo ""
+
+# =============================================================================
+# Mac Setup
+# =============================================================================
+
+setup-mac: ## Install Mac dependencies via Homebrew
+	@echo "$(BLUE)Installing Mac dependencies...$(NC)"
+	@if ! command -v brew >/dev/null 2>&1; then \
+		echo "$(RED)Homebrew not installed. Install from https://brew.sh$(NC)"; \
+		exit 1; \
+	fi
+	brew bundle --no-upgrade
+	@echo ""
+	@echo "$(GREEN)All dependencies installed!$(NC)"
+	@if [ -z "$$DIRENV_DIR" ]; then \
+		echo "$(YELLOW)Next: Configure direnv in your shell:$(NC)"; \
+		echo "  Add to ~/.zshrc: eval \"\$$(direnv hook zsh)\""; \
+		echo "  Then: source ~/.zshrc"; \
+	fi
 
 # =============================================================================
 # Prerequisites Check
@@ -285,6 +304,27 @@ kubectl: ## Run arbitrary kubectl command (usage: make kubectl CMD="get pods")
 # =============================================================================
 # Application Deployment
 # =============================================================================
+
+deploy-k8s: ## Deploy all K8s manifests from applications/ (ordered)
+	@echo "$(BLUE)Deploying K8s manifests...$(NC)"
+	@export KUBECONFIG=$(TF_DIR)/kubeconfig; \
+	echo "$(YELLOW)1/6 Installing MetalLB...$(NC)"; \
+	kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml; \
+	kubectl wait --for=condition=Available deployment --all -n metallb-system --timeout=120s; \
+	kubectl apply -f applications/metallb/config.yaml; \
+	echo "$(YELLOW)2/6 Deploying nvidia-device-plugin...$(NC)"; \
+	kubectl apply -f applications/nvidia-device-plugin/; \
+	echo "$(YELLOW)3/6 Installing cert-manager...$(NC)"; \
+	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.1/cert-manager.yaml; \
+	kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=120s; \
+	echo "$(YELLOW)4/6 Deploying cert-manager config...$(NC)"; \
+	kubectl apply -f applications/cert-manager/secret.yaml || echo "$(RED)ERROR: applications/cert-manager/secret.yaml not found. Copy secret.yaml.example and add your Cloudflare token$(NC)"; \
+	kubectl apply -f applications/cert-manager/clusterissuer.yaml; \
+	echo "$(YELLOW)5/6 Deploying hello-world...$(NC)"; \
+	kubectl apply -f applications/hello-world/; \
+	echo "$(YELLOW)6/6 Deploying ollama...$(NC)"; \
+	kubectl apply -f applications/ollama/
+	@echo "$(GREEN)All K8s manifests deployed!$(NC)"
 
 deploy: ## Deploy a specific application (usage: make deploy APP=postgresql)
 	@if [ -z "$(APP)" ]; then \

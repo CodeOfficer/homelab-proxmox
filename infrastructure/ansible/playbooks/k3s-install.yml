@@ -108,3 +108,21 @@
       systemd:
         name: k3s-agent
         state: restarted
+
+- name: Label GPU nodes in Kubernetes
+  hosts: server[0]
+  become: true
+  tasks:
+    - name: Wait for GPU nodes to join cluster
+      command: kubectl get node {{ item }} --no-headers
+      register: node_check
+      until: node_check.rc == 0
+      retries: 30
+      delay: 10
+      loop: "{{ groups['gpu_nodes'] }}"
+      changed_when: false
+
+    - name: Label GPU nodes for nvidia device plugin
+      command: kubectl label node {{ item }} nvidia.com/gpu.present=true --overwrite
+      loop: "{{ groups['gpu_nodes'] }}"
+      changed_when: true

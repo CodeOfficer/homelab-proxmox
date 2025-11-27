@@ -21,7 +21,7 @@ spec:
     spec:
       runtimeClassName: nvidia
       nodeSelector:
-        kubernetes.io/hostname: k3s-gpu-01
+        nvidia.com/gpu.present: "true"
       containers:
         - name: ollama
           image: ollama/ollama:latest

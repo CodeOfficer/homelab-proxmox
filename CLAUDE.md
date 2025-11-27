@@ -34,6 +34,9 @@ homelab-proxmox/
 The complete orchestration workflow:
 
 ```bash
+# 0. Install Mac tools (one-time)
+make setup-mac                # Install via Homebrew (terraform, packer, ansible, kubectl, helm, k9s, direnv)
+
 # 1. Setup environment
 cp .envrc.example .envrc     # Configure credentials
 direnv allow                  # Load environment
@@ -47,10 +50,15 @@ make template                 # Build VM template with Packer
 make apply                    # Provision VMs with Terraform
 
 # 4. Install K3s
-make ansible-k3s              # Install K3s cluster via Ansible
+make ansible-k3s              # Install K3s cluster + GPU drivers + node labels
 make kubeconfig               # Fetch cluster credentials
 
-# 5. Verify
+# 5. Deploy K8s services
+cp applications/cert-manager/secret.yaml.example applications/cert-manager/secret.yaml
+# Edit secret.yaml with Cloudflare API token
+make deploy-k8s               # Deploy MetalLB, cert-manager, NVIDIA plugin, apps
+
+# 6. Verify
 make test                     # Cluster health checks
 ```
 
@@ -58,12 +66,14 @@ make test                     # Cluster health checks
 
 | Target | Description |
 |--------|-------------|
+| `make setup-mac` | Install Mac dependencies via Homebrew |
 | `make check` | Verify prerequisites (API, SSH, tools) |
 | `make iso-upload` | Download/upload Ubuntu ISO to Proxmox |
 | `make template` | Build VM template with Packer |
 | `make apply` | Provision VMs with Terraform |
-| `make ansible-k3s` | Install K3s cluster |
+| `make ansible-k3s` | Install K3s cluster + GPU node config |
 | `make kubeconfig` | Fetch kubeconfig from cluster |
+| `make deploy-k8s` | Deploy all K8s manifests (ordered) |
 | `make test` | Run cluster health checks |
 | `make destroy` | Tear down all infrastructure |
 
@@ -79,24 +89,16 @@ make test                     # Cluster health checks
 - Phase 2: VM template built (`ubuntu-2404-k3s-template`, VMID 9000)
 - Phase 3: K3s cluster operational (2 control plane nodes)
 - Phase 3.5: GPU worker node operational with NVIDIA RTX 4000 Ada
+- Phase 4: K3s services deployed (MetalLB, cert-manager, hello-world, Ollama)
 - Kubeconfig saved to `infrastructure/terraform/kubeconfig`
 
 **Next Steps (Priority Order):**
-1. Phase 4: K3s Services & Demo Apps
-2. Phase 5: Platform Services (Harbor, GitOps)
-3. Phase 6: Operations
+1. Phase 5: Platform Services (Harbor, GitOps)
+2. Phase 6: Operations
 
 ---
 
 ## Pending Tasks
-
-### Phase 4: K3s Services & Demo Apps
-- [ ] 4.1: Install MetalLB (IP pool: 10.20.11.200-220)
-- [ ] 4.2: Install cert-manager with Cloudflare DNS-01
-- [ ] 4.3: Configure DNS records (`*.lab.codeofficer.com` → Traefik)
-- [ ] 4.4: Deploy hello-world (2 replicas, HTTPS verified)
-- [ ] 4.5: Deploy Ollama on GPU node
-- [ ] 4.6: Mac tooling (k9s, kubectl, helm)
 
 ### Phase 5: Platform Services (Future)
 - [ ] 5.1: NFS StorageClass for persistent volumes
@@ -126,11 +128,13 @@ make test                     # Cluster health checks
 | 2 | VM template | `ubuntu-2404-k3s-template` (VMID 9000) via Packer |
 | 3 | K3s cluster | 2 control plane nodes (k3s-cp-01, k3s-cp-02) with embedded etcd |
 | 3.5 | GPU worker | k3s-gpu-01 with RTX 4000 Ada, NVIDIA driver/toolkit |
+| 4 | K3s services | MetalLB, cert-manager, NVIDIA device plugin, hello-world, Ollama |
 
 **Technical Notes (GPU Passthrough):**
 - VM requires: `bios = "ovmf"` + `efi_disk`
 - Kernel params: `net.ifnames=0 biosdevname=0` (for q35 NIC naming)
 - Device plugin needs: `runtimeClassName: nvidia`
+- GPU nodes labeled: `nvidia.com/gpu.present=true` (via Ansible)
 
 ---
 
