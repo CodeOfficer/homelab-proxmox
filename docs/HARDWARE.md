@@ -1,10 +1,10 @@
 # Hardware
 
-This document outlines the physical hardware used in the homelab.
+Physical hardware specifications for the homelab.
 
 ## Compute Nodes
 
-There are 3 primary compute nodes in this cluster, all identical Minisforum MS-01 Workstations.
+3 identical Minisforum MS-01 Workstations form the Proxmox cluster.
 
 | Hostname   | Make/Model       | CPU                       | RAM   | Storage    | GPU                 | Management | Purpose              |
 | ---------- | ---------------- | ------------------------- | ----- | ---------- | ------------------- | ---------- | -------------------- |
@@ -56,34 +56,38 @@ There are 3 primary compute nodes in this cluster, all identical Minisforum MS-0
 
 | Device       | Model/Type | Capacity | RAID | Protocols | Intended Use                                  |
 | ------------ | ---------- | -------- | ---- | --------- | --------------------------------------------- |
-| **NAS**      | UNAS Pro (2U rack) | 40TB usable (3x WD 20TB Red Pro) | RAID 5 | NFS, SMB, 10GbE | Proxmox ISOs, K8s PVs, Templates, Media, Time Machine |
-| **Backup**   | Synology DS713+ | 6TB usable (2x WD Red Pro 6TB) | RAID 1 | NFS, SMB | Proxmox VM Backups, K8s etcd snapshots, Critical configs |
+| **NAS**      | UNAS Pro (2U rack) | 40TB usable (3x WD 20TB Red Pro) | RAID 5 | NFS, SMB, 10GbE | Proxmox storage (VMStorage), K3s PVs (K3sStorage), Media |
+| **Backup**   | Synology DS713+ | 6TB usable (2x WD Red Pro 6TB) | RAID 1 | NFS, SMB | K3s database backups (PostgreSQL), Proxmox VM backups |
 
 ### Detailed Storage Specifications
 
-#### UNAS Pro (Primary Storage - nas.home.arpa)
+#### UNAS Pro (Primary Storage - nas.home.arpa, 10.20.10.20)
 - **Model**: UNAS PRO 2U rack-mount NAS
 - **Bays**: 7x 2.5"/3.5" drive bays (3 currently populated, 4 available for expansion)
 - **Drives**: 3x Western Digital Red Pro 7200 RPM SATA III 3.5" 20TB (WD Red Pro NAS HDD)
 - **RAID**: RAID 5 (2 drives data + 1 parity = ~40TB usable)
 - **Network**: 10 Gbps performance (connected via SFP+ port 25 on switch)
 - **Protocols**: NFS (primary), SMB (Mac Time Machine backups)
+- **NFS Exports** (isolated for security):
+  - `/volume1/pve-vmstorage` → VMStorage (Proxmox only: ISOs, VM templates, backups)
+  - `/volume1/k3s-storage` → K3sStorage (K3s only: app data, models, media)
 - **Use Cases**:
-  - Proxmox ISO storage
-  - VM templates
-  - Kubernetes persistent volumes (primary)
+  - Proxmox ISO storage, VM templates
+  - K3s persistent volumes (app data via nfs-client StorageClass)
   - Shared application data
   - Mac Time Machine backups
 
-#### Synology DS713+ (Backup Target - synology.home.arpa)
+#### Synology DS713+ (Backup Target - synology.home.arpa, 10.20.11.10)
 - **Model**: Synology DS713+ (2-bay NAS)
 - **Drives**: 2x Western Digital WD Red Pro 6TB NAS 7200 RPM SATA 6 Gb/s 256MB Cache (WD6003FFBX)
 - **RAID**: RAID 1 (mirror, 6TB usable)
-- **Network**: 1 Gbps Ethernet
-- **Protocols**: NFS (primary for Proxmox), SMB
+- **Network**: 1 Gbps Ethernet (connected via port 3 on switch)
+- **Protocols**: NFS (primary), SMB
+- **NFS Exports**:
+  - `/volume1/k3s-backups` → PostgreSQL backups (daily CronJob at 3 AM, 7-day retention)
 - **Use Cases**:
+  - K3s database backups (PostgreSQL via CronJob)
   - Proxmox VM/CT backups (separate from production storage)
-  - K8s etcd snapshots
   - Critical configuration backups
   - Disaster recovery storage
 
@@ -170,16 +174,14 @@ This approach avoids slow NFS I/O during intensive build operations while still 
 - **Key Connections**:
   - Port 3: Synology DS713+ (1 GbE)
   - Port 4: pve-01 (2.5 GbE)
-  - Port 6: kvm-03 (PoE FE)
-  - Port 7: kvm-02 (PoE FE)
-  - Port 9: K3S Agent 1 (2.5 GbE)
+  - Port 6: kvm-03 (PoE)
+  - Port 7: kvm-02 (PoE)
   - Port 11: pve-03 (2.5 GbE)
-  - Port 14: kvm-01 (PoE FE)
-  - Port 21: NSFW connection (2.5 GbE)
-  - Port 22: SFW connection (2.5 GbE)
+  - Port 14: kvm-01 (PoE)
   - Port 24: Uplink to UDM Pro (2.5 GbE)
   - Port 25: UNAS Pro (10G SFP+)
   - Port 26: Management connection (1 GbE SFP+)
+  - K3s VMs: Bridge via Proxmox hosts (10.20.11.80, 81, 85)
 
 #### JetKVM Units (Out-of-Band Management)
 - **Quantity**: 3 units (one per compute node)

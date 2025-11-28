@@ -1,6 +1,6 @@
 # Reference Links
 
-Useful documentation and resources for this project.
+Documentation and resources for this project.
 
 ## Infrastructure
 
@@ -11,7 +11,9 @@ Useful documentation and resources for this project.
 
 ## Provisioning Tools
 
+- [Packer Documentation](https://developer.hashicorp.com/packer/docs)
 - [Packer Proxmox Builder](https://developer.hashicorp.com/packer/integrations/hashicorp/proxmox)
+- [Terraform Documentation](https://developer.hashicorp.com/terraform/docs)
 - [Terraform Proxmox Provider](https://registry.terraform.io/providers/bpg/proxmox/latest/docs)
 - [Ansible Documentation](https://docs.ansible.com/)
 
@@ -23,10 +25,17 @@ Useful documentation and resources for this project.
 
 ## Kubernetes Add-ons
 
-- [MetalLB](https://metallb.universe.tf/)
-- [cert-manager](https://cert-manager.io/docs/)
-- [Flux CD](https://fluxcd.io/flux/)
-- [Traefik](https://doc.traefik.io/traefik/)
+- [MetalLB Documentation](https://metallb.universe.tf/)
+- [cert-manager Documentation](https://cert-manager.io/docs/)
+- [Traefik Documentation](https://doc.traefik.io/traefik/)
+- [NFS Subdir External Provisioner](https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner)
+
+## Applications
+
+- [Ollama Documentation](https://github.com/ollama/ollama)
+- [Open WebUI Documentation](https://github.com/open-webui/open-webui)
+- [PostgreSQL Docker Hub](https://hub.docker.com/_/postgres)
+- [Redis Docker Hub](https://hub.docker.com/_/redis)
 
 ## Management Dashboards
 

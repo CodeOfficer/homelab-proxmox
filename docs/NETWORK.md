@@ -1,16 +1,15 @@
 # Network Architecture
 
-This document details the network configuration, including subnet design, IP addressing, DNS, and naming conventions.
+Network configuration: subnet design, IP addressing, DNS, naming conventions.
 
 ## Network Overview
 
-**VLAN-Based Segmentation**: Network is properly segmented using VLANs managed by UDM Pro
+**VLAN-Based Segmentation**: Network segmented using VLANs managed by UDM Pro
 
 **Homelab Primary Network**: `10.20.11.0/24` (VLAN 11 - VM-Servers)
-- All Proxmox hosts, VMs, K3s cluster, and services on VLAN 11
-- Managed by UniFi Dream Machine Pro
+- All Proxmox hosts, VMs, K3s cluster, services on VLAN 11
 - Layer 3 switching via USW-Enterprise-24-PoE (VLAN-aware)
-- Proxmox nodes require VLAN-aware bridge configuration
+- Proxmox nodes use VLAN-aware bridge configuration
 
 **External Access**: VPN via UDM Pro (WireGuard/L2TP)
 
@@ -25,7 +24,7 @@ The network uses multiple VLANs for proper segmentation:
 | `12`    | Personal            | `10.20.12.0/24`  | `10.20.12.1` | Personal devices and workstations         | No              |
 | `13`    | IoT                 | `10.20.13.0/24`  | `10.20.13.1` | IoT devices, Home Assistant targets       | Via K8s ingress |
 
-**Note:** Homelab infrastructure uses **VLAN 10 (Core-Infrastructure)** for storage devices and **VLAN 11 (VM-Servers)** for Proxmox nodes and VMs. Inter-VLAN routing enabled via Layer 3 switch. Other VLANs are for non-homelab purposes.
+**Note:** Homelab uses **VLAN 10** for storage devices and **VLAN 11** for Proxmox nodes/VMs. Inter-VLAN routing via Layer 3 switch.
 
 ## IP Address Allocation
 
@@ -66,9 +65,9 @@ The network uses multiple VLANs for proper segmentation:
 - **Control Plane Nodes**: 4 vCPU, 8GB RAM, 50GB disk
 - **GPU Worker Node**: 8 vCPU, 16GB RAM, 100GB disk, RTX 4000 Ada passthrough
 
-### LoadBalancer IP Pool (10.20.11.200-10.20.11.220)
+### LoadBalancer IP Pool (10.20.11.200-10.20.11.210)
 
-Reserved for MetalLB to assign LoadBalancer service IPs (21 addresses available).
+Reserved for MetalLB to assign LoadBalancer service IPs (11 addresses available).
 
 **Example services:**
 - Traefik Ingress: 10.20.11.200
@@ -119,7 +118,7 @@ Internet
    |
 [UDM Pro] (10.20.11.1) - Gateway/Router/DNS/VPN
    |
-[USW-Enterprise-24-PoE] (10.20.11.2) - Layer 3 Switch, 2.5GbE + 10G SFP+
+[USW-Enterprise-24-PoE] (10.20.10.2) - Layer 3 Switch, 2.5GbE + 10G SFP+
    |
    ├─ Port 3:  Synology DS713+ (1 GbE)
    ├─ Port 4:  pve-01 (2.5 GbE) - GPU Node
@@ -142,7 +141,7 @@ Proxmox Cluster (homelab-cluster)
 K3s Cluster
 ├─ Control Plane: k3s-cp-01 + k3s-cp-02 (embedded etcd HA)
 └─ Workers: k3s-gpu-01 (GPU workloads)
-   └─ MetalLB: 10.20.11.200-220 (LoadBalancer IPs)
+   └─ MetalLB: 10.20.11.200-210 (LoadBalancer IPs)
 ```
 
 ## Bandwidth Allocation
@@ -155,16 +154,16 @@ K3s Cluster
 ## Network Security
 
 ### Current State
-- VLAN segmentation already implemented (VLANs 10, 11, 12, 13)
-- Homelab isolated on VLAN 11 (VM-Servers)
+- VLAN segmentation implemented (VLANs 10, 11, 12, 13)
+- Homelab isolated on VLAN 11
 - VPN required for remote access
-- UDM Pro firewall provides perimeter and inter-VLAN routing
+- UDM Pro firewall handles perimeter and inter-VLAN routing
 - Layer 3 switch enables VLAN isolation
 
-### Future Considerations (Optional)
-- Network policies in K3s for pod-level isolation
-- Additional firewall rules for service-level security
-- Inter-VLAN firewall rules for IoT access from homelab services
+### Future Considerations
+- K3s network policies for pod-level isolation
+- Service-level firewall rules
+- Inter-VLAN rules for IoT access from homelab services
 
 ## Proxmox VLAN Configuration
 
@@ -178,9 +177,9 @@ All Proxmox nodes configured with VLAN-aware networking:
 
 ## Notes
 
-- Network already properly segmented with VLANs
-- All homelab infrastructure uses VLAN 11 (VM-Servers)
-- All infrastructure uses static IP addressing
-- VPN access provides secure remote connectivity
+- Network segmented with VLANs
+- Homelab infrastructure on VLAN 11 (VM-Servers)
+- Static IP addressing throughout
+- VPN provides secure remote access
 - Let's Encrypt certificates avoid browser warnings
-- Existing VLAN structure provides good security boundaries
+- VLAN structure provides security boundaries

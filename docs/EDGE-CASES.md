@@ -331,7 +331,7 @@ kubectl exec -n databases postgresql-0 -- df -h /bitnami/postgresql
 
 ## Recommended Improvements
 
-1. **PostgreSQL backup CronJob** - Daily pg_dump to Synology (planned)
+1. ~~**PostgreSQL backup CronJob**~~ - ✅ Implemented (daily 3 AM to Synology)
 2. **Move databases to NFS** - Trade performance for resilience
 3. **Proxmox HA** - Auto-restart VMs on node failure
 4. **Monitoring/Alerting** - Know when things fail before users complain

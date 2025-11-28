@@ -4,15 +4,15 @@ This document describes the core software stack and the catalog of applications 
 
 ## Core Infrastructure
 
-| Component            | Technology              | Target Version | Purpose                                        |
+| Component            | Technology              | Version        | Purpose                                        |
 | -------------------- | ----------------------- | -------------- | ---------------------------------------------- |
-| **Hypervisor**       | Proxmox VE              | 9.1            | Virtual machine and container management       |
-| **VM Template**      | HashiCorp Packer        | Latest         | Automated VM template building                 |
-| **VM Provisioning**  | HashiCorp Terraform     | Latest         | Infrastructure as Code - VM creation           |
-| **Configuration**    | Ansible + k3s-ansible   | Latest         | K3s cluster installation and configuration     |
-| **Cloud-init**       | cloud-init              | Latest         | VM first-boot initialization                   |
-| **Kubernetes**       | K3s                     | Latest stable  | Lightweight Kubernetes distribution            |
-| **Container Runtime**| containerd              | (embedded)     | Included with K3s                              |
+| **Hypervisor**       | Proxmox VE              | 8.x            | Virtual machine and container management       |
+| **VM Template**      | HashiCorp Packer        | 1.14+          | Automated VM template building                 |
+| **VM Provisioning**  | HashiCorp Terraform     | 1.13+          | Infrastructure as Code - VM creation           |
+| **Configuration**    | Ansible                 | 2.20+          | K3s cluster installation and configuration     |
+| **Cloud-init**       | cloud-init              | (embedded)     | VM first-boot initialization                   |
+| **Kubernetes**       | K3s                     | v1.33.6+k3s1   | Lightweight Kubernetes distribution            |
+| **Container Runtime**| containerd              | 2.1.5-k3s1.33  | Included with K3s                              |
 
 ## Kubernetes Core Services
 
@@ -26,10 +26,10 @@ This document describes the core software stack and the catalog of applications 
 
 ### Storage
 
-| Component         | Technology      | Purpose                                      |
-| ----------------- | --------------- | -------------------------------------------- |
-| **CSI**           | NFS CSI Driver  | Kubernetes NFS persistent volumes            |
-| **Local Storage** | local-path      | Local persistent volumes (K3s default)       |
+| Component         | Technology                        | Purpose                                      |
+| ----------------- | --------------------------------- | -------------------------------------------- |
+| **NFS CSI**       | nfs-subdir-external-provisioner   | Dynamic NFS persistent volumes               |
+| **Local Storage** | local-path                        | Local persistent volumes (K3s default)       |
 
 ### Certificate Management
 
@@ -45,31 +45,29 @@ This document describes the core software stack and the catalog of applications 
 - Validation: DNS-01 challenge via Cloudflare API
 - Renewal: Automatic via cert-manager
 
-### GitOps & Deployment
+### Deployment
 
 | Component          | Technology | Purpose                                      |
 | ------------------ | ---------- | -------------------------------------------- |
-| **GitOps**         | FluxCD     | Continuous deployment from Git repository    |
+| **GitOps**         | FluxCD     | Continuous deployment (planned)              |
 | **Package Manager**| Helm       | Kubernetes package management                |
 
-## Monitoring & Observability (Phase 4+)
+## Monitoring & Observability (Planned)
 
 | Component     | Technology  | Purpose                                |
 | ------------- | ----------- | -------------------------------------- |
 | **Metrics**   | Prometheus  | Time-series metrics collection         |
-| **Dashboard** | Grafana     | Visualization and alerting dashboard   |
+| **Dashboard** | Grafana     | Visualization and alerting             |
 | **Logs**      | TBD         | Log aggregation (optional)             |
-
-**Note:** Monitoring stack to be deployed after cluster is stable.
 
 ## GPU Support
 
-| Component             | Technology                  | Purpose                          |
-| --------------------- | --------------------------- | -------------------------------- |
-| **Device Plugin**     | NVIDIA k8s-device-plugin    | Exposes `nvidia.com/gpu` resource |
-| **Driver**            | nvidia-headless-570-server-open | Host driver in k3s-gpu-01 VM |
-| **Container Toolkit** | nvidia-container-toolkit    | CDI + nvidia-container-runtime   |
-| **RuntimeClass**      | `nvidia`                    | Required for GPU workloads       |
+| Component             | Technology                     | Purpose                          |
+| --------------------- | ------------------------------ | -------------------------------- |
+| **Device Plugin**     | NVIDIA k8s-device-plugin       | Exposes `nvidia.com/gpu` resource |
+| **Driver**            | nvidia-headless-570-server-open| Host driver in k3s-gpu-01 VM     |
+| **Container Toolkit** | nvidia-container-toolkit       | CDI + nvidia-container-runtime   |
+| **RuntimeClass**      | `nvidia`                       | Required for GPU workloads       |
 
 **GPU Pod Requirements:**
 ```yaml
@@ -83,32 +81,29 @@ spec:
 
 ## Application Catalog
 
-Applications to be deployed after core infrastructure is stable (Phase 5).
+### Deployed Infrastructure Services
 
-### Infrastructure Services (namespace: infrastructure)
+| Application   | Namespace      | Description                    | GPU Required |
+| ------------- | -------------- | ------------------------------ | ------------ |
+| PostgreSQL    | default        | Relational database            | No           |
+| Redis         | default        | Caching and message broker     | No           |
 
-| Application   | Description                    | GPU Required |
-| ------------- | ------------------------------ | ------------ |
-| PostgreSQL    | Relational database            | No           |
-| Redis         | Caching and message broker     | No           |
-| MinIO         | S3-compatible object storage   | No           |
+### Deployed AI/ML Workloads
 
-### Core Applications (namespace: applications)
+| Application   | Namespace      | Description                    | GPU Required |
+| ------------- | -------------- | ------------------------------ | ------------ |
+| Ollama        | ollama         | Local LLM inference engine     | Yes          |
+| Open WebUI    | open-webui     | Web interface for Ollama       | No           |
 
-| Application      | Description                    | GPU Required |
-| ---------------- | ------------------------------ | ------------ |
-| n8n              | Workflow automation platform   | No           |
-| Home Assistant   | Home automation hub            | No           |
-
-### AI/ML Workloads (namespace: ai)
+### Planned Applications
 
 | Application              | Description                    | GPU Required |
 | ------------------------ | ------------------------------ | ------------ |
-| Ollama                   | Local LLM inference engine     | Yes          |
+| Harbor                   | Container registry             | No           |
+| n8n                      | Workflow automation            | No           |
+| Home Assistant           | Home automation hub            | No           |
 | Stable Diffusion WebUI   | AI image generation            | Yes          |
 | Jupyter Lab              | Interactive notebooks          | Optional     |
-
-**Note:** AI/ML applications will run on `k3s-gpu-01` node with NVIDIA RTX 4000 Ada.
 
 ## Deployment Methods
 
@@ -158,10 +153,10 @@ applications/<app-name>/
 - Configures cluster networking and components
 - Idempotent configuration management
 
-**Layer 4: Application Deployment (Flux)**
-- GitOps continuous deployment
-- Native Helm chart support
-- Automated synchronization from Git
+**Layer 4: Application Deployment (Helm)**
+- Kubernetes manifests and Helm charts
+- Environment-driven secret generation
+- GitOps with FluxCD (planned)
 
 ### Terraform Modules
 
@@ -175,37 +170,39 @@ applications/<app-name>/
 | Command               | Purpose                                |
 | --------------------- | -------------------------------------- |
 | `make help`           | Show available commands                |
+| `make check`          | Verify prerequisites                   |
+| `make iso-upload`     | Upload Ubuntu ISO (one-time)           |
 | `make template`       | Build VM template with Packer          |
-| `make init`           | Initialize Terraform                   |
-| `make plan`           | Plan infrastructure changes            |
-| `make apply`          | Apply infrastructure (VMs only)        |
-| `make cluster`        | Deploy full cluster (Terraform + Ansible) |
-| `make infra`          | Alias for cluster deployment           |
-| `make deploy APP=x`   | Deploy specific application            |
+| `make apply`          | Provision VMs with Terraform           |
+| `make ansible-k3s`    | Install K3s cluster                    |
+| `make kubeconfig`     | Fetch kubeconfig from cluster          |
+| `make deploy-k8s`     | Deploy all K8s services                |
+| `make test`           | Run cluster health checks              |
+| `make destroy`        | Tear down infrastructure               |
 
 ## Software Versions
 
 | Component | Version | Notes |
 |-----------|---------|-------|
-| Proxmox VE | 9.1 | All 3 nodes |
+| Proxmox VE | 8.x | All 3 nodes |
 | K3s | v1.33.6+k3s1 | Stable channel |
 | containerd | 2.1.5-k3s1.33 | Bundled with K3s |
-| NVIDIA Driver | 570.195.03 | Ubuntu nvidia-headless-570-server-open |
-| CUDA | 12.8 | Via driver |
+| NVIDIA Driver | 550.x | Ubuntu nvidia-headless-550-server |
+| CUDA | 12.4 | Via driver |
 | NVIDIA Container Toolkit | 1.18.0 | libnvidia-container |
 | NVIDIA Device Plugin | v0.17.0 | k8s-device-plugin |
-| Ubuntu | 24.04.3 LTS | VM template base |
+| Ubuntu | 24.04 LTS | VM template base |
 | Kernel | 6.8.0-88-generic | VM kernel |
+| Terraform | 1.13+ | IaC provisioning |
+| Packer | 1.14+ | VM template building |
+| Ansible | 2.20+ | Configuration management |
 
 ## Reference Architecture
 
-This homelab follows Infrastructure as Code principles:
-- Declarative configuration (Packer + Terraform + Ansible + Flux)
+Infrastructure as Code principles:
+- Declarative configuration (Packer + Terraform + Ansible + Helm)
 - Version controlled (Git)
 - Reproducible deployments
-- Environment variable driven secrets
+- Environment-driven secrets (.envrc + direnv)
 - Idempotent configuration management
-- GitOps for application lifecycle
 - Clear separation of concerns (VMs, configuration, applications)
-
-All patterns inspired by `~/homelab-k3s` reference repository and community conventions, adapted for Proxmox context.
