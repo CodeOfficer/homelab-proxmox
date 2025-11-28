@@ -57,10 +57,46 @@
       "Bash(kubectl describe:*)",
       "Bash(kubectl logs:*)",
       "Bash(kubectl patch:*)",
-      "Bash(kubectl delete:*)"
+      "Bash(kubectl delete:*)",
+      "Bash(python3:*)",
+      "Bash(KUBECONFIG=/Users/codeofficer/homelab-proxmox/infrastructure/terraform/kubeconfig kubectl get:*)",
+      "Bash(KUBECONFIG=/Users/codeofficer/homelab-proxmox/infrastructure/terraform/kubeconfig kubectl wait:*)",
+      "Bash(source:*)",
+      "Bash(KUBECONFIG=/Users/codeofficer/homelab-proxmox/infrastructure/terraform/kubeconfig kubectl run:*)",
+      "Bash(KUBECONFIG=/Users/codeofficer/homelab-proxmox/infrastructure/terraform/kubeconfig kubectl logs:*)",
+      "Bash(KUBECONFIG=/Users/codeofficer/homelab-proxmox/infrastructure/terraform/kubeconfig kubectl delete:*)",
+      "Bash(KUBECONFIG=/Users/codeofficer/homelab-proxmox/infrastructure/terraform/kubeconfig kubectl exec:*)",
+      "Bash(KUBECONFIG=/Users/codeofficer/homelab-proxmox/infrastructure/terraform/kubeconfig kubectl rollout:*)",
+      "Bash(dig:*)",
+      "Bash(kubectl create:*)",
+      "Bash(terraform -chdir=infrastructure/terraform state show:*)",
+      "Bash(K3S_TOKEN=\"REDACTED_K3S_TOKEN\")",
+      "Bash(K3S_URL=\"https://10.20.11.80:6443\":*)",
+      "Bash(kubectl version:*)",
+      "Bash(KUBECONFIG=/Users/codeofficer/homelab-proxmox/infrastructure/terraform/kubeconfig kubectl patch:*)",
+      "Bash(brew:*)",
+      "Bash(helm version:*)",
+      "Bash(k9s version:*)",
+      "Bash(terraform version:*)",
+      "Bash(packer version:*)",
+      "Bash(ansible:*)",
+      "Bash(direnv version:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop\""
+          }
+        ]
+      }
+    ]
   },
   "sandbox": {
     "enabled": false,
