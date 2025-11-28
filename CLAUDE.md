@@ -185,7 +185,7 @@ See detailed plan: `.claude/plans/keen-spinning-conway.md`
 - NEVER use `emptyDir` for data that grows unbounded or must survive restarts
 
 **Backup strategy:**
-- PostgreSQL: pg_dump CronJob → Synology (`/volume1/backups/k3s/postgresql/`)
+- PostgreSQL: pg_dump CronJob → Synology 10.20.11.10 (`/volume1/k3s-backups/postgresql/`)
 - App data on NFS: UNAS RAID 5 provides redundancy
 
 **NFS shares (isolated for security):**

@@ -1,6 +1,6 @@
 nfs:
   server: 10.20.10.20
-  path: /volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/VMStorage/.data/k3s
+  path: /volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data
 
 storageClass:
   name: nfs-client

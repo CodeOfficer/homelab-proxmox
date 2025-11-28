@@ -80,7 +80,13 @@
       "Bash(packer version:*)",
       "Bash(ansible:*)",
       "Bash(direnv version:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(KUBECONFIG=~/homelab-proxmox-fresh/infrastructure/terraform/kubeconfig kubectl get:*)",
+      "Bash(KUBECONFIG=~/homelab-proxmox-fresh/infrastructure/terraform/kubeconfig kubectl describe:*)",
+      "Bash(for ip in 10.20.11.80 10.20.11.81)",
+      "Bash(do)",
+      "Bash(do echo \"=== $ip ===\")",
+      "Bash(KUBECONFIG=/Users/codeofficer/homelab-proxmox/infrastructure/terraform/kubeconfig helm install:*)"
     ],
     "deny": [],
     "ask": []

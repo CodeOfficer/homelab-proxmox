@@ -35,13 +35,11 @@ The network uses multiple VLANs for proper segmentation:
 | ------------- | --------------------- | ------------------------------ | ----------------- |
 | `10.20.10.1`  | `udm.home.arpa`       | UniFi Dream Machine Pro        | Gateway/Router    |
 | `10.20.10.2`  | `switch.home.arpa`    | USW-Enterprise-24-PoE          | Switch            |
-| `10.20.10.10` | `synology.lab`        | Synology DS713+ (Backup NAS)   | Storage           |
 | `10.20.10.20` | `nas.lab`             | UNAS Pro (Primary NAS)         | Storage           |
 
 **Note:**
-- Storage devices on VLAN 10 per network design
 - DNS uses `.lab` suffix temporarily (UniFi limitation with nested subdomains)
-- **TODO:** Synology currently on legacy network, needs migration to 10.20.10.10
+- Synology is on VLAN 11 (see VM Servers section)
 
 ### VM Servers - VLAN 11 (10.20.11.0/24)
 
@@ -54,6 +52,7 @@ The network uses multiple VLANs for proper segmentation:
 | `10.20.11.21` | `kvm-01.home.arpa`    | JetKVM for pve-01              | Out-of-Band Mgmt  |
 | `10.20.11.22` | `kvm-02.home.arpa`    | JetKVM for pve-02              | Out-of-Band Mgmt  |
 | `10.20.11.23` | `kvm-03.home.arpa`    | JetKVM for pve-03              | Out-of-Band Mgmt  |
+| `10.20.11.10` | `synology.lab`        | Synology DS713+ (Backup NAS)   | Storage           |
 
 ### Kubernetes VMs (10.20.11.80-10.20.11.99)
 
