@@ -2,7 +2,7 @@
 
 This document contains operational procedures, administrative tasks, and step-by-step instructions for maintaining the homelab infrastructure.
 
-**Last Updated:** 2025-11-25
+**Last Updated:** 2025-11-28
 
 ---
 
@@ -182,14 +182,25 @@ mount | grep nfs
 - **local-zfs**: VM disks (ZFS pool, ~900GB per node)
 - **local**: ISOs, templates, backups (directory storage)
 
-**Network Storage (NFS from UNAS Pro):**
-- **nas-vmstorage**: Shared storage for ISOs, templates, backups
-  - Server: 10.20.10.20 (nas.lab)
+**Network Storage (NFS from UNAS Pro 10.20.10.20):**
+- **VMStorage**: Proxmox storage for ISOs, templates, backups
   - Export: `/volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/VMStorage/.data`
   - Mount: `/mnt/pve/nas-vmstorage`
   - Capacity: 37TB total, ~31TB available
   - Content types: ISO images, VM templates, backups
-  - Available on all three nodes
+  - Allowed IPs: 10.20.11.11-13 (Proxmox nodes only)
+
+- **K3sStorage**: K3s application data (PVCs)
+  - Export: `/volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data`
+  - Used by: nfs-subdir-external-provisioner (StorageClass: `nfs-client`)
+  - Allowed IPs: 10.20.11.80, 81, 85 (K3s VMs only)
+  - PVC path pattern: `{namespace}-{pvc-name}/`
+
+**Network Storage (NFS from Synology 10.20.11.10):**
+- **k3s-backups**: PostgreSQL database backups
+  - Export: `/volume1/k3s-backups`
+  - Used by: PostgreSQL backup CronJob
+  - Mount in pod: `/backup`
 
 ### NFS Storage Operations
 
@@ -400,6 +411,92 @@ JetKVM devices provide out-of-band access to each node for BIOS configuration an
 
 ---
 
+## K3s Operations
+
+### Connecting to K3s Cluster
+
+```bash
+# Via Make targets (recommended)
+make ssh-server           # SSH to k3s-cp-01 (control plane)
+make ssh-agent            # SSH to k3s-gpu-01 (GPU worker)
+make status               # Show cluster status
+
+# Direct kubectl
+export KUBECONFIG=~/homelab-proxmox/infrastructure/terraform/kubeconfig
+kubectl get nodes
+kubectl get pods -A
+```
+
+### Common kubectl Commands
+
+```bash
+# Check cluster health
+make kubectl CMD="get nodes -o wide"
+make kubectl CMD="get pods -A"
+make kubectl CMD="top nodes"
+
+# Check specific namespaces
+make kubectl CMD="get pods -n ollama"
+make kubectl CMD="get pods -n open-webui"
+make kubectl CMD="get pods -n databases"
+
+# View logs
+make kubectl CMD="logs -n ollama deployment/ollama"
+make kubectl CMD="logs -n databases postgresql-0"
+
+# Check storage
+make kubectl CMD="get pvc -A"
+make kubectl CMD="get sc"
+```
+
+### Using k9s (Terminal UI)
+
+```bash
+# Launch k9s with cluster kubeconfig
+KUBECONFIG=~/homelab-proxmox/infrastructure/terraform/kubeconfig k9s
+
+# Useful k9s shortcuts:
+# :pods      - View all pods
+# :deploy    - View deployments
+# :pvc       - View persistent volume claims
+# :nodes     - View nodes
+# Ctrl+d     - Delete selected resource
+# l          - View logs
+# s          - Shell into container
+```
+
+### Helm Operations
+
+```bash
+# List installed charts
+KUBECONFIG=~/homelab-proxmox/infrastructure/terraform/kubeconfig helm list -A
+
+# Upgrade a release
+KUBECONFIG=~/homelab-proxmox/infrastructure/terraform/kubeconfig helm upgrade postgresql \
+  oci://registry-1.docker.io/bitnamicharts/postgresql \
+  -n databases -f applications/postgresql/values.yaml
+```
+
+### K3s Node IP Addresses
+
+| Node | IP | Role | Location |
+|------|-----|------|----------|
+| k3s-cp-01 | 10.20.11.80 | Control plane | pve-02 |
+| k3s-cp-02 | 10.20.11.81 | Control plane | pve-03 |
+| k3s-gpu-01 | 10.20.11.85 | GPU worker | pve-01 |
+
+### Deployed Services
+
+| Service | Namespace | Type | URL |
+|---------|-----------|------|-----|
+| Ollama | ollama | GPU LLM | https://ollama.codeofficer.com |
+| Open WebUI | open-webui | Chat UI | https://chat.codeofficer.com |
+| PostgreSQL | databases | Database | postgresql.databases.svc.cluster.local:5432 |
+| Redis | databases | Cache | redis-master.databases.svc.cluster.local:6379 |
+| Hello World | hello-world | Test | https://hello.codeofficer.com |
+
+---
+
 ## Troubleshooting
 
 ### Cannot SSH to Node
@@ -498,7 +595,61 @@ pvecm status
 
 ## Backup and Recovery
 
-*TODO: Add procedures as backup strategy is implemented*
+### PostgreSQL Backups
+
+**Automated Daily Backups:**
+- CronJob: `postgresql-backup` in `databases` namespace
+- Schedule: Daily at 3 AM
+- Destination: Synology NFS `/volume1/k3s-backups/postgresql/`
+- Retention: Last 7 days (auto-cleanup)
+- File: `applications/postgresql/backup-cronjob.yaml`
+
+**Check backup status:**
+```bash
+# View recent backup jobs
+make kubectl CMD="get jobs -n databases"
+
+# Check backup files on Synology
+ssh admin@10.20.11.10 "ls -la /volume1/k3s-backups/postgresql/"
+```
+
+**Manual backup:**
+```bash
+# Trigger manual backup
+make kubectl CMD="create job --from=cronjob/postgresql-backup manual-backup-$(date +%s) -n databases"
+
+# Watch job progress
+make kubectl CMD="get jobs -n databases -w"
+```
+
+**Restore from backup:**
+```bash
+# 1. Copy backup file to PostgreSQL pod
+make kubectl CMD="cp /path/to/backup.sql databases/postgresql-0:/tmp/"
+
+# 2. Restore
+make kubectl CMD="exec -it postgresql-0 -n databases -- psql -U postgres -f /tmp/backup.sql"
+```
+
+### Application Data (NFS)
+
+App data stored on NFS (Ollama models, Open WebUI data) is protected by:
+- UNAS Pro RAID 5 redundancy
+- No additional backup needed for replaceable data (models can be re-downloaded)
+
+### etcd Snapshots
+
+K3s embedded etcd auto-snapshots to `/var/lib/rancher/k3s/server/db/snapshots/` on control plane nodes.
+
+**Manual etcd snapshot:**
+```bash
+# On k3s-cp-01
+ssh ubuntu@10.20.11.80 "sudo k3s etcd-snapshot save"
+```
+
+### Proxmox VM Backups
+
+*TODO: Configure vzdump schedules for K3s VMs*
 
 ---
 
