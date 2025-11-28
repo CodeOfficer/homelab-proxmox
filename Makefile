@@ -316,23 +316,25 @@ kubectl: ## Run arbitrary kubectl command (usage: make kubectl CMD="get pods")
 deploy-k8s: ## Deploy all K8s manifests from applications/ (ordered)
 	@echo "$(BLUE)Deploying K8s manifests...$(NC)"
 	@export KUBECONFIG=$(TF_DIR)/kubeconfig; \
-	echo "$(YELLOW)1/6 Installing MetalLB...$(NC)"; \
+	echo "$(YELLOW)1/7 Installing MetalLB...$(NC)"; \
 	kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml; \
 	kubectl wait --for=condition=Available deployment --all -n metallb-system --timeout=120s; \
 	kubectl apply -f applications/metallb/config.yaml; \
-	echo "$(YELLOW)2/6 Deploying nvidia-device-plugin...$(NC)"; \
+	echo "$(YELLOW)2/7 Deploying nvidia-device-plugin...$(NC)"; \
 	kubectl apply -f applications/nvidia-device-plugin/; \
-	echo "$(YELLOW)3/6 Installing cert-manager...$(NC)"; \
+	echo "$(YELLOW)3/7 Installing cert-manager...$(NC)"; \
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.1/cert-manager.yaml; \
 	kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=120s; \
-	echo "$(YELLOW)4/6 Deploying cert-manager config...$(NC)"; \
+	echo "$(YELLOW)4/7 Deploying cert-manager config...$(NC)"; \
 	envsubst < applications/cert-manager/secret.yaml.example > applications/cert-manager/secret.yaml; \
 	kubectl apply -f applications/cert-manager/secret.yaml; \
 	kubectl apply -f applications/cert-manager/clusterissuer.yaml; \
-	echo "$(YELLOW)5/6 Deploying hello-world...$(NC)"; \
+	echo "$(YELLOW)5/7 Deploying hello-world...$(NC)"; \
 	kubectl apply -f applications/hello-world/; \
-	echo "$(YELLOW)6/6 Deploying ollama...$(NC)"; \
-	kubectl apply -f applications/ollama/
+	echo "$(YELLOW)6/7 Deploying ollama...$(NC)"; \
+	kubectl apply -f applications/ollama/; \
+	echo "$(YELLOW)7/7 Deploying open-webui...$(NC)"; \
+	kubectl apply -f applications/open-webui/
 	@echo "$(GREEN)All K8s manifests deployed!$(NC)"
 
 deploy: ## Deploy a specific application (usage: make deploy APP=postgresql)
