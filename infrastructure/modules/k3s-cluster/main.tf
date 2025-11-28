@@ -175,14 +175,7 @@ resource "proxmox_virtual_environment_vm" "k3s_agent" {
   machine = var.k3s_agent_nodes[count.index].gpu_passthrough ? "q35" : null
   bios    = var.k3s_agent_nodes[count.index].gpu_passthrough ? "ovmf" : null
 
-  # EFI disk for OVMF boot (required when bios = ovmf)
-  dynamic "efi_disk" {
-    for_each = var.k3s_agent_nodes[count.index].gpu_passthrough ? [1] : []
-    content {
-      datastore_id = var.storage_pool
-      type         = "4m"
-    }
-  }
+  # EFI disk is inherited from template (don't specify here or provider errors on resize)
 
   network_device {
     bridge  = "vmbr0"
