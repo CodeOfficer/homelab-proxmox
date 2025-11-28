@@ -4,6 +4,19 @@ kind: Namespace
 metadata:
   name: open-webui
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: open-webui-data
+  namespace: open-webui
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nfs-client
+  resources:
+    requests:
+      storage: 10Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -39,7 +52,8 @@ spec:
               mountPath: /app/backend/data
       volumes:
         - name: data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: open-webui-data
 ---
 apiVersion: v1
 kind: Service
@@ -60,6 +74,7 @@ metadata:
   namespace: open-webui
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: default-redirect-https@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:

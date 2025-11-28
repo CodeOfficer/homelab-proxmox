@@ -1,0 +1,31 @@
+# Redis Bitnami Helm Chart values
+# Uses local-path storage for performance
+# Pinned to control plane nodes (not GPU worker) for stability
+
+auth:
+  password: "${REDIS_PASSWORD}"
+
+master:
+  persistence:
+    storageClass: "local-path"
+    size: 2Gi
+
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 50m
+    limits:
+      memory: 512Mi
+      cpu: 250m
+
+  # Run on control plane nodes only (not GPU worker)
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: "true"
+
+  # Allow scheduling on control plane (they have taints by default)
+  tolerations:
+    - key: "node-role.kubernetes.io/control-plane"
+      operator: "Exists"
+      effect: "NoSchedule"
+
+architecture: standalone

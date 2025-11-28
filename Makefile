@@ -316,25 +316,39 @@ kubectl: ## Run arbitrary kubectl command (usage: make kubectl CMD="get pods")
 deploy-k8s: ## Deploy all K8s manifests from applications/ (ordered)
 	@echo "$(BLUE)Deploying K8s manifests...$(NC)"
 	@export KUBECONFIG=$(TF_DIR)/kubeconfig; \
-	echo "$(YELLOW)1/7 Installing MetalLB...$(NC)"; \
+	echo "$(YELLOW)1/10 Installing MetalLB...$(NC)"; \
 	kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml; \
 	kubectl wait --for=condition=Available deployment --all -n metallb-system --timeout=120s; \
 	kubectl apply -f applications/metallb/config.yaml; \
-	echo "$(YELLOW)2/7 Deploying nvidia-device-plugin...$(NC)"; \
+	echo "$(YELLOW)2/10 Deploying nvidia-device-plugin...$(NC)"; \
 	kubectl apply -f applications/nvidia-device-plugin/; \
-	echo "$(YELLOW)3/7 Installing cert-manager...$(NC)"; \
+	echo "$(YELLOW)3/10 Installing cert-manager...$(NC)"; \
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.1/cert-manager.yaml; \
 	kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=120s; \
-	echo "$(YELLOW)4/7 Deploying cert-manager config...$(NC)"; \
+	echo "$(YELLOW)4/10 Deploying cert-manager config...$(NC)"; \
 	envsubst < applications/cert-manager/secret.yaml.example > applications/cert-manager/secret.yaml; \
 	kubectl apply -f applications/cert-manager/secret.yaml; \
 	kubectl apply -f applications/cert-manager/clusterissuer.yaml; \
-	echo "$(YELLOW)5/7 Deploying hello-world...$(NC)"; \
+	echo "$(YELLOW)5/10 Installing NFS provisioner...$(NC)"; \
+	helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/ 2>/dev/null || true; \
+	helm upgrade --install nfs-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner \
+		-n kube-system -f applications/nfs-provisioner/values.yaml --wait; \
+	echo "$(YELLOW)6/10 Deploying hello-world...$(NC)"; \
 	kubectl apply -f applications/hello-world/; \
-	echo "$(YELLOW)6/7 Deploying ollama...$(NC)"; \
+	echo "$(YELLOW)7/10 Deploying ollama...$(NC)"; \
 	kubectl apply -f applications/ollama/; \
-	echo "$(YELLOW)7/7 Deploying open-webui...$(NC)"; \
-	kubectl apply -f applications/open-webui/
+	kubectl rollout status deployment/ollama -n ollama --timeout=180s || true; \
+	echo "$(YELLOW)8/10 Deploying open-webui...$(NC)"; \
+	kubectl apply -f applications/open-webui/; \
+	echo "$(YELLOW)9/10 Installing PostgreSQL...$(NC)"; \
+	kubectl apply -f applications/postgresql/namespace.yaml; \
+	envsubst < applications/postgresql/values.yaml > /tmp/postgresql-values.yaml; \
+	helm upgrade --install postgresql oci://registry-1.docker.io/bitnamicharts/postgresql \
+		-n databases -f /tmp/postgresql-values.yaml --wait; \
+	echo "$(YELLOW)10/10 Installing Redis...$(NC)"; \
+	envsubst < applications/redis/values.yaml > /tmp/redis-values.yaml; \
+	helm upgrade --install redis oci://registry-1.docker.io/bitnamicharts/redis \
+		-n databases -f /tmp/redis-values.yaml --wait
 	@echo "$(GREEN)All K8s manifests deployed!$(NC)"
 
 deploy: ## Deploy a specific application (usage: make deploy APP=postgresql)

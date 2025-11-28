@@ -92,15 +92,16 @@ make test                     # Cluster health checks
 - Phase 3: K3s cluster operational (2 control plane nodes)
 - Phase 3.5: GPU worker node operational with NVIDIA RTX 4000 Ada
 - Phase 4: K3s services deployed (MetalLB, cert-manager, hello-world, Ollama, Open WebUI)
+- Phase 4.5: Storage + Shared Services complete
+  - NFS StorageClass (nfs-client) via nfs-subdir-external-provisioner
+  - Ollama/Open WebUI migrated to NFS PVCs
+  - PostgreSQL + Redis deployed (local-path storage)
 - Kubeconfig saved to `infrastructure/terraform/kubeconfig`
 
-**In Progress (see plan file):**
-- Phase 4.5: Storage + Shared Services - see `.claude/plans/keen-spinning-conway.md`
-  - Fix emptyDir timebomb (Ollama, Open WebUI → NFS)
-  - Deploy shared PostgreSQL/Redis
-  - Establish storage conventions
+**In Progress:**
+- None
 
-**Next Steps (after Phase 4.5):**
+**Next Steps:**
 1. Phase 5: Platform Services (Harbor, GitOps)
 2. Phase 6: Operations
 
@@ -108,18 +109,16 @@ make test                     # Cluster health checks
 
 ## Pending Tasks
 
-### Phase 4.5: Storage + Shared Services (In Progress)
-See detailed plan: `.claude/plans/keen-spinning-conway.md`
-- [ ] 4.5.0: Deploy NFS StorageClass
-- [ ] 4.5.1: Fix Ollama storage (emptyDir → NFS PVC)
-- [ ] 4.5.2: Fix Open WebUI storage (emptyDir → NFS PVC)
-- [ ] 4.5.3: Deploy shared PostgreSQL with Synology backup
-- [ ] 4.5.4: Deploy shared Redis
+### Phase 4.6: PostgreSQL Backup - COMPLETE
+- CronJob runs daily at 3 AM
+- Backups saved to Synology `/volume1/k3s-backups/`
+- Keeps last 7 days of backups
+- File: `applications/postgresql/backup-cronjob.yaml`
 
 ### Phase 5: Platform Services (Future)
 - [ ] 5.1: Harbor container registry (in K3s)
 - [ ] 5.2: FluxCD for GitOps
-- [ ] 5.3: MCP server for infrastructure access (deferred from 4.5)
+- [ ] 5.3: MCP server for infrastructure access
 
 ### Phase 6: Operations (Future)
 - [ ] Configure Proxmox backup schedules
@@ -188,6 +187,45 @@ See detailed plan: `.claude/plans/keen-spinning-conway.md`
 - `VMStorage`: Proxmox only (backups, images, templates) - IPs 10.20.11.11-13
 - `K3sStorage`: K3s only (app data) - IPs 10.20.11.80, 81, 85
 - PVC path pattern: `{namespace}-{pvc-name}/`
+
+### Ingress Convention
+
+All ingresses must use TLS with HTTP→HTTPS redirect:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-app
+  namespace: my-app
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: default-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - myapp.codeofficer.com
+      secretName: my-app-tls
+  rules:
+    - host: myapp.codeofficer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-app
+                port:
+                  number: 8080
+```
+
+**Required components:**
+- `cert-manager.io/cluster-issuer: letsencrypt-prod` - auto-issue Let's Encrypt cert
+- `traefik...router.middlewares: default-redirect-https@kubernetescrd` - HTTP→HTTPS redirect
+- `tls.secretName` - where cert is stored
+
+**Middleware:** `applications/traefik/middleware.yaml` (deployed once)
 
 ### Terminology
 - Always refer to K3s (not K8s) when discussing this cluster

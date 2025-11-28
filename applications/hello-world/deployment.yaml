@@ -68,6 +68,7 @@ metadata:
   namespace: hello-world
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: default-redirect-https@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:

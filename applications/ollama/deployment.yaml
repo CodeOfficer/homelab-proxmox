@@ -4,6 +4,19 @@ kind: Namespace
 metadata:
   name: ollama
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-models
+  namespace: ollama
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nfs-client
+  resources:
+    requests:
+      storage: 100Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -11,6 +24,8 @@ metadata:
   namespace: ollama
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: ollama
@@ -41,7 +56,8 @@ spec:
               mountPath: /root/.ollama
       volumes:
         - name: ollama-data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: ollama-models
 ---
 apiVersion: v1
 kind: Service
@@ -62,6 +78,7 @@ metadata:
   namespace: ollama
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: default-redirect-https@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
