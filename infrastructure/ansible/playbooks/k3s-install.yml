@@ -106,7 +106,7 @@
   handlers:
     - name: restart k3s agent
       systemd:
-        name: k3s-agent
+        name: k3s
         state: restarted
 
 - name: Label GPU nodes in Kubernetes
