@@ -65,7 +65,7 @@ This document describes the core software stack and the catalog of applications 
 | Component             | Technology                     | Purpose                          |
 | --------------------- | ------------------------------ | -------------------------------- |
 | **Device Plugin**     | NVIDIA k8s-device-plugin       | Exposes `nvidia.com/gpu` resource |
-| **Driver**            | nvidia-headless-570-server-open| Host driver in k3s-gpu-01 VM     |
+| **Driver**            | nvidia-headless-570-server-open | Host driver in k3s-gpu-01 VM    |
 | **Container Toolkit** | nvidia-container-toolkit       | CDI + nvidia-container-runtime   |
 | **RuntimeClass**      | `nvidia`                       | Required for GPU workloads       |
 
@@ -85,8 +85,8 @@ spec:
 
 | Application   | Namespace      | Description                    | GPU Required |
 | ------------- | -------------- | ------------------------------ | ------------ |
-| PostgreSQL    | default        | Relational database            | No           |
-| Redis         | default        | Caching and message broker     | No           |
+| PostgreSQL    | databases      | Relational database            | No           |
+| Redis         | databases      | Caching and message broker     | No           |
 
 ### Deployed AI/ML Workloads
 
@@ -187,7 +187,10 @@ applications/<app-name>/
 | Proxmox VE | 9.1 | All 3 nodes |
 | K3s | v1.33.6+k3s1 | Stable channel |
 | containerd | 2.1.5-k3s1.33 | Bundled with K3s |
-| NVIDIA Driver | 550.x | Ubuntu nvidia-headless-550-server |
+| Traefik | 3.5.1 | Ingress controller (K3s bundled) |
+| cert-manager | v1.17.1 | TLS certificate automation |
+| NFS provisioner | v4.0.2 | nfs-subdir-external-provisioner |
+| NVIDIA Driver | 570.x | Ubuntu nvidia-headless-570-server-open |
 | CUDA | 12.4 | Via driver |
 | NVIDIA Container Toolkit | 1.18.0 | libnvidia-container |
 | NVIDIA Device Plugin | v0.17.0 | k8s-device-plugin |

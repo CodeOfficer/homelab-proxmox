@@ -65,9 +65,9 @@ The network uses multiple VLANs for proper segmentation:
 - **Control Plane Nodes**: 4 vCPU, 8GB RAM, 50GB disk
 - **GPU Worker Node**: 8 vCPU, 16GB RAM, 100GB disk, RTX 4000 Ada passthrough
 
-### LoadBalancer IP Pool (10.20.11.200-10.20.11.210)
+### LoadBalancer IP Pool (10.20.11.200-10.20.11.220)
 
-Reserved for MetalLB to assign LoadBalancer service IPs (11 addresses available).
+Reserved for MetalLB to assign LoadBalancer service IPs (21 addresses available).
 
 **Example services:**
 - Traefik Ingress: 10.20.11.200
