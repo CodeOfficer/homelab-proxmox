@@ -1,0 +1,57 @@
+# CronJob to send saveworld command every 5 minutes via telnet
+# Ensures world state is saved periodically, protecting against crashes
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sdtd-auto-save
+  namespace: sdtd
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: "true"
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+          containers:
+            - name: save
+              image: alpine:3.19
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -e
+                  apk add --no-cache netcat-openbsd >/dev/null 2>&1
+
+                  # Send password, wait, send saveworld command
+                  # Protocol: connect -> password prompt -> auth -> command prompt -> saveworld
+                  {
+                    sleep 1
+                    echo "$TELNET_PASSWORD"
+                    sleep 1
+                    echo "saveworld"
+                    sleep 3
+                    echo "exit"
+                  } | nc -w 10 sdtd-7dtd-telnet.sdtd.svc.cluster.local 8081 2>&1 || true
+
+                  echo "[$(date)] Auto-save completed"
+              env:
+                - name: TELNET_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: sdtd-telnet
+                      key: password
+              resources:
+                requests:
+                  memory: "32Mi"
+                  cpu: "10m"
+                limits:
+                  memory: "64Mi"
+                  cpu: "100m"
+          restartPolicy: OnFailure

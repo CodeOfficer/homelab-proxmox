@@ -57,6 +57,41 @@ helm status sdtd -n sdtd
 helm uninstall sdtd -n sdtd
 ```
 
+## Auto-Save & Shutdown
+
+### Auto-Save (Crash Protection)
+
+A CronJob sends `saveworld` every 5 minutes via telnet, ensuring world state is saved periodically. This protects against:
+- Server crashes
+- OOM kills
+- Node failures
+- Accidental pod termination
+
+**Max data loss: ~5 minutes of gameplay.**
+
+### Proper Shutdown
+
+Always use graceful shutdown methods:
+
+```bash
+# Option 1: Delete pod (triggers preStop hook, saves world)
+kubectl delete pod -n sdtd -l app.kubernetes.io/name=7dtd
+
+# Option 2: Rolling restart
+kubectl rollout restart deployment -n sdtd sdtd-7dtd
+
+# Option 3: Makefile
+make 7dtd-update
+```
+
+### ⚠️ DO NOT USE
+
+- **Ctrl+D in k9s** - Sends SIGKILL, bypasses save
+- **kill -9** - Same problem
+- **Force delete** - `kubectl delete pod --force --grace-period=0`
+
+These cause instant termination without saving. Any progress since the last auto-save (up to 5 min) will be lost.
+
 ## Game Updates
 
 The server checks for updates on each pod restart:
@@ -158,12 +193,18 @@ Game is disk-intensive. Using `local-path` StorageClass provides better I/O than
 
 ## Admin Commands (via Telnet)
 
+Telnet is enabled for the auto-save CronJob. Password is in `.secrets/7dtd-telnet-password`.
+
 ```bash
-# Port-forward first
+# Get password
+cat .secrets/7dtd-telnet-password
+
+# Port-forward
 kubectl port-forward -n sdtd deploy/sdtd-7dtd 8081:8081
 
-# Then connect
+# Connect
 telnet localhost 8081
+# Enter password when prompted
 ```
 
 ```
