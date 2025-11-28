@@ -34,23 +34,8 @@ persistentStorage:
     size: 20Gi
 
 # Services - LoadBalancer for external access via MetalLB
-gameService:
+service:
   type: LoadBalancer
-  port: 26900
-  annotations:
-    metallb.universe.tf/loadBalancerIPs: "10.20.11.210"
-
-webDashboardService:
-  type: LoadBalancer
-  port: 8080
-  annotations:
-    metallb.universe.tf/loadBalancerIPs: "10.20.11.210"
-
-telnetService:
-  type: LoadBalancer
-  port: 8081
-  annotations:
-    metallb.universe.tf/loadBalancerIPs: "10.20.11.210"
 
 # Health probes - long startup for initial download (~12GB)
 startupDelaySeconds: 2700  # 45 minutes
@@ -104,8 +89,8 @@ maxSpawnedAnimals: 50
 # Built-in backups
 backups:
   enabled: true
-  frequency: "0 4 * * *"  # Daily at 4 AM
-  maxBackups: 7
+  frequency: 30  # Every 30 minutes
+  maxBackups: 48  # ~24 hours of backups
 
 # Admin interfaces
 controlPanelEnabled: true

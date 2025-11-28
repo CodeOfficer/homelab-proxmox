@@ -4,8 +4,8 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: 7dtd-backup-sync
-  namespace: 7dtd
+  name: sdtd-backup-sync
+  namespace: sdtd
 spec:
   schedule: "30 4 * * *"  # 30 min after chart's backup job
   concurrencyPolicy: Forbid
@@ -43,7 +43,7 @@ spec:
           volumes:
             - name: source
               persistentVolumeClaim:
-                claimName: 7dtd-backups
+                claimName: sdtd-7dtd-backups
             - name: dest
               nfs:
                 server: 10.20.11.10
