@@ -4,6 +4,22 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 4.7] - 2025-11-28
+
+### Added
+- 7 Days to Die dedicated game server (thelande/7dtd Helm chart)
+  - Auto-save CronJob every 5 minutes via telnet (crash protection)
+  - Backup sync to Synology NFS
+  - LoadBalancer service at 10.20.11.201:26900
+- Tailscale subnet router on k3s-cp-01 for remote game access
+  - Exposes 10.20.11.0/24 to Tailscale network
+  - Friends can join via Tailscale invite
+
+### Technical Notes
+- 7DTD has NO built-in auto-save; only saves on player logout or graceful shutdown
+- Telnet enabled for `saveworld` command (password in `.secrets/7dtd-telnet-password`)
+- Never use Ctrl+D/SIGKILL on game server pods - use `kubectl delete pod` for graceful shutdown
+
 ## [Phase 4.6] - 2025-11-28
 
 ### Added
