@@ -6,7 +6,7 @@ This document describes the core software stack and the catalog of applications 
 
 | Component            | Technology              | Version        | Purpose                                        |
 | -------------------- | ----------------------- | -------------- | ---------------------------------------------- |
-| **Hypervisor**       | Proxmox VE              | 8.x            | Virtual machine and container management       |
+| **Hypervisor**       | Proxmox VE              | 9.1            | Virtual machine and container management       |
 | **VM Template**      | HashiCorp Packer        | 1.14+          | Automated VM template building                 |
 | **VM Provisioning**  | HashiCorp Terraform     | 1.13+          | Infrastructure as Code - VM creation           |
 | **Configuration**    | Ansible                 | 2.20+          | K3s cluster installation and configuration     |
@@ -184,7 +184,7 @@ applications/<app-name>/
 
 | Component | Version | Notes |
 |-----------|---------|-------|
-| Proxmox VE | 8.x | All 3 nodes |
+| Proxmox VE | 9.1 | All 3 nodes |
 | K3s | v1.33.6+k3s1 | Stable channel |
 | containerd | 2.1.5-k3s1.33 | Bundled with K3s |
 | NVIDIA Driver | 550.x | Ubuntu nvidia-headless-550-server |
