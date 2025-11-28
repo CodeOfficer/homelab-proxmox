@@ -83,7 +83,7 @@ make test                     # Cluster health checks
 
 ## Current Status
 
-**Last Updated:** 2025-11-26
+**Last Updated:** 2025-11-28
 
 **Completed:**
 - Phase 0: Information gathering (docs complete)
@@ -91,10 +91,20 @@ make test                     # Cluster health checks
 - Phase 2: VM template built (`ubuntu-2404-k3s-template`, VMID 9000)
 - Phase 3: K3s cluster operational (2 control plane nodes)
 - Phase 3.5: GPU worker node operational with NVIDIA RTX 4000 Ada
-- Phase 4: K3s services deployed (MetalLB, cert-manager, hello-world, Ollama)
+- Phase 4: K3s services deployed (MetalLB, cert-manager, hello-world, Ollama, Open WebUI)
 - Kubeconfig saved to `infrastructure/terraform/kubeconfig`
 
-**Next Steps (Priority Order):**
+**In Progress (see plan file):**
+- Phase 4.5: Storage + Shared Services - see `.claude/plans/keen-spinning-conway.md`
+  - Fix emptyDir timebomb (Ollama, Open WebUI → NFS)
+  - Deploy shared PostgreSQL/Redis
+  - Establish storage conventions
+
+**Blockers (manual steps before continuing Phase 4.5):**
+1. UNAS: Create `K3sStorage` NFS export (IPs: 10.20.11.80, 81, 85)
+2. Synology: Create NFS export `/volume1/backups/k3s/postgresql`
+
+**Next Steps (after Phase 4.5):**
 1. Phase 5: Platform Services (Harbor, GitOps)
 2. Phase 6: Operations
 
@@ -102,10 +112,18 @@ make test                     # Cluster health checks
 
 ## Pending Tasks
 
+### Phase 4.5: Storage + Shared Services (In Progress)
+See detailed plan: `.claude/plans/keen-spinning-conway.md`
+- [ ] 4.5.0: Deploy NFS StorageClass (after UNAS K3sStorage created)
+- [ ] 4.5.1: Fix Ollama storage (emptyDir → NFS PVC)
+- [ ] 4.5.2: Fix Open WebUI storage (emptyDir → NFS PVC)
+- [ ] 4.5.3: Deploy shared PostgreSQL with Synology backup
+- [ ] 4.5.4: Deploy shared Redis
+
 ### Phase 5: Platform Services (Future)
-- [ ] 5.1: NFS StorageClass for persistent volumes
-- [ ] 5.2: Harbor container registry (in K3s)
-- [ ] 5.3: FluxCD for GitOps
+- [ ] 5.1: Harbor container registry (in K3s)
+- [ ] 5.2: FluxCD for GitOps
+- [ ] 5.3: MCP server for infrastructure access (deferred from 4.5)
 
 ### Phase 6: Operations (Future)
 - [ ] Configure Proxmox backup schedules
@@ -158,3 +176,22 @@ make test                     # Cluster health checks
 - VLAN 11 (10.20.11.0/24) for VMs
 - Static IPs via cloud-init
 - UDM Pro as DNS/gateway
+
+### Storage Convention
+
+**K3s StorageClass selection:**
+- `local-path`: Databases (PostgreSQL, Redis) - fast I/O, backup to Synology
+- `nfs-client`: App data (models, uploads, media) - persistence across node failures
+- NEVER use `emptyDir` for data that grows unbounded or must survive restarts
+
+**Backup strategy:**
+- PostgreSQL: pg_dump CronJob → Synology (`/volume1/backups/k3s/postgresql/`)
+- App data on NFS: UNAS RAID 5 provides redundancy
+
+**NFS shares (isolated for security):**
+- `VMStorage`: Proxmox only (backups, images, templates) - IPs 10.20.11.11-13
+- `K3sStorage`: K3s only (app data) - IPs 10.20.11.80, 81, 85
+- PVC path pattern: `{namespace}-{pvc-name}/`
+
+### Terminology
+- Always refer to K3s (not K8s) when discussing this cluster
