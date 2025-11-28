@@ -100,10 +100,6 @@ make test                     # Cluster health checks
   - Deploy shared PostgreSQL/Redis
   - Establish storage conventions
 
-**Blockers (manual steps before continuing Phase 4.5):**
-1. UNAS: Create `K3sStorage` NFS export (IPs: 10.20.11.80, 81, 85)
-2. Synology: Create NFS export `/volume1/backups/k3s/postgresql`
-
 **Next Steps (after Phase 4.5):**
 1. Phase 5: Platform Services (Harbor, GitOps)
 2. Phase 6: Operations
@@ -114,7 +110,7 @@ make test                     # Cluster health checks
 
 ### Phase 4.5: Storage + Shared Services (In Progress)
 See detailed plan: `.claude/plans/keen-spinning-conway.md`
-- [ ] 4.5.0: Deploy NFS StorageClass (after UNAS K3sStorage created)
+- [ ] 4.5.0: Deploy NFS StorageClass
 - [ ] 4.5.1: Fix Ollama storage (emptyDir → NFS PVC)
 - [ ] 4.5.2: Fix Open WebUI storage (emptyDir → NFS PVC)
 - [ ] 4.5.3: Deploy shared PostgreSQL with Synology backup
