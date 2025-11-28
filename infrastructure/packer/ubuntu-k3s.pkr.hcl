@@ -114,6 +114,7 @@ source "proxmox-iso" "ubuntu-k3s" {
   cores   = 2
   sockets = 1
   memory  = 4096
+  machine = "q35"  # Modern machine type, required for GPU passthrough
 
   # BIOS settings (UEFI)
   bios = "ovmf"
