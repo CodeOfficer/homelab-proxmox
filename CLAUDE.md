@@ -117,6 +117,11 @@ Run `make help` for full list. Key targets:
 - [ ] Set up etcd snapshots
 - [ ] Security hardening
 
+### Game Servers
+- [ ] Add pod anti-affinity to spread game servers across nodes
+- [ ] Factorio server deployment
+- [ ] Other game servers as needed
+
 ### Dependency Tiers (Bootstrap Safety)
 | Tier | Services | Image Source |
 |------|----------|--------------|

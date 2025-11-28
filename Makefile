@@ -4,6 +4,7 @@
 .PHONY: template template-validate template-init template-clean
 .PHONY: iso-upload iso-check
 .PHONY: ansible-deps ansible-k3s ansible-expand-disk kubeconfig save-token
+.PHONY: deploy-7dtd 7dtd-logs 7dtd-shell 7dtd-update 7dtd-status
 
 # =============================================================================
 # Homelab Proxmox Infrastructure Management
@@ -444,3 +445,29 @@ output: ## Show Terraform outputs
 refresh: ## Refresh Terraform state
 	@echo "$(BLUE)Refreshing Terraform state...$(NC)"
 	cd $(TF_DIR) && terraform refresh
+
+# =============================================================================
+# Game Servers
+# =============================================================================
+
+deploy-7dtd: ## Deploy 7 Days to Die game server
+	@echo "$(BLUE)Deploying 7 Days to Die...$(NC)"
+	@./applications/7dtd/deploy.sh
+
+7dtd-logs: ## Tail 7DTD server logs
+	kubectl logs -n 7dtd -l app.kubernetes.io/name=7dtd -f --tail=100
+
+7dtd-shell: ## Open shell in 7DTD container
+	kubectl exec -it -n 7dtd $$(kubectl get pods -n 7dtd -l app.kubernetes.io/name=7dtd -o jsonpath='{.items[0].metadata.name}') -- /bin/bash
+
+7dtd-update: ## Update 7DTD (restarts pod, triggers game update)
+	@echo "$(BLUE)Restarting 7DTD to trigger update...$(NC)"
+	kubectl rollout restart deployment -n 7dtd
+	@echo "$(GREEN)Update triggered. Check logs with: make 7dtd-logs$(NC)"
+
+7dtd-status: ## Show 7DTD server status
+	@echo "$(BLUE)7 Days to Die Status$(NC)"
+	@echo ""
+	helm status 7dtd -n 7dtd 2>/dev/null || echo "$(YELLOW)Not deployed$(NC)"
+	@echo ""
+	kubectl get pods -n 7dtd 2>/dev/null || true

@@ -1,0 +1,51 @@
+# Optional: Sync local backups to Synology NFS
+# The Helm chart creates backups locally on local-path storage.
+# This CronJob syncs them to NFS for off-node redundancy.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: 7dtd-backup-sync
+  namespace: 7dtd
+spec:
+  schedule: "30 4 * * *"  # 30 min after chart's backup job
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: "true"
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+          containers:
+            - name: sync
+              image: alpine:latest
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -e
+                  apk add --no-cache rsync
+                  echo "Syncing 7DTD backups to NFS at $(date)"
+                  mkdir -p /dest/7dtd
+                  rsync -av --delete /source/ /dest/7dtd/
+                  echo "Sync complete. Contents:"
+                  ls -lh /dest/7dtd/
+              volumeMounts:
+                - name: source
+                  mountPath: /source
+                  readOnly: true
+                - name: dest
+                  mountPath: /dest
+          volumes:
+            - name: source
+              persistentVolumeClaim:
+                claimName: 7dtd-backups
+            - name: dest
+              nfs:
+                server: 10.20.11.10
+                path: /volume1/k3s-backups
+          restartPolicy: OnFailure
