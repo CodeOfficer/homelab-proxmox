@@ -70,7 +70,6 @@
       "Bash(dig:*)",
       "Bash(kubectl create:*)",
       "Bash(terraform -chdir=infrastructure/terraform state show:*)",
-      "Bash(K3S_TOKEN=\"REDACTED_K3S_TOKEN\")",
       "Bash(K3S_URL=\"https://10.20.11.80:6443\":*)",
       "Bash(kubectl version:*)",
       "Bash(KUBECONFIG=/Users/codeofficer/homelab-proxmox/infrastructure/terraform/kubeconfig kubectl patch:*)",

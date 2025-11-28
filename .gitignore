@@ -41,6 +41,9 @@ Thumbs.db
 logs/
 *.log
 
+# Claude Code local settings (may contain sensitive allowlist entries)
+.claude/settings.local.json
+
 # Node modules (if using any JS tooling)
 node_modules/
 package-lock.json
