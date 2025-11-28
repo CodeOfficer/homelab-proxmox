@@ -53,8 +53,10 @@ export TF_VAR_k3s_cluster_name="homelab"
 export TF_VAR_k3s_version="v1.33.6+k3s1"
 export TF_VAR_k3s_cluster_domain="k3s.home.arpa"
 
-# K3s cluster join token (get from: ssh ubuntu@10.20.11.80 "sudo cat /var/lib/rancher/k3s/server/node-token")
-export K3S_TOKEN="your-k3s-token-here"
+# K3s cluster join token (OPTIONAL for fresh deploys)
+# Token is auto-saved to .secrets/k3s-token by 'make ansible-k3s'
+# Only set this manually if adding nodes to an existing cluster without .secrets/k3s-token
+# export K3S_TOKEN="your-k3s-token-here"
 
 # -----------------------------------------------------------------------------
 # VM Template Configuration

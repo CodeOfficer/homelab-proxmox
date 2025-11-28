@@ -17,6 +17,7 @@ packer_cache/
 
 # Secrets
 secrets/
+.secrets/
 *.secret
 *.key
 *.pem

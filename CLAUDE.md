@@ -38,7 +38,7 @@ The complete orchestration workflow:
 make setup-mac                # Install via Homebrew (terraform, packer, ansible, kubectl, helm, k9s, direnv)
 
 # 1. Setup environment
-cp .envrc.example .envrc     # Configure credentials
+cp .envrc.example .envrc     # Configure credentials (Proxmox, Cloudflare, SSH key)
 direnv allow                  # Load environment
 
 # 2. Verify prerequisites
@@ -50,17 +50,18 @@ make template                 # Build VM template with Packer
 make apply                    # Provision VMs with Terraform
 
 # 4. Install K3s
-make ansible-k3s              # Install K3s cluster + GPU drivers + node labels
+make ansible-k3s              # Install K3s cluster + GPU drivers + auto-saves token to .secrets/
 make kubeconfig               # Fetch cluster credentials
 
 # 5. Deploy K8s services
-cp applications/cert-manager/secret.yaml.example applications/cert-manager/secret.yaml
-# Edit secret.yaml with Cloudflare API token
 make deploy-k8s               # Deploy MetalLB, cert-manager, NVIDIA plugin, apps
+                              # (cert-manager secret auto-generated from $CLOUDFLARE_API_TOKEN)
 
 # 6. Verify
 make test                     # Cluster health checks
 ```
+
+**Note:** No manual file copying required. K3s token is auto-saved to `.secrets/k3s-token` and cert-manager secret is generated from `.envrc`.
 
 ### Make Targets Reference
 
@@ -71,9 +72,10 @@ make test                     # Cluster health checks
 | `make iso-upload` | Download/upload Ubuntu ISO to Proxmox |
 | `make template` | Build VM template with Packer |
 | `make apply` | Provision VMs with Terraform |
-| `make ansible-k3s` | Install K3s cluster + GPU node config |
+| `make ansible-k3s` | Install K3s cluster + GPU node config + save token |
+| `make save-token` | Save K3s cluster token to .secrets/k3s-token |
 | `make kubeconfig` | Fetch kubeconfig from cluster |
-| `make deploy-k8s` | Deploy all K8s manifests (ordered) |
+| `make deploy-k8s` | Deploy all K8s manifests (generates secrets from env) |
 | `make test` | Run cluster health checks |
 | `make destroy` | Tear down all infrastructure |
 

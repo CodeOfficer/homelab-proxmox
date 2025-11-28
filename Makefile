@@ -3,7 +3,7 @@
 .PHONY: logs status kubectl ssh-server ssh-agent
 .PHONY: template template-validate template-init template-clean
 .PHONY: iso-upload iso-check
-.PHONY: ansible-deps ansible-k3s ansible-expand-disk kubeconfig
+.PHONY: ansible-deps ansible-k3s ansible-expand-disk kubeconfig save-token
 
 # =============================================================================
 # Homelab Proxmox Infrastructure Management
@@ -230,9 +230,17 @@ ansible-deps: ## Install Ansible dependencies (k3s-ansible role)
 ansible-k3s: ansible-deps ## Install K3s on VMs using Ansible
 	@echo "$(BLUE)Installing K3s cluster...$(NC)"
 	$(DIRENV) ansible-playbook -i $(ANSIBLE_DIR)/inventory/hosts.yml $(ANSIBLE_DIR)/playbooks/k3s-install.yml
+	@$(MAKE) save-token
 	@echo "$(GREEN)K3s cluster installed!$(NC)"
 	@echo ""
 	@echo "$(YELLOW)Next: make kubeconfig$(NC)"
+
+save-token: ## Save K3s cluster token to .secrets/k3s-token
+	@echo "$(BLUE)Saving K3s cluster token...$(NC)"
+	@mkdir -p .secrets
+	@$(DIRENV) ssh ubuntu@$(FIRST_SERVER_IP) "sudo cat /var/lib/rancher/k3s/server/node-token" > .secrets/k3s-token
+	@chmod 600 .secrets/k3s-token
+	@echo "$(GREEN)Token saved to .secrets/k3s-token$(NC)"
 
 ansible-expand-disk: ## Expand filesystem after disk resize (idempotent)
 	@echo "$(BLUE)Expanding filesystems to fill disks...$(NC)"
@@ -318,7 +326,8 @@ deploy-k8s: ## Deploy all K8s manifests from applications/ (ordered)
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.1/cert-manager.yaml; \
 	kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=120s; \
 	echo "$(YELLOW)4/6 Deploying cert-manager config...$(NC)"; \
-	kubectl apply -f applications/cert-manager/secret.yaml || echo "$(RED)ERROR: applications/cert-manager/secret.yaml not found. Copy secret.yaml.example and add your Cloudflare token$(NC)"; \
+	envsubst < applications/cert-manager/secret.yaml.example > applications/cert-manager/secret.yaml; \
+	kubectl apply -f applications/cert-manager/secret.yaml; \
 	kubectl apply -f applications/cert-manager/clusterissuer.yaml; \
 	echo "$(YELLOW)5/6 Deploying hello-world...$(NC)"; \
 	kubectl apply -f applications/hello-world/; \
