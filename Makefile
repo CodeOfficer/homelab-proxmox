@@ -238,7 +238,7 @@ ansible-k3s: ansible-deps ## Install K3s on VMs using Ansible
 save-token: ## Save K3s cluster token to .secrets/k3s-token
 	@echo "$(BLUE)Saving K3s cluster token...$(NC)"
 	@mkdir -p .secrets
-	@$(DIRENV) ssh ubuntu@$(FIRST_SERVER_IP) "sudo cat /var/lib/rancher/k3s/server/node-token" > .secrets/k3s-token
+	@$(DIRENV) ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@$(FIRST_SERVER_IP) "sudo cat /var/lib/rancher/k3s/server/node-token" > .secrets/k3s-token 2>/dev/null
 	@chmod 600 .secrets/k3s-token
 	@echo "$(GREEN)Token saved to .secrets/k3s-token$(NC)"
 
@@ -249,7 +249,7 @@ ansible-expand-disk: ## Expand filesystem after disk resize (idempotent)
 
 kubeconfig: ## Fetch kubeconfig from K3s cluster
 	@echo "$(BLUE)Fetching kubeconfig...$(NC)"
-	$(DIRENV) ssh ubuntu@$(FIRST_SERVER_IP) "sudo cat /etc/rancher/k3s/k3s.yaml" | \
+	$(DIRENV) ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@$(FIRST_SERVER_IP) "sudo cat /etc/rancher/k3s/k3s.yaml" 2>/dev/null | \
 		sed "s/127.0.0.1/$(FIRST_SERVER_IP)/g" > $(TF_DIR)/kubeconfig
 	@chmod 600 $(TF_DIR)/kubeconfig
 	@echo "$(GREEN)Kubeconfig saved to: $(TF_DIR)/kubeconfig$(NC)"
