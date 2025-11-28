@@ -153,6 +153,9 @@ resource "proxmox_virtual_environment_vm" "k3s_agent" {
   vm_id       = var.k3s_agent_nodes[count.index].vmid
   description = "K3s worker node${var.k3s_agent_nodes[count.index].gpu_passthrough ? " (GPU enabled)" : ""}"
 
+  # GPU VMs can take longer to stop
+  timeout_stop_vm = 600
+
   clone {
     vm_id     = var.vm_template_vmid
     node_name = var.vm_template_node
