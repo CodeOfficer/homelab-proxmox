@@ -101,7 +101,7 @@ Run `make help` for full list. Key targets:
 
 ## Current Status
 
-**Completed:** Phases 0-4.7 (see `CHANGELOG.md`)
+**Completed:** Phases 0-4.8 (see `CHANGELOG.md`)
 
 **In Progress:** None
 
@@ -118,15 +118,16 @@ Run `make help` for full list. Key targets:
 - [ ] Security hardening
 
 ### Game Servers
-- [x] 7 Days to Die (`applications/7dtd/`) - deployed with auto-save
+- [x] 7 Days to Die (`applications/7dtd/`) - 10.20.11.201:26900
+- [x] Factorio (`applications/factorio/`) - 10.20.11.202:34197
 - [x] Tailscale subnet router for remote friend access
 - [ ] Pod anti-affinity to spread game servers across nodes
-- [ ] Factorio server deployment
 
 ### Remote Access (Tailscale)
 Tailscale installed on k3s-cp-01 as subnet router exposing 10.20.11.0/24.
 - Invite friends via: https://login.tailscale.com/admin/users
-- Friends connect to game at: `10.20.11.201:26900`
+- 7 Days to Die: `10.20.11.201:26900`
+- Factorio: `10.20.11.202:34197`
 
 ### Dependency Tiers (Bootstrap Safety)
 | Tier | Services | Image Source |

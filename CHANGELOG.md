@@ -4,6 +4,19 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 4.8] - 2025-11-28
+
+### Added
+- Factorio dedicated game server (SQLJames/factorio-server-charts)
+  - Built-in auto-save every 5 minutes (no CronJob needed)
+  - LoadBalancer service at 10.20.11.202:34197
+  - Space Age DLC enabled
+  - RCON password in `.secrets/factorio-rcon-password`
+
+### Technical Notes
+- Factorio is simpler than 7DTD - built-in auto-save, fast startup (~30s vs 45min)
+- No account needed for private server
+
 ## [Phase 4.7] - 2025-11-28
 
 ### Added

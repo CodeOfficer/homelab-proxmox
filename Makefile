@@ -5,6 +5,7 @@
 .PHONY: iso-upload iso-check
 .PHONY: ansible-deps ansible-k3s ansible-expand-disk kubeconfig save-token
 .PHONY: deploy-7dtd 7dtd-logs 7dtd-shell 7dtd-update 7dtd-status
+.PHONY: deploy-factorio factorio-logs factorio-status factorio-rcon
 
 # =============================================================================
 # Homelab Proxmox Infrastructure Management
@@ -471,3 +472,24 @@ deploy-7dtd: ## Deploy 7 Days to Die game server
 	helm status sdtd -n sdtd 2>/dev/null || echo "$(YELLOW)Not deployed$(NC)"
 	@echo ""
 	kubectl get pods -n sdtd 2>/dev/null || true
+
+deploy-factorio: ## Deploy Factorio game server
+	@echo "$(BLUE)Deploying Factorio...$(NC)"
+	@./applications/factorio/deploy.sh
+
+factorio-logs: ## Tail Factorio server logs
+	kubectl logs -n factorio -l app=factorio-factorio-server-charts -f --tail=100
+
+factorio-status: ## Show Factorio server status
+	@echo "$(BLUE)Factorio Status$(NC)"
+	@echo ""
+	helm status factorio -n factorio 2>/dev/null || echo "$(YELLOW)Not deployed$(NC)"
+	@echo ""
+	kubectl get pods -n factorio 2>/dev/null || true
+	@echo ""
+	@echo "$(YELLOW)LoadBalancer IP:$(NC)"
+	kubectl get svc -n factorio -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "pending"
+
+factorio-rcon: ## Port-forward to Factorio RCON
+	@echo "$(BLUE)Port-forwarding to RCON on localhost:27015...$(NC)"
+	kubectl port-forward -n factorio svc/factorio-factorio-server-charts-rcon 27015:27015

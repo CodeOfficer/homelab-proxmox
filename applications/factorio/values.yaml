@@ -1,0 +1,87 @@
+# SQLJames/factorio-server-charts Helm values for homelab
+# Chart: https://github.com/SQLJames/factorio-server-charts
+# Image: factoriotools/factorio
+
+image:
+  repository: factoriotools/factorio
+  tag: stable
+  pullPolicy: IfNotPresent
+
+# Disable host networking - use LoadBalancer instead
+hostNetworkEnabled: false
+
+# Node scheduling - control plane only (not GPU node)
+nodeSelector:
+  node-role.kubernetes.io/control-plane: "true"
+
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+
+# Pod security (factorio user is 845)
+securityContext:
+  fsGroup: 845
+
+podSecurityContext:
+  runAsUser: 845
+  runAsGroup: 845
+
+# Service - LoadBalancer via MetalLB
+service:
+  type: LoadBalancer
+  port: 34197  # Standard Factorio port
+
+# Resources
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "500m"
+  limits:
+    memory: "2Gi"
+    cpu: "2"
+
+# Storage - local-path for performance
+persistence:
+  enabled: true
+  dataDir:
+    Size: 10Gi
+  storageClassName: local-path
+
+# Factorio server settings
+factorioServer:
+  save_name: "homelab"
+  generate_new_save: true
+  load_latest_save: true
+  update_mods_on_start: false
+  enable_space_age: true  # Enable Space Age DLC support
+  port: 34197
+
+# Server configuration (no account needed for private server)
+server_settings:
+  name: "Homelab Factorio"
+  description: "Private Homelab Server"
+  tags:
+    - homelab
+    - private
+  max_players: 8
+  visibility:
+    public: false
+    lan: true
+  require_user_verification: false  # No Factorio account needed to join
+  autosave_interval: 5   # Minutes between autosaves
+  autosave_slots: 10     # Keep 10 autosaves
+  auto_pause: true       # Pause when no players
+  afk_autokick_interval: 0  # Never kick AFK
+
+# RCON (remote console) - ClusterIP for internal use only
+rcon:
+  external: true
+  type: ClusterIP
+  port: 27015
+  password: ""  # Will be set by deploy.sh via passwordSecret
+  passwordSecret: "factorio-rcon"
+
+# Mods - disabled by default
+mods:
+  enabled: false
