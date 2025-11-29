@@ -33,6 +33,11 @@ helm upgrade --install "$RELEASE" prometheus-community/kube-prometheus-stack \
     --wait \
     --timeout 10m
 
+# Sync password to Grafana database (Helm --set doesn't update existing installs)
+echo "Syncing admin password..."
+kubectl exec -n "$NAMESPACE" deployment/monitoring-grafana -c grafana -- \
+    grafana cli admin reset-admin-password "${GRAFANA_ADMIN_PASSWORD}" 2>/dev/null || true
+
 echo "Applying Grafana ingress..."
 kubectl apply -f "${SCRIPT_DIR}/ingress.yaml"
 
