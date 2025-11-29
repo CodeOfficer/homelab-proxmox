@@ -101,13 +101,14 @@ Run `make help` for full list. Key targets:
 
 ## Current Status
 
-**Completed:** Phases 0-4.8 (see `CHANGELOG.md`)
+**Completed:** Phases 0-5.0 (see `CHANGELOG.md`)
 
 **In Progress:** None
 
 **Next Steps:**
 
 ### Phase 5: Platform Services
+- [x] 5.0: Prometheus + Grafana monitoring (`applications/monitoring/`)
 - [ ] 5.1: Harbor container registry
 - [ ] 5.2: FluxCD for GitOps
 - [ ] 5.3: MCP server for infrastructure access
@@ -126,13 +127,14 @@ Run `make help` for full list. Key targets:
 ### Remote Access (Tailscale)
 Tailscale installed on k3s-cp-01 as subnet router exposing 10.20.11.0/24.
 - Invite friends via: https://login.tailscale.com/admin/users
+- Grafana: https://grafana.codeofficer.com
 - 7 Days to Die: `10.20.11.201:26900`
 - Factorio: `10.20.11.202:34197`
 
 ### Dependency Tiers (Bootstrap Safety)
 | Tier | Services | Image Source |
 |------|----------|--------------|
-| 0 - Core | MetalLB, cert-manager, Traefik | Public (ghcr.io, quay.io) |
-| 1 - Platform | Harbor, Gitea, monitoring | Public (docker.io) |
+| 0 - Core | MetalLB, cert-manager, Traefik, Prometheus/Grafana | Public (ghcr.io, quay.io) |
+| 1 - Platform | Harbor, Gitea | Public (docker.io) |
 | 2 - Apps | Custom apps | Harbor |
 

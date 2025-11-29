@@ -4,6 +4,24 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.0] - 2025-11-28
+
+### Added
+- Prometheus + Grafana monitoring stack (kube-prometheus-stack Helm chart)
+  - Grafana at https://grafana.codeofficer.com
+  - 15-day metric retention (10Gi local-path storage)
+  - Node exporter on all 3 nodes
+  - kube-state-metrics for K8s object metrics
+  - Alertmanager for alert routing
+- NVIDIA DCGM exporter for GPU metrics (RTX 4090)
+  - GPU temperature, utilization, memory usage
+  - ServiceMonitor for Prometheus scraping
+
+### Technical Notes
+- Grafana admin password saved to `.secrets/grafana-admin-password`
+- All monitoring components scheduled on control plane nodes
+- GPU metrics available via `DCGM_FI_DEV_*` Prometheus metrics
+
 ## [Phase 4.8] - 2025-11-28
 
 ### Added

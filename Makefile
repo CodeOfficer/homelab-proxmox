@@ -6,6 +6,7 @@
 .PHONY: ansible-deps ansible-k3s ansible-expand-disk kubeconfig save-token
 .PHONY: deploy-7dtd 7dtd-logs 7dtd-shell 7dtd-update 7dtd-status
 .PHONY: deploy-factorio factorio-logs factorio-status factorio-rcon
+.PHONY: deploy-monitoring monitoring-status grafana-password
 
 # =============================================================================
 # Homelab Proxmox Infrastructure Management
@@ -493,3 +494,29 @@ factorio-status: ## Show Factorio server status
 factorio-rcon: ## Port-forward to Factorio RCON
 	@echo "$(BLUE)Port-forwarding to RCON on localhost:27015...$(NC)"
 	kubectl port-forward -n factorio svc/factorio-factorio-server-charts-rcon 27015:27015
+
+# =============================================================================
+# Monitoring (Prometheus + Grafana)
+# =============================================================================
+
+deploy-monitoring: ## Deploy Prometheus + Grafana monitoring stack
+	@echo "$(BLUE)Deploying monitoring stack...$(NC)"
+	@./applications/monitoring/deploy.sh
+
+monitoring-status: ## Show monitoring stack status
+	@echo "$(BLUE)Monitoring Stack Status$(NC)"
+	@echo ""
+	helm status monitoring -n monitoring 2>/dev/null || echo "$(YELLOW)Not deployed$(NC)"
+	@echo ""
+	kubectl get pods -n monitoring 2>/dev/null || true
+	@echo ""
+	@echo "$(YELLOW)Grafana URL: https://grafana.codeofficer.com$(NC)"
+
+grafana-password: ## Show Grafana admin password
+	@if [ -f .secrets/grafana-admin-password ]; then \
+		echo "$(BLUE)Grafana Admin Password:$(NC)"; \
+		cat .secrets/grafana-admin-password; \
+		echo ""; \
+	else \
+		echo "$(RED)Password file not found. Run deploy-monitoring first.$(NC)"; \
+	fi
