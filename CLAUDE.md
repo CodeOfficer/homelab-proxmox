@@ -123,6 +123,17 @@ Run `make help` for full list. Key targets:
 - [x] Factorio (`applications/factorio/`) - 10.20.11.202:34197
 - [x] Tailscale subnet router for remote friend access
 - [ ] Pod anti-affinity to spread game servers across nodes
+- [ ] Factorio Server Manager (FSM) - web UI for saves/mods/config
+  - Options: FSM sidecar, RCON CLI (`make factorio-rcon`), kubectl cp
+  - FSM repo: `mroote/factorio-server-manager`
+
+### Monitoring Enhancements
+- [ ] Custom Grafana dashboards:
+  - K8s cluster overview (nodes, pods, resource usage)
+  - GPU metrics (RTX 4090 utilization, temp, memory)
+  - Game server status (uptime, player counts if available)
+- [ ] Prometheus alerting rules (disk full, node down, pod crash loops)
+- [ ] Explore Prometheus metrics and queries
 
 ### Remote Access (Tailscale)
 Tailscale installed on k3s-cp-01 as subnet router exposing 10.20.11.0/24.
