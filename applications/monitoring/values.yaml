@@ -38,6 +38,15 @@ grafana:
   # Admin password set via --set in deploy.sh
   adminUser: admin
 
+  # Install additional plugins
+  plugins:
+    - marcusolsson-treemap-panel
+    - knightss27-weathermap-panel
+
+  # Disable init chown (causes issues with existing PVCs)
+  initChownData:
+    enabled: false
+
   persistence:
     enabled: true
     storageClassName: local-path

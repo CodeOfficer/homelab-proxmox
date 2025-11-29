@@ -44,6 +44,9 @@ kubectl apply -f "${SCRIPT_DIR}/ingress.yaml"
 echo "Deploying DCGM exporter for GPU metrics..."
 kubectl apply -f "${SCRIPT_DIR}/dcgm-exporter.yaml"
 
+echo "Deploying custom dashboards..."
+kubectl apply -f "${SCRIPT_DIR}/dashboards/"
+
 echo ""
 echo "Monitoring stack deployed!"
 echo ""

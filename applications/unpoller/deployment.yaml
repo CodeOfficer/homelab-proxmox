@@ -1,0 +1,163 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: unpoller
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: unpoller-credentials
+  namespace: unpoller
+type: Opaque
+stringData:
+  # IMPORTANT: Create a read-only user in UniFi for this
+  # UniFi > Settings > Admins > Add Admin > Role: View Only
+  UNIFI_USER: "unpoller"
+  UNIFI_PASS: "CHANGE_ME"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: unpoller-config
+  namespace: unpoller
+data:
+  up.conf: |
+    [poller]
+    debug = false
+    quiet = false
+    plugins = []
+
+    [prometheus]
+    disable = false
+    http_listen = "0.0.0.0:9130"
+    report_errors = false
+
+    [influxdb]
+    disable = true
+
+    [loki]
+    disable = true
+
+    [[unifi.controller]]
+    # UDM Pro on VLAN 10
+    url = "https://10.20.10.1"
+    # Credentials from environment (secret)
+    user = "${UP_UNIFI_DEFAULT_USER}"
+    pass = "${UP_UNIFI_DEFAULT_PASS}"
+    sites = ["all"]
+    # UDM Pro uses port 443 (UniFiOS)
+    verify_ssl = false
+    save_ids = true
+    save_events = false
+    save_alarms = false
+    save_anomalies = false
+    save_dpi = false
+    save_sites = true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unpoller
+  namespace: unpoller
+  labels:
+    app: unpoller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unpoller
+  template:
+    metadata:
+      labels:
+        app: unpoller
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: unpoller
+          image: ghcr.io/unpoller/unpoller:v2.11.2
+          ports:
+            - name: metrics
+              containerPort: 9130
+              protocol: TCP
+          env:
+            - name: UP_UNIFI_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: unpoller-credentials
+                  key: UNIFI_USER
+            - name: UP_UNIFI_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: unpoller-credentials
+                  key: UNIFI_PASS
+          volumeMounts:
+            - name: config
+              mountPath: /etc/unpoller
+              readOnly: true
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 256Mi
+              cpu: 200m
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: metrics
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: unpoller-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: unpoller
+  namespace: unpoller
+  labels:
+    app: unpoller
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9130
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    app: unpoller
+---
+# ServiceMonitor for Prometheus Operator
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: unpoller
+  namespace: unpoller
+  labels:
+    app: unpoller
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: unpoller
+  namespaceSelector:
+    matchNames:
+      - unpoller
+  endpoints:
+    - port: metrics
+      interval: 30s
+      scrapeTimeout: 10s
