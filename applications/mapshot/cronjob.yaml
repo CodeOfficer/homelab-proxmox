@@ -110,6 +110,7 @@ spec:
                     --factorio_datadir /mapshot/factorio \
                     --work_dir /mapshot/factorio \
                     --area ${MAPSHOT_AREA:-all} \
+                    --resolution ${MAPSHOT_RESOLUTION:-2048} \
                     --jpgquality ${MAPSHOT_JPEG_QUALITY:-90} \
                     --surface _all_ \
                     -v 5 \

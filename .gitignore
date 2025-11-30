@@ -48,3 +48,5 @@ logs/
 # Node modules (if using any JS tooling)
 node_modules/
 package-lock.json
+# Large binary files
+applications/factorio/*.tar.xz
