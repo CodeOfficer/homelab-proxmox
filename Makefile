@@ -7,6 +7,7 @@
 .PHONY: deploy-7dtd 7dtd-logs 7dtd-shell 7dtd-update 7dtd-status
 .PHONY: deploy-factorio factorio-logs factorio-status factorio-rcon
 .PHONY: deploy-monitoring monitoring-status grafana-password
+.PHONY: deploy-mapshot mapshot-render mapshot-status mapshot-logs
 
 # =============================================================================
 # Homelab Proxmox Infrastructure Management
@@ -519,4 +520,38 @@ grafana-password: ## Show Grafana admin password
 		echo ""; \
 	else \
 		echo "$(RED)Password file not found. Run deploy-monitoring first.$(NC)"; \
+	fi
+
+# =============================================================================
+# Mapshot (Factorio Map Visualization)
+# =============================================================================
+
+deploy-mapshot: ## Deploy Mapshot for Factorio map rendering
+	@echo "$(BLUE)Deploying Mapshot...$(NC)"
+	@./applications/mapshot/deploy.sh
+
+mapshot-render: ## Trigger manual map render
+	@echo "$(BLUE)Triggering Mapshot render...$(NC)"
+	kubectl create job --from=cronjob/mapshot-render -n mapshot mapshot-manual-$$(date +%s)
+	@echo "$(GREEN)Render job created. View logs with: make mapshot-logs$(NC)"
+
+mapshot-status: ## Show Mapshot status
+	@echo "$(BLUE)Mapshot Status$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Server:$(NC)"
+	kubectl get pods -n mapshot -l app=mapshot-server 2>/dev/null || echo "Not deployed"
+	@echo ""
+	@echo "$(YELLOW)Recent render jobs:$(NC)"
+	kubectl get jobs -n mapshot --sort-by=.metadata.creationTimestamp 2>/dev/null | tail -5 || true
+	@echo ""
+	@echo "$(YELLOW)URL: https://mapshot.codeofficer.com$(NC)"
+
+mapshot-logs: ## View latest Mapshot render logs
+	@echo "$(BLUE)Mapshot Render Logs$(NC)"
+	@LATEST=$$(kubectl get jobs -n mapshot --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}' 2>/dev/null); \
+	if [ -n "$$LATEST" ]; then \
+		echo "Job: $$LATEST"; \
+		kubectl logs -n mapshot job/$$LATEST --all-containers; \
+	else \
+		echo "$(YELLOW)No render jobs found$(NC)"; \
 	fi

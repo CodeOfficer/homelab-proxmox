@@ -122,11 +122,14 @@ Run `make help` for full list. Key targets:
 - [x] 7 Days to Die (`applications/7dtd/`) - 10.20.11.201:26900
   - RWG 8K map "FoundationRWG", Warrior difficulty, EAC disabled
 - [x] Factorio (`applications/factorio/`) - 10.20.11.202:34197
+- [x] Factorio Mapshot (`applications/mapshot/`) - https://mapshot.codeofficer.com/mapshot/latest/
+  - Zoomable web map, 4-hour CronJob render, checksum-gated
 - [x] Tailscale subnet router for remote friend access
 - [ ] Pod anti-affinity to spread game servers across nodes
 - [ ] Factorio Server Manager (FSM) - web UI for saves/mods/config
   - Options: FSM sidecar, RCON CLI (`make factorio-rcon`), kubectl cp
   - FSM repo: `mroote/factorio-server-manager`
+- [ ] Mapshot event-driven trigger (sidecar watches for last player leave)
 
 ### Monitoring Enhancements
 - [ ] Custom Grafana dashboards:

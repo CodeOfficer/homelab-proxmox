@@ -1,0 +1,27 @@
+# Mapshot Ingress with TLS via cert-manager
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mapshot
+  namespace: mapshot
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: default-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - mapshot.codeofficer.com
+      secretName: mapshot-tls
+  rules:
+    - host: mapshot.codeofficer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mapshot-server
+                port:
+                  number: 8080

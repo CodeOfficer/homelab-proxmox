@@ -164,6 +164,14 @@ export HOMEASSISTANT_PASSWORD="change-me-strong-password"
 export GRAFANA_ADMIN_PASSWORD="change-me-strong-password"
 
 # -----------------------------------------------------------------------------
+# Factorio.com Account (for Mapshot map rendering)
+# -----------------------------------------------------------------------------
+# Create account at https://factorio.com/login
+# Get token from https://factorio.com/profile (API Token section)
+export FACTORIO_USERNAME="your-factorio-username"
+export FACTORIO_TOKEN="your-factorio-api-token"
+
+# -----------------------------------------------------------------------------
 # Kubectl Configuration
 # -----------------------------------------------------------------------------
 # Path to kubeconfig for cluster access

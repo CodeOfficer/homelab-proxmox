@@ -1,0 +1,69 @@
+# RBAC for mapshot trigger - allows log-watcher sidecar to create render jobs
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mapshot-trigger
+  namespace: factorio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mapshot-job-creator
+  namespace: mapshot
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list"]
+  - apiGroups: ["batch"]
+    resources: ["cronjobs"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mapshot-trigger-binding
+  namespace: mapshot
+subjects:
+  - kind: ServiceAccount
+    name: mapshot-trigger
+    namespace: factorio
+roleRef:
+  kind: Role
+  name: mapshot-job-creator
+  apiGroup: rbac.authorization.k8s.io
+---
+# Also need permissions to copy saves from factorio namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: factorio-save-reader
+  namespace: factorio
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mapshot-factorio-reader
+  namespace: factorio
+subjects:
+  - kind: ServiceAccount
+    name: mapshot-render
+    namespace: mapshot
+roleRef:
+  kind: Role
+  name: factorio-save-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# ServiceAccount for render jobs
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mapshot-render
+  namespace: mapshot

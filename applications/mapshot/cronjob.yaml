@@ -1,0 +1,178 @@
+# Mapshot render CronJob - 4-hour fallback with checksum gating
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mapshot-render
+  namespace: mapshot
+spec:
+  schedule: "0 */4 * * *"  # Every 4 hours
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400  # Clean up after 24 hours
+      template:
+        spec:
+          serviceAccountName: mapshot-render
+          restartPolicy: OnFailure
+
+          initContainers:
+            # Copy latest save from Factorio pod and check if render needed
+            - name: copy-save
+              image: bitnami/kubectl:latest
+              command: ["/bin/bash", "-c"]
+              args:
+                - |
+                  set -e
+                  echo "Finding Factorio pod..."
+                  POD=$(kubectl get pods -n factorio -l app=factorio-factorio-server-charts -o jsonpath='{.items[0].metadata.name}')
+
+                  if [ -z "$POD" ]; then
+                    echo "ERROR: No Factorio pod found"
+                    exit 1
+                  fi
+
+                  echo "Found pod: $POD"
+
+                  # Find the most recent save file
+                  SAVE=$(kubectl exec -n factorio "$POD" -- sh -c 'ls -t /factorio/saves/*.zip 2>/dev/null | head -1')
+
+                  if [ -z "$SAVE" ]; then
+                    echo "ERROR: No save files found"
+                    exit 1
+                  fi
+
+                  echo "Copying save: $SAVE"
+                  kubectl cp "factorio/$POD:$SAVE" /opt/factorio/saves/latest.zip
+
+                  # Compute checksum
+                  NEW_CHECKSUM=$(sha256sum /opt/factorio/saves/latest.zip | cut -d' ' -f1)
+                  echo "Save checksum: $NEW_CHECKSUM"
+
+                  # Check against previous checksum
+                  if [ -f /mapshot/.last-render-checksum ]; then
+                    OLD_CHECKSUM=$(cat /mapshot/.last-render-checksum)
+                    echo "Previous checksum: $OLD_CHECKSUM"
+                    if [ "$NEW_CHECKSUM" = "$OLD_CHECKSUM" ]; then
+                      echo "SKIP_RENDER: Save unchanged since last render"
+                      echo "skip" > /opt/factorio/saves/.render-status
+                      exit 0
+                    fi
+                  fi
+
+                  echo "Render needed (save changed or first render)"
+                  echo "$NEW_CHECKSUM" > /opt/factorio/saves/.new-checksum
+                  echo "render" > /opt/factorio/saves/.render-status
+                  ls -la /opt/factorio/saves/
+              volumeMounts:
+                - name: saves
+                  mountPath: /opt/factorio/saves
+                - name: mapshot-data
+                  mountPath: /mapshot
+
+          containers:
+            - name: render
+              image: martydingo/mapshot:latest
+              command: ["/bin/bash", "-c"]
+              args:
+                - |
+                  # Check if render is needed
+                  if [ -f /opt/factorio/saves/.render-status ]; then
+                    STATUS=$(cat /opt/factorio/saves/.render-status)
+                    if [ "$STATUS" = "skip" ]; then
+                      echo "Skipping render - save unchanged"
+                      exit 0
+                    fi
+                  fi
+
+                  echo "Starting render..."
+
+                  # Download headless Factorio (Steam-linked accounts only have API access to headless)
+                  if [ ! -f /mapshot/factorio/bin/x64/factorio ]; then
+                    echo "Downloading Factorio headless..."
+                    curl -L "https://www.factorio.com/get-download/stable/headless/linux64?username=$FACTORIO_USERNAME&token=$FACTORIO_TOKEN" -o /tmp/factorio.tar.xz
+                    echo "Extracting..."
+                    tar xf /tmp/factorio.tar.xz -C /mapshot
+                    mkdir -p /mapshot/factorio/mods
+                    echo '{}' > /mapshot/factorio/mods/mod-list.json
+                    rm /tmp/factorio.tar.xz
+                    ls -la /mapshot/factorio/bin/x64/
+                  else
+                    echo "Factorio already installed"
+                  fi
+
+                  echo "Running mapshot render..."
+                  timeout ${MAPSHOT_INTERVAL:-3600} xvfb-run mapshot render \
+                    --logtostderr \
+                    --factorio_binary /mapshot/factorio/bin/x64/factorio \
+                    --factorio_datadir /mapshot/factorio \
+                    --work_dir /mapshot/factorio \
+                    --area ${MAPSHOT_AREA:-all} \
+                    --jpgquality ${MAPSHOT_JPEG_QUALITY:-90} \
+                    --surface _all_ \
+                    -v 5 \
+                    "$FACTORIO_SAVE"
+
+                  # Fix index.html config key (mapshot uses "path" but viewer expects "encoded_path")
+                  find /mapshot/factorio/script-output -name "index.html" -exec sed -i 's/"path":/"encoded_path":/g' {} \;
+
+                  # If render succeeded, update checksum
+                  if [ -f /opt/factorio/saves/.new-checksum ]; then
+                    cp /opt/factorio/saves/.new-checksum /mapshot/.last-render-checksum
+                    echo "Checksum updated"
+                  fi
+
+                  echo "Render complete!"
+                  ls -la /mapshot/factorio/script-output/
+              env:
+                - name: FACTORIO_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: factorio-credentials
+                      key: username
+                - name: FACTORIO_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: factorio-credentials
+                      key: token
+                - name: MAPSHOT_MODE
+                  value: "render"
+                - name: FACTORIO_SAVE
+                  value: "/opt/factorio/saves/latest.zip"
+                - name: MAPSHOT_INTERVAL
+                  value: "3600"  # 1 hour timeout for render
+                - name: MAPSHOT_AREA
+                  value: "all"
+                - name: MAPSHOT_JPEG_QUALITY
+                  value: "90"
+                - name: MAPSHOT_ROOT_DIRECTORY
+                  value: "/mapshot"
+              volumeMounts:
+                - name: saves
+                  mountPath: /opt/factorio/saves
+                - name: mapshot-data
+                  mountPath: /mapshot
+              resources:
+                requests:
+                  memory: "2Gi"
+                  cpu: "1"
+                limits:
+                  memory: "4Gi"
+                  cpu: "2"
+
+          volumes:
+            - name: saves
+              emptyDir: {}
+            - name: mapshot-data
+              persistentVolumeClaim:
+                claimName: mapshot-data
+
+          # Schedule on control plane nodes (same as Factorio for local-path PVC locality)
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: "true"
+          tolerations:
+            - key: "node-role.kubernetes.io/control-plane"
+              operator: "Exists"
+              effect: "NoSchedule"
