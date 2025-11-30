@@ -78,6 +78,35 @@ grafana:
 
 # Alertmanager configuration
 alertmanager:
+  # Alert routing config (Telegram bot token/chat_id injected via deploy.sh --set)
+  config:
+    global:
+      resolve_timeout: 5m
+    receivers:
+      - name: "null"  # Sink for warnings (visible in Grafana only)
+      - name: telegram-critical
+        telegram_configs:
+          - bot_token: "PLACEHOLDER"  # Injected via --set
+            chat_id: "PLACEHOLDER"    # Injected via --set
+            parse_mode: HTML
+            message: |
+              {{ if eq .Status "firing" }}🚨{{ else }}✅{{ end }} <b>{{ .Status | toUpper }}</b>
+              <b>Alert:</b> {{ .CommonLabels.alertname }}
+              <b>Severity:</b> {{ .CommonLabels.severity }}
+              {{ range .Alerts }}
+              {{ .Annotations.description }}
+              {{ end }}
+    route:
+      receiver: "null"
+      group_by: ['alertname', 'namespace']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      routes:
+        - match:
+            severity: critical
+          receiver: telegram-critical
+
   alertmanagerSpec:
     storage:
       volumeClaimTemplate:

@@ -164,6 +164,15 @@ export HOMEASSISTANT_PASSWORD="change-me-strong-password"
 export GRAFANA_ADMIN_PASSWORD="change-me-strong-password"
 
 # -----------------------------------------------------------------------------
+# Alerting / Notifications
+# -----------------------------------------------------------------------------
+# Telegram Bot for Alertmanager notifications
+# Create bot: https://t.me/BotFather > /newbot
+# Get chat ID: Send message to bot, then GET https://api.telegram.org/bot<TOKEN>/getUpdates
+export TELEGRAM_BOT_TOKEN="your-telegram-bot-token"
+export TELEGRAM_CHAT_ID="your-chat-id"
+
+# -----------------------------------------------------------------------------
 # Factorio.com Account (for Mapshot map rendering)
 # -----------------------------------------------------------------------------
 # Create account at https://factorio.com/login

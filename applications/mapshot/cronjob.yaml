@@ -127,6 +127,16 @@ spec:
 
                   echo "Render complete!"
                   ls -la /mapshot/factorio/script-output/
+
+                  # Send Telegram notification if configured
+                  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+                    echo "Sending Telegram notification..."
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                      -d chat_id="${TELEGRAM_CHAT_ID}" \
+                      -d parse_mode="HTML" \
+                      -d text="<b>Factorio Mapshot Updated</b>%0A%0ANew map render available at:%0Ahttps://mapshot.codeofficer.com/mapshot/latest/" \
+                      || echo "Warning: Telegram notification failed (non-fatal)"
+                  fi
               env:
                 - name: FACTORIO_USERNAME
                   valueFrom:
@@ -150,6 +160,19 @@ spec:
                   value: "90"
                 - name: MAPSHOT_ROOT_DIRECTORY
                   value: "/mapshot"
+                # Optional Telegram notification (secret may not exist)
+                - name: TELEGRAM_BOT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: telegram-credentials
+                      key: bot-token
+                      optional: true
+                - name: TELEGRAM_CHAT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: telegram-credentials
+                      key: chat-id
+                      optional: true
               volumeMounts:
                 - name: saves
                   mountPath: /opt/factorio/saves

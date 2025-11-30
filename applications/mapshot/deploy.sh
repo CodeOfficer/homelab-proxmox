@@ -19,6 +19,19 @@ kubectl create secret generic factorio-credentials \
     --from-literal=token="${FACTORIO_TOKEN}" \
     --dry-run=client -o yaml | kubectl apply -f -
 
+# Optional: Telegram notification for render completions
+if [[ -n "${TELEGRAM_BOT_TOKEN:-}" && -n "${TELEGRAM_CHAT_ID:-}" ]]; then
+    echo "Creating Telegram credentials secret..."
+    kubectl create secret generic telegram-credentials \
+        --namespace "$NAMESPACE" \
+        --from-literal=bot-token="${TELEGRAM_BOT_TOKEN}" \
+        --from-literal=chat-id="${TELEGRAM_CHAT_ID}" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    echo "Telegram notifications: enabled"
+else
+    echo "Telegram notifications: disabled (set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .envrc)"
+fi
+
 echo "Applying RBAC..."
 kubectl apply -f "${SCRIPT_DIR}/rbac.yaml"
 

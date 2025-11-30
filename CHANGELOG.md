@@ -34,7 +34,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   - Node exporter on all 3 nodes
   - kube-state-metrics for K8s object metrics
   - Alertmanager for alert routing
-- NVIDIA DCGM exporter for GPU metrics (RTX 4090)
+- NVIDIA DCGM exporter for GPU metrics (RTX 4000 Ada)
   - GPU temperature, utilization, memory usage
   - ServiceMonitor for Prometheus scraping
 

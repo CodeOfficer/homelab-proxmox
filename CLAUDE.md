@@ -134,7 +134,7 @@ Run `make help` for full list. Key targets:
 ### Monitoring Enhancements
 - [ ] Custom Grafana dashboards:
   - K8s cluster overview (nodes, pods, resource usage)
-  - GPU metrics (RTX 4090 utilization, temp, memory)
+  - GPU metrics (RTX 4000 Ada utilization, temp, memory)
   - Game server status (uptime, player counts if available)
 - [ ] Prometheus alerting rules (disk full, node down, pod crash loops)
 - [ ] Explore Prometheus metrics and queries
