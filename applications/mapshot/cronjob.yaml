@@ -116,8 +116,17 @@ spec:
                     -v 5 \
                     "$FACTORIO_SAVE"
 
-                  # Fix index.html config key (mapshot uses "path" but viewer expects "encoded_path")
-                  find /mapshot/factorio/script-output -name "index.html" -exec sed -i 's/"path":/"encoded_path":/g' {} \;
+                  # Symlink mapshot.json to root so viewer can find it
+                  # Viewer requests /mapshot.json but it's in /d-XXXX/mapshot.json
+                  OUTPUT_DIR="/mapshot/factorio/script-output/mapshot/latest"
+                  RENDER_DIR=$(ls -td "$OUTPUT_DIR"/d-* 2>/dev/null | head -1)
+                  if [ -n "$RENDER_DIR" ] && [ -f "$RENDER_DIR/mapshot.json" ]; then
+                    ln -sf "$(basename "$RENDER_DIR")/mapshot.json" "$OUTPUT_DIR/mapshot.json"
+                    echo "Symlinked mapshot.json from $(basename "$RENDER_DIR")"
+                  else
+                    echo "WARNING: Could not find mapshot.json to symlink"
+                    ls -la "$OUTPUT_DIR"/d-* 2>/dev/null || echo "No d-* directories found"
+                  fi
 
                   # If render succeeded, update checksum
                   if [ -f /opt/factorio/saves/.new-checksum ]; then

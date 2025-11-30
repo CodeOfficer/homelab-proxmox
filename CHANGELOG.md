@@ -27,6 +27,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   - Bypasses broken Helm chart backup mechanism
   - Creates timestamped tarballs every 6 hours
   - Retains last 10 backups on Synology NFS
+  - Checksum-based change detection (skips backup if no changes)
+  - Fixed retention pruning (was keeping ~27, now exactly 10)
 
 ### Technical Notes
 - Telegram secrets are optional (`optional: true` in secretKeyRef)
