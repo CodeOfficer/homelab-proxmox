@@ -46,7 +46,7 @@ telnetService:
   type: ClusterIP  # Internal only for auto-save CronJob
   port: 8081
 
-# Health probes - long startup for initial download (~12GB)
+# Health probes - long startup for initial download (~12GB) + world generation
 startupDelaySeconds: 2700  # 45 minutes
 
 livenessProbe:
@@ -74,38 +74,42 @@ resources:
 serverName: "Homelab 7DTD"
 serverDescription: "Private Homelab Server"
 serverWebsiteURL: ""
-serverPassword: ""  # Set password if needed
-
-# Network
+serverPassword: ""
 serverPort: 26900
 serverMaxPlayerCount: 8
-serverVisibility: 1  # 0=not listed, 1=friends, 2=public
+serverVisibility: 1
 
-# World settings
-gameWorld: "Navezgane"  # Or "RWG" for random gen
-worldGenSeed: "homelab"
-worldGenSize: 6144
-
-# Gameplay
-gameDifficulty: 2  # 0-5 scale
-dayNightLength: 60
-bloodMoonFrequency: 7
-
-# Performance tuning
-maxSpawnedZombies: 64
-maxSpawnedAnimals: 50
-
-# Built-in backups
-backups:
-  enabled: true
-  frequency: 30  # Every 30 minutes
-  maxBackups: 48  # ~24 hours of backups
-
-# Admin interfaces - nested under serverConfig.admin
+# World & Gameplay - nested structure per upstream chart
 serverConfig:
+  other:
+    eacEnabled: false
+  gameplay:
+    world:
+      gameWorld: "RWG"
+      gameName: "FoundationRWG"
+      worldGenSeed: "foundation"
+      worldGenSize: 8192
+    difficulty:
+      gameDifficulty: 3
+    misc:
+      dropOnDeath: 0
+      dropOnQuit: 0
+      dayNightLength: 60
+      bloodMoonFrequency: 7
+    loot:
+      lootAbundance: 100
+    spawning:
+      maxSpawnedZombies: 64
+      maxSpawnedAnimals: 50
   admin:
     webDashboardEnabled: true
     webDashboardPort: 8080
     telnetEnabled: true
     telnetPort: 8081
-    telnetPasswordSecret: "sdtd-telnet"  # K8s secret with 'password' key
+    telnetPasswordSecret: "sdtd-telnet"
+
+# Backups - enabled (RWG creates GeneratedWorlds directory)
+backups:
+  enabled: true
+  frequency: 30
+  maxBackups: 48

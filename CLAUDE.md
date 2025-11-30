@@ -101,7 +101,7 @@ Run `make help` for full list. Key targets:
 
 ## Current Status
 
-**Completed:** Phases 0-5.0 (see `CHANGELOG.md`)
+**Completed:** Phases 0-5.1 (see `CHANGELOG.md`)
 
 **In Progress:** None
 
@@ -120,6 +120,7 @@ Run `make help` for full list. Key targets:
 
 ### Game Servers
 - [x] 7 Days to Die (`applications/7dtd/`) - 10.20.11.201:26900
+  - RWG 8K map "FoundationRWG", Warrior difficulty, EAC disabled
 - [x] Factorio (`applications/factorio/`) - 10.20.11.202:34197
 - [x] Tailscale subnet router for remote friend access
 - [ ] Pod anti-affinity to spread game servers across nodes

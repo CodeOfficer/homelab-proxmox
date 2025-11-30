@@ -4,6 +4,27 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.1] - 2025-11-29
+
+### Changed
+- 7 Days to Die: Switched from Navezgane to RWG world generation
+  - 8K map size (seed: "foundation", world: "Fekigu Territory")
+  - Game name: "FoundationRWG"
+  - Warrior difficulty (3)
+  - Keep inventory on death (dropOnDeath: 0, dropOnQuit: 0)
+  - EAC disabled for LAN play
+
+### Fixed
+- 7DTD backup sidecar crash loop (58 restarts in 29h → 0)
+  - Root cause: Navezgane doesn't create `/data/GeneratedWorlds/` directory
+  - RWG creates this directory, fixing rsync exit code 23 errors
+  - Re-enabled built-in backups (30 min interval, 48 max)
+
+### Technical Notes
+- Helm chart uses nested YAML: `serverConfig.gameplay.world.gameWorld`
+- EAC setting path: `serverConfig.other.eacEnabled`
+- World generation takes ~2 minutes for 8K map
+
 ## [Phase 5.0] - 2025-11-28
 
 ### Added
