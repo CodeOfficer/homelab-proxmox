@@ -4,6 +4,24 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.6] - 2025-11-30
+
+### Added
+- ContainerOOMKilled Prometheus alert (`applications/monitoring/alerts.yaml`)
+  - Alerts via Telegram when containers are OOM-killed
+  - Catches failures that can't be trapped by EXIT handlers
+
+### Fixed
+- **Mapshot Telegram notifications not sending**
+  - Root cause: Container was OOM-killed (4Gi insufficient for Space Age maps)
+  - SIGKILL from OOM cannot be trapped, so EXIT handler never ran
+  - Increased memory limit: 4Gi → 8Gi
+
+### Technical Notes
+- Exit code 137 = SIGKILL (OOM kill)
+- Bash EXIT traps don't run on SIGKILL - need external monitoring
+- Prometheus `kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}` tracks OOM events
+
 ## [Phase 5.5] - 2025-11-30
 
 ### Added

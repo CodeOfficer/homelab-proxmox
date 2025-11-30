@@ -98,6 +98,15 @@ spec:
             summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} memory pressure"
             description: "Container {{ $labels.container }} is at {{ $value | humanizePercentage }} of memory limit. OOM kill risk."
 
+        - alert: ContainerOOMKilled
+          expr: increase(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[10m]) > 0
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Container {{ $labels.namespace }}/{{ $labels.pod }}/{{ $labels.container }} OOM killed"
+            description: "Container was terminated due to OOM. Consider increasing memory limits."
+
     # GPU health (RTX 4000 Ada)
     - name: gpu-health
       rules:
