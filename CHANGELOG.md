@@ -4,6 +4,30 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.4] - 2025-11-30
+
+### Added
+- Loki health dashboard (`applications/monitoring/dashboards/loki-health.yaml`)
+  - Log ingestion rate, storage %, active streams
+  - Request latency p99, Promtail read rate by node
+- PodMemoryPressure alert rule (warn at 80% of container limit)
+- Promtail multiline log support (`applications/loki/promtail-values.yaml`)
+  - Handles stack traces and multi-line game server logs
+  - Regex matches ISO-8601 timestamps
+
+### Changed
+- Mapshot CronJob now auto-cleans old renders (keeps latest only)
+  - Cleans both NAS (`/nas/mapshot/renders/`) and PVC locations
+  - Removes stale zoom symlinks after cleanup
+- Mapshot failure notifications via Telegram
+  - Added EXIT trap for unhandled errors
+  - All failures now send alerts (was success-only)
+
+### Technical Notes
+- Memory pressure threshold: 80% of `container_spec_memory_limit_bytes`
+- Mapshot cleanup runs after every successful render
+- Promtail multiline firstline regex: `^\d{4}[-/]\d{2}[-/]\d{2}|^\[\d{4}[-/]\d{2}[-/]\d{2}|^\d{2}:\d{2}:\d{2}`
+
 ## [Phase 5.3] - 2025-11-30
 
 ### Added

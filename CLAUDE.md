@@ -101,7 +101,7 @@ Run `make help` for full list. Key targets:
 
 ## Current Status
 
-**Completed:** Phases 0-5.3 (see `CHANGELOG.md`)
+**Completed:** Phases 0-5.4 (see `CHANGELOG.md`)
 
 **In Progress:** None
 
@@ -123,7 +123,7 @@ Run `make help` for full list. Key targets:
   - RWG 8K map "FoundationRWG", Warrior difficulty, EAC disabled
 - [x] Factorio (`applications/factorio/`) - 10.20.11.202:34197
 - [x] Factorio Mapshot (`applications/mapshot/`) - https://mapshot.codeofficer.com/mapshot/latest/
-  - Zoomable web map, 4-hour CronJob render, checksum-gated
+  - Zoomable web map, 4-hour CronJob render, checksum-gated, auto-cleanup
 - [x] Tailscale subnet router for remote friend access
 - [ ] Pod anti-affinity to spread game servers across nodes
 - [ ] Factorio Server Manager (FSM) - web UI for saves/mods/config
@@ -137,6 +137,8 @@ Run `make help` for full list. Key targets:
 - [x] CronJob health alerts (failure + staleness detection)
 - [x] Game server dashboard (CPU throttling, memory %, TCP retransmits)
 - [x] Loki log aggregation (`applications/loki/`) - query logs in Grafana
+- [x] Loki health dashboard (ingestion rate, storage %, latency)
+- [x] Pod memory pressure alerts (warn at 80% of limit)
 - [ ] K8s cluster overview dashboard (nodes, pods, resource usage)
 - [ ] GPU metrics dashboard (RTX 4000 Ada utilization, temp, memory)
 

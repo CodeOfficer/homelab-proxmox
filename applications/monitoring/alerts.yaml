@@ -87,6 +87,17 @@ spec:
             summary: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} replica mismatch"
             description: "Deployment has {{ $value }} unavailable replicas."
 
+        - alert: PodMemoryPressure
+          expr: |
+            (container_memory_working_set_bytes{container!="", container!="POD"} / container_spec_memory_limit_bytes{container!="", container!="POD"}) > 0.8
+            and container_spec_memory_limit_bytes{container!="", container!="POD"} > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} memory pressure"
+            description: "Container {{ $labels.container }} is at {{ $value | humanizePercentage }} of memory limit. OOM kill risk."
+
     # GPU health (RTX 4000 Ada)
     - name: gpu-health
       rules:

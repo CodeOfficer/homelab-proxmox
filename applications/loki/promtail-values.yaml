@@ -1,0 +1,30 @@
+# Promtail configuration with multiline log support
+config:
+  clients:
+    - url: http://loki:3100/loki/api/v1/push
+
+  # Pipeline stages for log processing
+  snippets:
+    pipelineStages:
+      # Multiline support for game server logs (stack traces, etc.)
+      - multiline:
+          # First line starts with timestamp (ISO-8601 or common formats)
+          # Matches: 2024-01-15, [2024-01-15], 2024/01/15, or HH:MM:SS
+          firstline: '^\d{4}[-/]\d{2}[-/]\d{2}|^\[\d{4}[-/]\d{2}[-/]\d{2}|^\d{2}:\d{2}:\d{2}'
+          max_wait_time: 3s
+          max_lines: 128
+
+# Tolerations for control plane nodes
+tolerations:
+  - key: "node-role.kubernetes.io/control-plane"
+    operator: "Exists"
+    effect: "NoSchedule"
+
+# Resource limits
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi

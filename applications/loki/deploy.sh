@@ -30,10 +30,7 @@ helm upgrade --install loki grafana/loki \
 echo "Deploying Promtail..."
 helm upgrade --install promtail grafana/promtail \
     --namespace "$NAMESPACE" \
-    --set "config.clients[0].url=http://loki:3100/loki/api/v1/push" \
-    --set "tolerations[0].key=node-role.kubernetes.io/control-plane" \
-    --set "tolerations[0].operator=Exists" \
-    --set "tolerations[0].effect=NoSchedule" \
+    --values "${SCRIPT_DIR}/promtail-values.yaml" \
     --wait \
     --timeout 3m
 
