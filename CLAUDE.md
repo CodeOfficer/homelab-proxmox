@@ -101,7 +101,7 @@ Run `make help` for full list. Key targets:
 
 ## Current Status
 
-**Completed:** Phases 0-5.1 (see `CHANGELOG.md`)
+**Completed:** Phases 0-5.2 (see `CHANGELOG.md`)
 
 **In Progress:** None
 
@@ -132,12 +132,11 @@ Run `make help` for full list. Key targets:
 - [ ] Mapshot event-driven trigger (sidecar watches for last player leave)
 
 ### Monitoring Enhancements
-- [ ] Custom Grafana dashboards:
-  - K8s cluster overview (nodes, pods, resource usage)
-  - GPU metrics (RTX 4000 Ada utilization, temp, memory)
-  - Game server status (uptime, player counts if available)
-- [ ] Prometheus alerting rules (disk full, node down, pod crash loops)
-- [ ] Explore Prometheus metrics and queries
+- [x] Telegram alerting (Alertmanager, mapshot, 7DTD backups)
+- [x] Prometheus alerting rules (`applications/monitoring/alerts.yaml`)
+- [x] Game server dashboard (CPU throttling, memory %, TCP retransmits)
+- [ ] K8s cluster overview dashboard (nodes, pods, resource usage)
+- [ ] GPU metrics dashboard (RTX 4000 Ada utilization, temp, memory)
 
 ### Remote Access (Tailscale)
 Tailscale installed on k3s-cp-01 as subnet router exposing 10.20.11.0/24.

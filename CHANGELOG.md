@@ -4,6 +4,35 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.2] - 2025-11-30
+
+### Added
+- Telegram alerting integration
+  - Alertmanager sends critical alerts to Telegram
+  - Mapshot CronJob notifies on render completion
+  - 7DTD backup CronJob notifies on success
+  - Config: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.envrc`
+- PrometheusRule for critical alerts (`applications/monitoring/alerts.yaml`)
+  - Node unreachable (5+ min)
+  - Pod crash loops (5+ restarts in 15 min)
+  - PVC near full (>85%)
+  - Game server down (sdtd/factorio namespace pods)
+- Game server dashboard improvements
+  - CPU throttling panel (stutter indicator)
+  - Memory % of limit panel (OOM risk indicator)
+  - TCP retransmits panel (network issues)
+
+### Fixed
+- 7DTD backup now directly copies save data
+  - Bypasses broken Helm chart backup mechanism
+  - Creates timestamped tarballs every 6 hours
+  - Retains last 10 backups on Synology NFS
+
+### Technical Notes
+- Telegram secrets are optional (`optional: true` in secretKeyRef)
+- Alertmanager route: warnings → Grafana only, critical → Telegram
+- 7DTD saves location varies by world type (RWG creates random folder names)
+
 ## [Phase 5.1] - 2025-11-29
 
 ### Changed
