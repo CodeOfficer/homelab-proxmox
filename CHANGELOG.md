@@ -4,6 +4,41 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.3] - 2025-11-30
+
+### Added
+- Loki 3.5.7 log aggregation (`applications/loki/`)
+  - Modern grafana/loki chart with volume query support
+  - Promtail DaemonSet on all nodes for log collection
+  - 15-day retention, 10Gi local-path storage
+  - Grafana datasource auto-configured
+  - CronJob logs dashboard for backup debugging
+- CronJob health PrometheusRules (`applications/monitoring/alerts.yaml`)
+  - `CronJobFailed` - Alert when backup jobs fail (severity: critical)
+  - `FactorioBackupStale` - No successful backup in 7h
+  - `SDTDBackupStale` - No successful backup in 7h
+  - `PostgreSQLBackupStale` - No successful backup in 25h
+  - `OpenWebUIBackupStale` - No successful backup in 25h
+  - `MapshotRenderStale` - No successful render in 5h (warning)
+  - `CronJobSuspended` - CronJob accidentally paused
+- Factorio backup CronJob (`applications/factorio/backup-cronjob.yaml`)
+- Open-WebUI backup CronJob (`applications/open-webui/backup-cronjob.yaml`)
+- Backup README (`applications/backups/README.md`)
+- `make deploy-loki` and `make loki-status` targets
+
+### Changed
+- Consolidated all backups to UNAS K3sStorage (was split between Synology and UNAS)
+- Backup directory structure: `namespace/purpose/history/` pattern
+  - `latest.*` at top level, timestamped backups in `history/` subfolder
+- Renamed `databases/` → `postgresql/` on NAS for consistency
+- Updated all backup CronJobs with history/ subfolder pattern
+
+### Technical Notes
+- Loki volume histogram requires modern Loki 3.5.7+ (loki-stack chart doesn't support it)
+- Promtail collects logs from deployment time forward (no historical data)
+- CronJob staleness thresholds: schedule + 1h buffer (6h job → 7h alert)
+- NFS path: `/volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data`
+
 ## [Phase 5.2] - 2025-11-30
 
 ### Added

@@ -1,0 +1,22 @@
+# Loki datasource for existing Grafana (kube-prometheus-stack)
+# Applied as ConfigMap with grafana_datasource label for auto-discovery
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-datasource
+  namespace: monitoring
+  labels:
+    grafana_datasource: "1"
+data:
+  loki-datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        uid: loki
+        access: proxy
+        url: http://loki.loki.svc.cluster.local:3100
+        isDefault: false
+        jsonData:
+          maxLines: 1000
+          derivedFields: []

@@ -8,6 +8,7 @@
 .PHONY: deploy-factorio factorio-logs factorio-status factorio-rcon
 .PHONY: deploy-monitoring monitoring-status grafana-password
 .PHONY: deploy-mapshot mapshot-render mapshot-status mapshot-logs
+.PHONY: deploy-loki loki-status
 
 # =============================================================================
 # Homelab Proxmox Infrastructure Management
@@ -555,3 +556,20 @@ mapshot-logs: ## View latest Mapshot render logs
 	else \
 		echo "$(YELLOW)No render jobs found$(NC)"; \
 	fi
+
+# =============================================================================
+# Loki (Log Aggregation)
+# =============================================================================
+
+deploy-loki: ## Deploy Loki log aggregation stack
+	@echo "$(BLUE)Deploying Loki stack...$(NC)"
+	@./applications/loki/deploy.sh
+
+loki-status: ## Show Loki deployment status
+	@echo "$(BLUE)Loki Status$(NC)"
+	@echo ""
+	helm status loki -n loki 2>/dev/null || echo "$(YELLOW)Not deployed$(NC)"
+	@echo ""
+	kubectl get pods -n loki 2>/dev/null || true
+	@echo ""
+	@echo "$(YELLOW)Query logs in Grafana: Explore -> Loki datasource$(NC)"

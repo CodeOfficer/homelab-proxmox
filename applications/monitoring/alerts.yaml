@@ -128,3 +128,82 @@ spec:
           annotations:
             summary: "Game server {{ $labels.namespace }} is down"
             description: "Game server has been unreachable for 5 minutes."
+
+    # CronJob health monitoring (backups, renders)
+    - name: cronjob-health
+      rules:
+        # Alert when any backup CronJob fails
+        - alert: CronJobFailed
+          expr: |
+            kube_job_status_failed{job_name=~"factorio-backup.*|sdtd-backup-sync.*|postgresql-backup.*|open-webui-backup.*|mapshot-render.*"} > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "CronJob {{ $labels.job_name }} failed"
+            description: "CronJob {{ $labels.job_name }} in namespace {{ $labels.namespace }} has failed."
+
+        # Staleness: Factorio backup (6h schedule, 7h threshold = 25200s)
+        - alert: FactorioBackupStale
+          expr: |
+            (time() - max(kube_job_status_completion_time{job_name=~"factorio-backup.*"} * on(job_name) group_left kube_job_status_succeeded{job_name=~"factorio-backup.*"})) > 25200
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Factorio backup is stale"
+            description: "No successful Factorio backup in the last 7 hours."
+
+        # Staleness: SDTD backup (6h schedule, 7h threshold)
+        - alert: SDTDBackupStale
+          expr: |
+            (time() - max(kube_job_status_completion_time{job_name=~"sdtd-backup-sync.*"} * on(job_name) group_left kube_job_status_succeeded{job_name=~"sdtd-backup-sync.*"})) > 25200
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "7DTD backup is stale"
+            description: "No successful 7DTD backup in the last 7 hours."
+
+        # Staleness: PostgreSQL backup (daily, 25h threshold = 90000s)
+        - alert: PostgreSQLBackupStale
+          expr: |
+            (time() - max(kube_job_status_completion_time{job_name=~"postgresql-backup.*"} * on(job_name) group_left kube_job_status_succeeded{job_name=~"postgresql-backup.*"})) > 90000
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PostgreSQL backup is stale"
+            description: "No successful PostgreSQL backup in the last 25 hours."
+
+        # Staleness: Open-WebUI backup (daily, 25h threshold)
+        - alert: OpenWebUIBackupStale
+          expr: |
+            (time() - max(kube_job_status_completion_time{job_name=~"open-webui-backup.*"} * on(job_name) group_left kube_job_status_succeeded{job_name=~"open-webui-backup.*"})) > 90000
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Open-WebUI backup is stale"
+            description: "No successful Open-WebUI backup in the last 25 hours."
+
+        # Staleness: Mapshot render (4h schedule, 5h threshold = 18000s)
+        - alert: MapshotRenderStale
+          expr: |
+            (time() - max(kube_job_status_completion_time{job_name=~"mapshot-render.*"} * on(job_name) group_left kube_job_status_succeeded{job_name=~"mapshot-render.*"})) > 18000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Mapshot render is stale"
+            description: "No successful mapshot render in the last 5 hours."
+
+        # CronJob suspended (accidentally paused)
+        - alert: CronJobSuspended
+          expr: kube_cronjob_spec_suspend{cronjob=~"factorio-backup|sdtd-backup-sync|postgresql-backup|open-webui-backup|mapshot-render"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob {{ $labels.cronjob }} is suspended"
+            description: "CronJob {{ $labels.cronjob }} in namespace {{ $labels.namespace }} has been suspended."

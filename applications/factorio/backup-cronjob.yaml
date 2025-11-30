@@ -1,10 +1,10 @@
-# 7DTD Save Backup to UNAS K3sStorage
+# Factorio Save Backup to UNAS K3sStorage
 # Backs up saves to NAS for Mac accessibility and disaster recovery
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: sdtd-backup-sync
-  namespace: sdtd
+  name: factorio-backup
+  namespace: factorio
 spec:
   schedule: "0 */6 * * *"  # Every 6 hours
   concurrencyPolicy: Forbid
@@ -27,44 +27,35 @@ spec:
               args:
                 - |
                   set -e
-                  apk add --no-cache rsync curl tar >/dev/null 2>&1
+                  apk add --no-cache curl >/dev/null 2>&1
 
                   # Notify start
                   if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
                     curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
                       -d chat_id="${TELEGRAM_CHAT_ID}" \
-                      -d text="🔄 7DTD backup started" >/dev/null || true
+                      -d text="🔄 Factorio backup started" >/dev/null || true
                   fi
 
-                  # Find the actual save folder (RWG creates random world names)
-                  SAVES_DIR="/gamefiles/UserData/Saves"
-                  WORLD_DIR=$(find "$SAVES_DIR" -maxdepth 1 -type d ! -name Saves ! -name Navezgane | head -1)
+                  # Find latest save file
+                  SAVES_DIR="/factorio/saves"
+                  LATEST_SAVE=$(ls -t "$SAVES_DIR"/*.zip 2>/dev/null | head -1)
 
-                  if [ -z "$WORLD_DIR" ]; then
-                    echo "ERROR: No world folder found in $SAVES_DIR"
+                  if [ -z "$LATEST_SAVE" ]; then
+                    echo "ERROR: No save files found in $SAVES_DIR"
                     ls -la "$SAVES_DIR" || true
                     exit 1
                   fi
 
-                  WORLD_NAME=$(basename "$WORLD_DIR")
-                  SAVE_PATH="$WORLD_DIR/FoundationRWG"
+                  SAVE_NAME=$(basename "$LATEST_SAVE")
+                  echo "Latest save: $SAVE_NAME"
 
-                  if [ ! -d "$SAVE_PATH" ]; then
-                    echo "ERROR: Save path not found: $SAVE_PATH"
-                    ls -la "$WORLD_DIR" || true
-                    exit 1
-                  fi
-
-                  echo "Found world: $WORLD_NAME"
-                  echo "Save path: $SAVE_PATH"
-
-                  DEST_DIR="/dest/sdtd/backups"
+                  DEST_DIR="/dest/factorio/backups"
                   HISTORY_DIR="$DEST_DIR/history"
                   mkdir -p "$DEST_DIR" "$HISTORY_DIR"
 
                   # Check if save has changed since last backup (checksum-based)
                   CHECKSUM_FILE="$DEST_DIR/.last-backup-checksum"
-                  CURRENT_CHECKSUM=$(find "$SAVE_PATH" -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum | cut -d' ' -f1)
+                  CURRENT_CHECKSUM=$(md5sum "$LATEST_SAVE" | cut -d' ' -f1)
                   LAST_CHECKSUM=$(cat "$CHECKSUM_FILE" 2>/dev/null || echo "none")
 
                   echo "Current checksum: $CURRENT_CHECKSUM"
@@ -75,60 +66,45 @@ spec:
                     if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
                       curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
                         -d chat_id="${TELEGRAM_CHAT_ID}" \
-                        -d text="⏭️ 7DTD backup skipped%0AWorld: ${WORLD_NAME}%0AReason: No changes" >/dev/null || true
+                        -d text="⏭️ Factorio backup skipped%0ASave: ${SAVE_NAME}%0AReason: No changes" >/dev/null || true
                     fi
                     exit 0
                   fi
 
-                  # Create timestamped backup
+                  # Create timestamped backup in history
                   TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-                  BACKUP_NAME="7dtd-${WORLD_NAME}-${TIMESTAMP}"
+                  BACKUP_NAME="factorio-${TIMESTAMP}.zip"
 
-                  # Create tarball of save data in history
-                  echo "Creating backup: ${BACKUP_NAME}.tar.gz"
-                  tar -czf "${HISTORY_DIR}/${BACKUP_NAME}.tar.gz" \
-                    -C "$WORLD_DIR" \
-                    FoundationRWG
-
-                  # Also sync GeneratedWorlds (world terrain data)
-                  GEN_WORLD="/gamefiles/UserData/GeneratedWorlds/$WORLD_NAME"
-                  if [ -d "$GEN_WORLD" ]; then
-                    echo "Backing up generated world data..."
-                    tar -czf "${HISTORY_DIR}/${BACKUP_NAME}-world.tar.gz" \
-                      -C "/gamefiles/UserData/GeneratedWorlds" \
-                      "$WORLD_NAME"
-                  fi
+                  echo "Creating backup: ${BACKUP_NAME}"
+                  cp "$LATEST_SAVE" "${HISTORY_DIR}/${BACKUP_NAME}"
 
                   # Save checksum for next run
                   echo "$CURRENT_CHECKSUM" > "$CHECKSUM_FILE"
 
-                  # Create latest.tar.gz for easy Mac access (overwrites previous)
-                  cp "${HISTORY_DIR}/${BACKUP_NAME}.tar.gz" "${DEST_DIR}/latest.tar.gz"
-                  if [ -f "${HISTORY_DIR}/${BACKUP_NAME}-world.tar.gz" ]; then
-                    cp "${HISTORY_DIR}/${BACKUP_NAME}-world.tar.gz" "${DEST_DIR}/latest-world.tar.gz"
-                  fi
+                  # Create latest.zip for easy Mac access (overwrites previous)
+                  cp "${HISTORY_DIR}/${BACKUP_NAME}" "${DEST_DIR}/latest.zip"
 
-                  # Keep only last 5 timestamped backups in history (prune oldest save+world pairs)
+                  # Keep only last 5 timestamped backups in history
                   cd "$HISTORY_DIR"
-                  ls -t 7dtd-*[0-9].tar.gz 2>/dev/null | tail -n +6 | while read f; do
-                    rm -f "$f" "${f%.tar.gz}-world.tar.gz" 2>/dev/null || true
+                  ls -t factorio-*.zip 2>/dev/null | tail -n +6 | while read f; do
+                    rm -f "$f" 2>/dev/null || true
                   done
 
-                  # Get total backup size
+                  # Get stats
                   BACKUP_SIZE=$(du -sh "$DEST_DIR" | cut -f1)
-                  LATEST_SIZE=$(du -sh "${DEST_DIR}/latest.tar.gz" | cut -f1)
-                  BACKUP_COUNT=$(ls -1 "$HISTORY_DIR"/7dtd-*[0-9].tar.gz 2>/dev/null | wc -l | tr -d ' ')
+                  LATEST_SIZE=$(du -sh "${DEST_DIR}/latest.zip" | cut -f1)
+                  BACKUP_COUNT=$(ls -1 "$HISTORY_DIR"/factorio-*.zip 2>/dev/null | wc -l | tr -d ' ')
 
                   echo "Backup complete!"
-                  echo "Latest: latest.tar.gz ($LATEST_SIZE)"
+                  echo "Latest: latest.zip ($LATEST_SIZE)"
                   echo "Total backups: $BACKUP_COUNT timestamped + latest ($BACKUP_SIZE)"
-                  ls -lht "$DEST_DIR" | head -12
+                  ls -lht "$DEST_DIR" | head -10
 
                   # Notify completion
                   if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
                     curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
                       -d chat_id="${TELEGRAM_CHAT_ID}" \
-                      -d text="✅ 7DTD backup complete%0AWorld: ${WORLD_NAME}%0ASize: ${LATEST_SIZE}%0ABackups: ${BACKUP_COUNT}/5 + latest (${BACKUP_SIZE})" >/dev/null || true
+                      -d text="✅ Factorio backup complete%0ASave: ${SAVE_NAME}%0ASize: ${LATEST_SIZE}%0ABackups: ${BACKUP_COUNT}/5 + latest (${BACKUP_SIZE})" >/dev/null || true
                   fi
               env:
                 - name: TELEGRAM_BOT_TOKEN
@@ -144,22 +120,22 @@ spec:
                       key: chat-id
                       optional: true
               volumeMounts:
-                - name: gamefiles
-                  mountPath: /gamefiles
+                - name: factorio-data
+                  mountPath: /factorio
                   readOnly: true
                 - name: dest
                   mountPath: /dest
               resources:
                 requests:
-                  memory: "128Mi"
-                  cpu: "100m"
+                  memory: "64Mi"
+                  cpu: "50m"
                 limits:
-                  memory: "512Mi"
-                  cpu: "500m"
+                  memory: "256Mi"
+                  cpu: "200m"
           volumes:
-            - name: gamefiles
+            - name: factorio-data
               persistentVolumeClaim:
-                claimName: sdtd-7dtd-gamefiles
+                claimName: factorio-factorio-server-charts-datadir
             - name: dest
               nfs:
                 server: 10.20.10.20

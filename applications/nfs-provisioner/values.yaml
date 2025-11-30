@@ -7,4 +7,4 @@ storageClass:
   defaultClass: false
   reclaimPolicy: Retain
   archiveOnDelete: true
-  pathPattern: "${.PVC.namespace}-${.PVC.name}"
+  pathPattern: "${.PVC.namespace}/${.PVC.name}"

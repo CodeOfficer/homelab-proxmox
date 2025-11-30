@@ -101,7 +101,7 @@ Run `make help` for full list. Key targets:
 
 ## Current Status
 
-**Completed:** Phases 0-5.2 (see `CHANGELOG.md`)
+**Completed:** Phases 0-5.3 (see `CHANGELOG.md`)
 
 **In Progress:** None
 
@@ -134,7 +134,9 @@ Run `make help` for full list. Key targets:
 ### Monitoring Enhancements
 - [x] Telegram alerting (Alertmanager, mapshot, 7DTD backups)
 - [x] Prometheus alerting rules (`applications/monitoring/alerts.yaml`)
+- [x] CronJob health alerts (failure + staleness detection)
 - [x] Game server dashboard (CPU throttling, memory %, TCP retransmits)
+- [x] Loki log aggregation (`applications/loki/`) - query logs in Grafana
 - [ ] K8s cluster overview dashboard (nodes, pods, resource usage)
 - [ ] GPU metrics dashboard (RTX 4000 Ada utilization, temp, memory)
 
@@ -151,4 +153,20 @@ Tailscale installed on k3s-cp-01 as subnet router exposing 10.20.11.0/24.
 | 0 - Core | MetalLB, cert-manager, Traefik, Prometheus/Grafana | Public (ghcr.io, quay.io) |
 | 1 - Platform | Harbor, Gitea | Public (docker.io) |
 | 2 - Apps | Custom apps | Harbor |
+
+### Backup Strategy
+
+All K8s app backups go to UNAS K3sStorage (`10.20.10.20`) for Mac accessibility.
+Pattern: `namespace/purpose/` (e.g., `sdtd/backups/`, `factorio/backups/`)
+
+| App | Schedule | Retention | Output |
+|-----|----------|-----------|--------|
+| 7DTD | 6h | 5 + latest | `sdtd/backups/latest.tar.gz` |
+| Factorio | 6h | 5 + latest | `factorio/backups/latest.zip` |
+| Mapshot | 4h | Latest only | `mapshot/renders/` |
+| PostgreSQL | 3 AM | 7 + latest | `postgresql/backups/latest.sql.gz` |
+| Open-WebUI | 4 AM | 7 + latest | `open-webui/backups/latest.db` |
+
+Features: Checksum-gated (skip if unchanged), Telegram notifications, Mac Finder accessible.
+Details: `applications/backups/README.md`
 

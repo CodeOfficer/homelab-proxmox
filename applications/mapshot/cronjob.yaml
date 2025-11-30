@@ -307,7 +307,16 @@ spec:
                   log "Files:"
                   ls -la "$VIEWER_DIR" | head -15
 
-                  # Step 9: Send success notification
+                  # Step 9: Sync to NAS for Mac access
+                  log "Syncing to NAS..."
+                  NAS_DEST="/nas/mapshot/renders"
+                  mkdir -p "$NAS_DEST"
+                  # Copy the latest viewer files to NAS
+                  cp -r "$VIEWER_DIR"/* "$NAS_DEST/" 2>/dev/null || true
+                  log "NAS sync complete: $NAS_DEST"
+                  ls -la "$NAS_DEST" | head -10
+
+                  # Step 10: Send success notification
                   send_notification "success" "New map render available%0Ahttps://mapshot.codeofficer.com/mapshot/latest/"
               env:
                 - name: FACTORIO_USERNAME
@@ -350,6 +359,8 @@ spec:
                   mountPath: /opt/factorio/saves
                 - name: mapshot-data
                   mountPath: /mapshot
+                - name: nas-dest
+                  mountPath: /nas
               resources:
                 requests:
                   memory: "2Gi"
@@ -364,6 +375,10 @@ spec:
             - name: mapshot-data
               persistentVolumeClaim:
                 claimName: mapshot-data
+            - name: nas-dest
+              nfs:
+                server: 10.20.10.20
+                path: /volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data
 
           # Schedule on control plane nodes (same as Factorio for local-path PVC locality)
           nodeSelector:
