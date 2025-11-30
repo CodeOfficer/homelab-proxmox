@@ -40,6 +40,9 @@ kubectl apply -f "${SCRIPT_DIR}/grafana-datasource.yaml"
 echo "Deploying CronJob logs dashboard..."
 kubectl apply -f "${SCRIPT_DIR}/cronjob-logs-dashboard.yaml"
 
+echo "Deploying ServiceMonitor and PodMonitor for Prometheus..."
+kubectl apply -f "${SCRIPT_DIR}/servicemonitor.yaml"
+
 echo ""
 echo "=== Loki Stack deployed! ==="
 echo "Loki endpoint: http://loki.loki.svc.cluster.local:3100"

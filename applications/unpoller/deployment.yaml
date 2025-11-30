@@ -13,8 +13,8 @@ type: Opaque
 stringData:
   # IMPORTANT: Create a read-only user in UniFi for this
   # UniFi > Settings > Admins > Add Admin > Role: View Only
-  UNIFI_USER: "unpoller"
-  UNIFI_PASS: "CHANGE_ME"
+  UNIFI_USER: "unpollar"
+  UNIFI_PASS: "Unpollar++11"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -22,38 +22,11 @@ metadata:
   name: unpoller-config
   namespace: unpoller
 data:
+  # Empty config - using environment variables instead
   up.conf: |
     [poller]
     debug = false
     quiet = false
-    plugins = []
-
-    [prometheus]
-    disable = false
-    http_listen = "0.0.0.0:9130"
-    report_errors = false
-
-    [influxdb]
-    disable = true
-
-    [loki]
-    disable = true
-
-    [[unifi.controller]]
-    # UDM Pro on VLAN 10
-    url = "https://10.20.10.1"
-    # Credentials from environment (secret)
-    user = "${UP_UNIFI_DEFAULT_USER}"
-    pass = "${UP_UNIFI_DEFAULT_PASS}"
-    sites = ["all"]
-    # UDM Pro uses port 443 (UniFiOS)
-    verify_ssl = false
-    save_ids = true
-    save_events = false
-    save_alarms = false
-    save_anomalies = false
-    save_dpi = false
-    save_sites = true
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -96,6 +69,14 @@ spec:
                 secretKeyRef:
                   name: unpoller-credentials
                   key: UNIFI_PASS
+            - name: UP_UNIFI_DEFAULT_URL
+              value: "https://10.20.10.1"
+            - name: UP_UNIFI_DEFAULT_VERIFY_SSL
+              value: "false"
+            - name: UP_PROMETHEUS_DISABLE
+              value: "false"
+            - name: UP_PROMETHEUS_HTTP_LISTEN
+              value: "0.0.0.0:9130"
           volumeMounts:
             - name: config
               mountPath: /etc/unpoller

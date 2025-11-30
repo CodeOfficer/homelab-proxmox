@@ -61,7 +61,7 @@ data:
           "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
           "id": 3,
           "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
-          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "count(unpoller_client_info)", "refId": "A"}],
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(unpoller_site_users)", "refId": "A"}],
           "title": "Connected Clients",
           "type": "stat"
         },
@@ -79,7 +79,7 @@ data:
           "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
           "id": 4,
           "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
-          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(unpoller_usw_port_poe_watts)", "refId": "A"}],
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(unpoller_device_port_poe_watts)", "refId": "A"}],
           "title": "Total PoE Power",
           "type": "stat"
         },
@@ -97,7 +97,7 @@ data:
           "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
           "id": 5,
           "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
-          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "avg(unpoller_device_temperature)", "refId": "A"}],
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "avg(unpoller_device_temperature_celsius)", "refId": "A"}],
           "title": "Avg Device Temp",
           "type": "stat"
         },
@@ -143,8 +143,8 @@ data:
           "id": 7,
           "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
           "targets": [
-            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "rate(unpoller_usg_wan_rx_bytes_total[5m]) * 8", "legendFormat": "Download", "refId": "A"},
-            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "rate(unpoller_usg_wan_tx_bytes_total[5m]) * 8", "legendFormat": "Upload", "refId": "B"}
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "rate(unpoller_device_wan_receive_bytes_total{type=\"udm\"}[5m]) * 8", "legendFormat": "Download", "refId": "A"},
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "rate(unpoller_device_wan_transmit_bytes_total{type=\"udm\"}[5m]) * 8", "legendFormat": "Upload", "refId": "B"}
           ],
           "title": "WAN Throughput",
           "type": "timeseries"
@@ -165,7 +165,7 @@ data:
           "id": 8,
           "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
           "targets": [
-            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "unpoller_usg_speedtest_ping", "legendFormat": "Latency", "refId": "A"}
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "unpoller_site_latency_seconds * 1000", "legendFormat": "Latency", "refId": "A"}
           ],
           "title": "WAN Latency",
           "type": "timeseries"
@@ -175,7 +175,7 @@ data:
           "gridPos": {"h": 1, "w": 24, "x": 0, "y": 13},
           "id": 21,
           "panels": [],
-          "title": "Switch Ports (USW-Enterprise-24-PoE)",
+          "title": "Switch Ports",
           "type": "row"
         },
         {
@@ -194,8 +194,8 @@ data:
           "id": 9,
           "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
           "targets": [
-            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(10, rate(unpoller_usw_port_rx_bytes_total[5m]) * 8)", "legendFormat": "{{name}} Port {{port_num}} RX", "refId": "A"},
-            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(10, rate(unpoller_usw_port_tx_bytes_total[5m]) * 8)", "legendFormat": "{{name}} Port {{port_num}} TX", "refId": "B"}
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(10, rate(unpoller_device_port_receive_bytes_total[5m]) * 8)", "legendFormat": "{{name}} Port {{port_num}} RX", "refId": "A"},
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(10, rate(unpoller_device_port_transmit_bytes_total[5m]) * 8)", "legendFormat": "{{name}} Port {{port_num}} TX", "refId": "B"}
           ],
           "title": "Top 10 Switch Ports by Throughput",
           "type": "timeseries"
@@ -214,7 +214,7 @@ data:
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22},
           "id": 10,
           "options": {"displayMode": "gradient", "maxVizHeight": 300, "minVizHeight": 16, "minVizWidth": 8, "namePlacement": "auto", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showUnfilled": true, "sizing": "auto", "text": {}, "valueMode": "color"},
-          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "unpoller_usw_port_poe_watts{poe_enable=\"true\"} > 0", "legendFormat": "Port {{port_num}}", "refId": "A"}],
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "unpoller_device_port_poe_watts > 0", "legendFormat": "{{name}} Port {{port_num}}", "refId": "A"}],
           "title": "PoE Power per Port",
           "type": "bargauge"
         },
@@ -233,7 +233,7 @@ data:
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22},
           "id": 11,
           "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
-          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(unpoller_usw_port_poe_watts)", "legendFormat": "Total PoE", "refId": "A"}],
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(unpoller_device_port_poe_watts)", "legendFormat": "Total PoE", "refId": "A"}],
           "title": "Total PoE Power Over Time",
           "type": "timeseries"
         },
@@ -260,7 +260,7 @@ data:
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 31},
           "id": 12,
           "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
-          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "unpoller_uap_stat_user_num_sta", "legendFormat": "{{name}}", "refId": "A"}],
+          "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "unpoller_device_stations{type=\"uap\"}", "legendFormat": "{{name}}", "refId": "A"}],
           "title": "WiFi Clients per AP",
           "type": "timeseries"
         },
@@ -280,8 +280,8 @@ data:
           "id": 13,
           "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
           "targets": [
-            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "rate(unpoller_uap_stat_rx_bytes[5m]) * 8", "legendFormat": "{{name}} RX", "refId": "A"},
-            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "rate(unpoller_uap_stat_tx_bytes[5m]) * 8", "legendFormat": "{{name}} TX", "refId": "B"}
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "rate(unpoller_device_stat_receive_bytes_total{type=\"uap\"}[5m]) * 8", "legendFormat": "{{name}} RX", "refId": "A"},
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "rate(unpoller_device_stat_transmit_bytes_total{type=\"uap\"}[5m]) * 8", "legendFormat": "{{name}} TX", "refId": "B"}
           ],
           "title": "WiFi Throughput per AP",
           "type": "timeseries"
@@ -314,11 +314,11 @@ data:
           "id": 14,
           "options": {"cellHeight": "sm", "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true, "sortBy": [{"desc": true, "displayName": "RX"}]},
           "targets": [
-            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(20, unpoller_client_rx_bytes_total)", "format": "table", "instant": true, "legendFormat": "__auto", "refId": "A"}
+            {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(20, unpoller_client_receive_bytes_total)", "format": "table", "instant": true, "legendFormat": "__auto", "refId": "A"}
           ],
           "title": "Top 20 Clients by Traffic",
           "transformations": [
-            {"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "ap_name": true, "channel": true, "connection": true, "essid": true, "gw_name": true, "instance": true, "ip": true, "job": true, "oui": true, "radio": true, "radio_name": true, "radio_proto": true, "site_name": true, "source": true, "sw_name": true, "sw_port": true, "vlan": true, "wired": true}, "indexByName": {}, "renameByName": {"Value": "RX", "hostname": "Client", "mac": "MAC", "name": "Name"}}}
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "ap_name": true, "bssid": true, "channel": true, "essid": true, "gw_name": true, "instance": true, "ip": true, "job": true, "mac": true, "network": true, "oui": true, "radio": true, "radio_desc": true, "radio_name": true, "radio_proto": true, "site_name": true, "source": true, "sw_name": true, "sw_port": true, "vlan": true, "wired": true}, "indexByName": {}, "renameByName": {"Value": "RX", "name": "Client"}}}
           ],
           "type": "table"
         }
@@ -332,5 +332,5 @@ data:
       "timezone": "browser",
       "title": "UniFi Network Overview",
       "uid": "unifi-overview",
-      "version": 1
+      "version": 2
     }

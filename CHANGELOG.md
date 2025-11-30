@@ -4,6 +4,30 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.5] - 2025-11-30
+
+### Added
+- Loki ServiceMonitor and Promtail PodMonitor (`applications/loki/servicemonitor.yaml`)
+  - Enables Prometheus to scrape Loki/Promtail metrics
+  - Required for Loki Health dashboard to function
+- UnPoller deployment for UniFi metrics (`applications/unpoller/deployment.yaml`)
+  - Scrapes UniFi controller at 10.20.10.1
+  - ServiceMonitor for Prometheus integration
+
+### Fixed
+- **K8s Treemap dashboard**: Converted deprecated treemap panels to bar gauges
+  - Treemap visualization no longer supported in Grafana 10+
+- **UniFi Network dashboard**: Updated all metrics for unpoller v2
+  - Old metrics (e.g., `unpoller_client_info`) → new (e.g., `unpoller_site_users`)
+  - Fixed authentication with environment variables instead of config file
+- **Loki Health dashboard**: Added ServiceMonitor so Prometheus scrapes Loki
+  - Was showing "No data" because no scrape target existed
+
+### Technical Notes
+- UnPoller v2 metric name changes required complete dashboard rewrite
+- Loki exposes metrics on port 3100, Promtail on port 3101
+- ServiceMonitor requires `release: monitoring` label for Prometheus to discover
+
 ## [Phase 5.4] - 2025-11-30
 
 ### Added

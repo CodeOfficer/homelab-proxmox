@@ -1,0 +1,41 @@
+# ServiceMonitor for Loki metrics scraping
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: loki
+  namespace: loki
+  labels:
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loki
+      app.kubernetes.io/instance: loki
+  namespaceSelector:
+    matchNames:
+      - loki
+  endpoints:
+    - port: http-metrics
+      interval: 30s
+      path: /metrics
+---
+# PodMonitor for Promtail metrics (DaemonSet doesn't have a Service)
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: promtail
+  namespace: loki
+  labels:
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: promtail
+      app.kubernetes.io/instance: promtail
+  namespaceSelector:
+    matchNames:
+      - loki
+  podMetricsEndpoints:
+    - port: http-metrics
+      interval: 30s
+      path: /metrics

@@ -101,7 +101,7 @@ Run `make help` for full list. Key targets:
 
 ## Current Status
 
-**Completed:** Phases 0-5.4 (see `CHANGELOG.md`)
+**Completed:** Phases 0-5.5 (see `CHANGELOG.md`)
 
 **In Progress:** None
 
