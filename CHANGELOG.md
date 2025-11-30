@@ -29,6 +29,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   - Retains last 10 backups on Synology NFS
   - Checksum-based change detection (skips backup if no changes)
   - Fixed retention pruning (was keeping ~27, now exactly 10)
+- Mapshot viewer 404 errors
+  - Root cause: viewer requests `/s1zoom_N/tile.jpg` but mapshot outputs to `/d-XXXXX/s1zoom_N/tile.jpg`
+  - Fix: symlink `mapshot.json` AND all zoom directories to render dir
+  - Refactored cronjob with path constants, validation functions, and better error handling
 
 ### Technical Notes
 - Telegram secrets are optional (`optional: true` in secretKeyRef)
