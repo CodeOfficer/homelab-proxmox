@@ -78,74 +78,237 @@ spec:
               command: ["/bin/bash", "-c"]
               args:
                 - |
-                  # Check if render is needed
-                  if [ -f /opt/factorio/saves/.render-status ]; then
-                    STATUS=$(cat /opt/factorio/saves/.render-status)
+                  set -euo pipefail
+
+                  # =============================================================================
+                  # PATH CONSTANTS - Single source of truth for all paths
+                  # =============================================================================
+                  PVC_ROOT="/mapshot"                                    # PVC mount point
+                  FACTORIO_DIR="$PVC_ROOT/factorio"                      # Factorio installation
+                  FACTORIO_BIN="$FACTORIO_DIR/bin/x64/factorio"          # Factorio binary
+                  SCRIPT_OUTPUT="$FACTORIO_DIR/script-output"            # mapshot output root
+                  VIEWER_DIR="$SCRIPT_OUTPUT/mapshot/latest"             # Where viewer files live
+                  CHECKSUM_FILE="$PVC_ROOT/.last-render-checksum"        # Tracks last rendered save
+                  SAVE_FILE="/opt/factorio/saves/latest.zip"             # Input save (from init container)
+                  STATUS_FILE="/opt/factorio/saves/.render-status"       # Render decision from init
+                  NEW_CHECKSUM_FILE="/opt/factorio/saves/.new-checksum"  # New checksum from init
+
+                  # =============================================================================
+                  # HELPER FUNCTIONS
+                  # =============================================================================
+                  log() { echo "[$(date '+%H:%M:%S')] $*"; }
+                  error() { echo "[$(date '+%H:%M:%S')] ERROR: $*" >&2; }
+
+                  validate_paths() {
+                    log "Validating paths..."
+                    local errors=0
+
+                    # Check PVC is mounted
+                    if [ ! -d "$PVC_ROOT" ]; then
+                      error "PVC not mounted at $PVC_ROOT"
+                      errors=$((errors + 1))
+                    fi
+
+                    # Check save file exists
+                    if [ ! -f "$SAVE_FILE" ]; then
+                      error "Save file not found: $SAVE_FILE"
+                      errors=$((errors + 1))
+                    fi
+
+                    if [ $errors -gt 0 ]; then
+                      error "Path validation failed with $errors errors"
+                      return 1
+                    fi
+
+                    log "Path validation passed"
+                    return 0
+                  }
+
+                  validate_render_output() {
+                    log "Validating render output..."
+                    local errors=0
+
+                    # Check viewer directory exists
+                    if [ ! -d "$VIEWER_DIR" ]; then
+                      error "Viewer directory not found: $VIEWER_DIR"
+                      log "Contents of $SCRIPT_OUTPUT:"
+                      ls -laR "$SCRIPT_OUTPUT" 2>/dev/null || echo "(empty or missing)"
+                      return 1
+                    fi
+
+                    # Check for render directories (d-XXXXX)
+                    local render_dirs=$(find "$VIEWER_DIR" -maxdepth 1 -type d -name 'd-*' 2>/dev/null | wc -l)
+                    if [ "$render_dirs" -eq 0 ]; then
+                      error "No render directories (d-*) found in $VIEWER_DIR"
+                      log "Contents of $VIEWER_DIR:"
+                      ls -la "$VIEWER_DIR" 2>/dev/null || echo "(empty or missing)"
+                      return 1
+                    fi
+
+                    # Find latest render directory
+                    RENDER_DIR=$(ls -td "$VIEWER_DIR"/d-* 2>/dev/null | head -1)
+                    RENDER_NAME=$(basename "$RENDER_DIR")
+                    log "Latest render directory: $RENDER_NAME"
+
+                    # Check required files exist
+                    local required_files=("$VIEWER_DIR/index.html" "$VIEWER_DIR/viewer-"*".js" "$RENDER_DIR/mapshot.json")
+                    for pattern in "${required_files[@]}"; do
+                      if ! ls $pattern >/dev/null 2>&1; then
+                        error "Required file not found: $pattern"
+                        errors=$((errors + 1))
+                      fi
+                    done
+
+                    if [ $errors -gt 0 ]; then
+                      error "Render validation failed with $errors missing files"
+                      log "Contents of $VIEWER_DIR:"
+                      ls -la "$VIEWER_DIR"
+                      log "Contents of $RENDER_DIR:"
+                      ls -la "$RENDER_DIR" 2>/dev/null || echo "(missing)"
+                      return 1
+                    fi
+
+                    log "Render validation passed"
+                    return 0
+                  }
+
+                  create_symlinks() {
+                    log "Creating symlinks for viewer compatibility..."
+
+                    # The viewer constructs tile URLs as: {base}/s1zoom_N/tile_X_Y.jpg
+                    # But mapshot puts them in: {base}/d-XXXXX/s1zoom_N/tile_X_Y.jpg
+                    # Solution: symlink both mapshot.json AND all zoom directories
+
+                    # 1. Symlink mapshot.json
+                    local json_target="$RENDER_NAME/mapshot.json"
+                    local json_link="$VIEWER_DIR/mapshot.json"
+                    rm -f "$json_link"
+                    ln -sf "$json_target" "$json_link"
+                    log "Symlinked: mapshot.json -> $json_target"
+
+                    # 2. Symlink all zoom directories (s1zoom_0, s1zoom_1, etc.)
+                    for zoom_dir in "$RENDER_DIR"/s*zoom_*; do
+                      if [ -d "$zoom_dir" ]; then
+                        local zoom_name=$(basename "$zoom_dir")
+                        local zoom_link="$VIEWER_DIR/$zoom_name"
+                        rm -rf "$zoom_link"  # Remove existing symlink or directory
+                        ln -sf "$RENDER_NAME/$zoom_name" "$zoom_link"
+                        log "Symlinked: $zoom_name -> $RENDER_NAME/$zoom_name"
+                      fi
+                    done
+
+                    # 3. Verify critical symlinks work
+                    if [ ! -f "$json_link" ]; then
+                      error "Symlink verification failed: $json_link"
+                      return 1
+                    fi
+
+                    # List what we created
+                    log "Symlinks created:"
+                    ls -la "$VIEWER_DIR" | grep '^l'
+                    return 0
+                  }
+
+                  send_notification() {
+                    local status="$1"
+                    local message="$2"
+
+                    if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+                      return 0
+                    fi
+
+                    local emoji="✅"
+                    [ "$status" = "error" ] && emoji="❌"
+
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                      -d chat_id="${TELEGRAM_CHAT_ID}" \
+                      -d parse_mode="HTML" \
+                      -d text="${emoji} <b>Factorio Mapshot</b>%0A${message}" \
+                      >/dev/null || log "Warning: Telegram notification failed (non-fatal)"
+                  }
+
+                  # =============================================================================
+                  # MAIN EXECUTION
+                  # =============================================================================
+                  log "=== Mapshot Render Job Started ==="
+
+                  # Step 1: Check if render is needed (set by init container)
+                  if [ -f "$STATUS_FILE" ]; then
+                    STATUS=$(cat "$STATUS_FILE")
                     if [ "$STATUS" = "skip" ]; then
-                      echo "Skipping render - save unchanged"
+                      log "Skipping render - save unchanged since last render"
                       exit 0
                     fi
                   fi
 
-                  echo "Starting render..."
+                  # Step 2: Validate inputs
+                  validate_paths || exit 1
 
-                  # Download headless Factorio (Steam-linked accounts only have API access to headless)
-                  if [ ! -f /mapshot/factorio/bin/x64/factorio ]; then
-                    echo "Downloading Factorio headless..."
+                  # Step 3: Ensure Factorio is installed
+                  if [ ! -f "$FACTORIO_BIN" ]; then
+                    log "Downloading Factorio headless..."
                     curl -L "https://www.factorio.com/get-download/stable/headless/linux64?username=$FACTORIO_USERNAME&token=$FACTORIO_TOKEN" -o /tmp/factorio.tar.xz
-                    echo "Extracting..."
-                    tar xf /tmp/factorio.tar.xz -C /mapshot
-                    mkdir -p /mapshot/factorio/mods
-                    echo '{}' > /mapshot/factorio/mods/mod-list.json
+                    log "Extracting to $PVC_ROOT..."
+                    tar xf /tmp/factorio.tar.xz -C "$PVC_ROOT"
+                    mkdir -p "$FACTORIO_DIR/mods"
+                    echo '{}' > "$FACTORIO_DIR/mods/mod-list.json"
                     rm /tmp/factorio.tar.xz
-                    ls -la /mapshot/factorio/bin/x64/
+
+                    if [ ! -f "$FACTORIO_BIN" ]; then
+                      error "Factorio installation failed - binary not found at $FACTORIO_BIN"
+                      exit 1
+                    fi
+                    log "Factorio installed successfully"
                   else
-                    echo "Factorio already installed"
+                    log "Factorio already installed at $FACTORIO_BIN"
                   fi
 
-                  echo "Running mapshot render..."
+                  # Step 4: Run mapshot render
+                  log "Running mapshot render..."
+                  log "  Binary: $FACTORIO_BIN"
+                  log "  Data dir: $FACTORIO_DIR"
+                  log "  Save: $SAVE_FILE"
+                  log "  Output: $SCRIPT_OUTPUT"
+
                   timeout ${MAPSHOT_INTERVAL:-3600} xvfb-run mapshot render \
                     --logtostderr \
-                    --factorio_binary /mapshot/factorio/bin/x64/factorio \
-                    --factorio_datadir /mapshot/factorio \
-                    --work_dir /mapshot/factorio \
-                    --area ${MAPSHOT_AREA:-all} \
-                    --resolution ${MAPSHOT_RESOLUTION:-2048} \
-                    --jpgquality ${MAPSHOT_JPEG_QUALITY:-90} \
+                    --factorio_binary "$FACTORIO_BIN" \
+                    --factorio_datadir "$FACTORIO_DIR" \
+                    --work_dir "$FACTORIO_DIR" \
+                    --area "${MAPSHOT_AREA:-all}" \
+                    --resolution "${MAPSHOT_RESOLUTION:-2048}" \
+                    --jpgquality "${MAPSHOT_JPEG_QUALITY:-90}" \
                     --surface _all_ \
                     -v 5 \
-                    "$FACTORIO_SAVE"
+                    "$SAVE_FILE"
 
-                  # Symlink mapshot.json to root so viewer can find it
-                  # Viewer requests /mapshot.json but it's in /d-XXXX/mapshot.json
-                  OUTPUT_DIR="/mapshot/factorio/script-output/mapshot/latest"
-                  RENDER_DIR=$(ls -td "$OUTPUT_DIR"/d-* 2>/dev/null | head -1)
-                  if [ -n "$RENDER_DIR" ] && [ -f "$RENDER_DIR/mapshot.json" ]; then
-                    ln -sf "$(basename "$RENDER_DIR")/mapshot.json" "$OUTPUT_DIR/mapshot.json"
-                    echo "Symlinked mapshot.json from $(basename "$RENDER_DIR")"
-                  else
-                    echo "WARNING: Could not find mapshot.json to symlink"
-                    ls -la "$OUTPUT_DIR"/d-* 2>/dev/null || echo "No d-* directories found"
+                  # Step 5: Validate render output
+                  validate_render_output || {
+                    send_notification "error" "Render failed - output validation failed"
+                    exit 1
+                  }
+
+                  # Step 6: Create symlinks for viewer compatibility
+                  create_symlinks || {
+                    send_notification "error" "Render failed - symlink creation failed"
+                    exit 1
+                  }
+
+                  # Step 7: Update checksum to prevent re-rendering same save
+                  if [ -f "$NEW_CHECKSUM_FILE" ]; then
+                    cp "$NEW_CHECKSUM_FILE" "$CHECKSUM_FILE"
+                    log "Checksum updated"
                   fi
 
-                  # If render succeeded, update checksum
-                  if [ -f /opt/factorio/saves/.new-checksum ]; then
-                    cp /opt/factorio/saves/.new-checksum /mapshot/.last-render-checksum
-                    echo "Checksum updated"
-                  fi
+                  # Step 8: Final summary
+                  log "=== Render Complete ==="
+                  log "Viewer URL: https://mapshot.codeofficer.com/mapshot/latest/"
+                  log "Render dir: $RENDER_NAME"
+                  log "Files:"
+                  ls -la "$VIEWER_DIR" | head -15
 
-                  echo "Render complete!"
-                  ls -la /mapshot/factorio/script-output/
-
-                  # Send Telegram notification if configured
-                  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-                    echo "Sending Telegram notification..."
-                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-                      -d chat_id="${TELEGRAM_CHAT_ID}" \
-                      -d parse_mode="HTML" \
-                      -d text="<b>Factorio Mapshot Updated</b>%0A%0ANew map render available at:%0Ahttps://mapshot.codeofficer.com/mapshot/latest/" \
-                      || echo "Warning: Telegram notification failed (non-fatal)"
-                  fi
+                  # Step 9: Send success notification
+                  send_notification "success" "New map render available%0Ahttps://mapshot.codeofficer.com/mapshot/latest/"
               env:
                 - name: FACTORIO_USERNAME
                   valueFrom:
