@@ -4,6 +4,19 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.7] - 2025-12-01
+
+### Fixed
+- **Mapshot CronJob scheduling failure**
+  - Root cause: Phase 5.6 set both request AND limit to 8Gi
+  - Scheduler couldn't find node with 8Gi free (k3s-cp-02 has 8Gi total)
+  - Fix: request=2Gi (scheduling), limit=8Gi (OOM protection)
+
+### Technical Notes
+- K8s `requests` = scheduler reservation (must be available on node)
+- K8s `limits` = maximum burst usage (OOM kill threshold)
+- Requests should be typical usage, limits should be peak usage
+
 ## [Phase 5.6] - 2025-11-30
 
 ### Added
