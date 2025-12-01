@@ -97,6 +97,14 @@ Run `make help` for full list. Key targets:
 | `make status` | Show cluster status |
 | `make kubectl CMD="..."` | Run kubectl commands |
 
+### Claude Tools
+
+| Tool | Description |
+|------|-------------|
+| `playwright-skill` | Browser automation for debugging web UIs (Grafana, etc.) |
+
+**Setup after clone:** `npm install` to restore Playwright dependency.
+
 ---
 
 ## Current Status
