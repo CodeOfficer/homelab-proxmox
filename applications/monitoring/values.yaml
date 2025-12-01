@@ -43,6 +43,39 @@ grafana:
     - marcusolsson-treemap-panel
     - knightss27-weathermap-panel
 
+  # Import dotdc kubernetes dashboards from grafana.com
+  # https://github.com/dotdc/grafana-dashboards-kubernetes
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'grafana-dashboards-kubernetes'
+          orgId: 1
+          folder: 'Kubernetes'
+          type: file
+          disableDeletion: true
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/grafana-dashboards-kubernetes
+  dashboards:
+    grafana-dashboards-kubernetes:
+      k8s-views-global:
+        gnetId: 15757
+        revision: 37
+        datasource: Prometheus
+      k8s-views-nodes:
+        gnetId: 15759
+        revision: 31
+        datasource: Prometheus
+      k8s-views-namespaces:
+        gnetId: 15758
+        revision: 35
+        datasource: Prometheus
+      k8s-views-pods:
+        gnetId: 15760
+        revision: 29
+        datasource: Prometheus
+
   # Disable init chown (causes issues with existing PVCs)
   initChownData:
     enabled: false

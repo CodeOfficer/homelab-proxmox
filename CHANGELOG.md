@@ -4,6 +4,29 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.8] - 2025-12-01
+
+### Added
+- **dotdc Kubernetes dashboards** - interactive cluster monitoring
+  - k8s-views-global (ID: 15757) - cluster overview with node health
+  - k8s-views-nodes (ID: 15759) - per-node drill-down with dropdown selector
+  - k8s-views-namespaces (ID: 15758) - namespace resource breakdown
+  - k8s-views-pods (ID: 15760) - pod-level detail
+  - Imported via Helm values `grafana.dashboards` from grafana.com
+
+### Removed
+- Custom k8s-treemap dashboard (`applications/monitoring/dashboards/k8s-treemap.yaml`)
+  - Replaced by dotdc dashboards which have proper interactive features
+
+### Changed
+- `applications/monitoring/values.yaml` - added dashboardProviders and dashboards config
+
+### Technical Notes
+- dotdc dashboards use Grafana variables for node/namespace/pod selection
+- Source: https://github.com/dotdc/grafana-dashboards-kubernetes
+- Dashboards appear in Grafana under "Kubernetes" folder
+- The custom treemap had label rendering issues and no interactivity
+
 ## [Phase 5.7] - 2025-12-01
 
 ### Fixed

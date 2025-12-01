@@ -101,7 +101,7 @@ Run `make help` for full list. Key targets:
 
 ## Current Status
 
-**Completed:** Phases 0-5.7 (see `CHANGELOG.md`)
+**Completed:** Phases 0-5.8 (see `CHANGELOG.md`)
 
 **In Progress:** None
 
@@ -139,7 +139,7 @@ Run `make help` for full list. Key targets:
 - [x] Loki log aggregation (`applications/loki/`) - query logs in Grafana
 - [x] Loki health dashboard (ingestion rate, storage %, latency)
 - [x] Pod memory pressure alerts (warn at 80% of limit)
-- [ ] K8s cluster overview dashboard (nodes, pods, resource usage)
+- [x] K8s cluster dashboards (dotdc: global, nodes, namespaces, pods views)
 - [ ] GPU metrics dashboard (RTX 4000 Ada utilization, temp, memory)
 
 ### Remote Access (Tailscale)
