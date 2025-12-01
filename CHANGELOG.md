@@ -4,6 +4,28 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.9] - 2025-12-01
+
+### Fixed
+- **K3s false-positive Prometheus alerts** - disabled ServiceMonitors for embedded components
+  - kubeControllerManager, kubeScheduler, kubeProxy, kubeEtcd
+  - K3s embeds these in the k3s binary - no separate metrics endpoints exist
+  - Prevents "target disappeared from discovery" alerts
+
+### Added
+- **Factorio save import workflow** - documented staging mechanism
+  - Place save in `/factorio/save-importer/import/` directory
+  - Pod restart triggers init container to import and rename file
+  - Useful for migrating saves from desktop Factorio to server
+
+### Changed
+- `applications/monitoring/values.yaml` - disabled K3s-incompatible ServiceMonitors
+
+### Technical Notes
+- K3s architecture: scheduler/controller-manager/proxy run in-process, not as separate pods
+- Standard kube-prometheus-stack expects separate component pods with metrics endpoints
+- Save importer uses checksum tracking to avoid re-importing unchanged files
+
 ## [Phase 5.8] - 2025-12-01
 
 ### Added

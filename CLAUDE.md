@@ -101,7 +101,7 @@ Run `make help` for full list. Key targets:
 
 ## Current Status
 
-**Completed:** Phases 0-5.8 (see `CHANGELOG.md`)
+**Completed:** Phases 0-5.9 (see `CHANGELOG.md`)
 
 **In Progress:** None
 
@@ -122,6 +122,7 @@ Run `make help` for full list. Key targets:
 - [x] 7 Days to Die (`applications/7dtd/`) - 10.20.11.201:26900
   - RWG 8K map "FoundationRWG", Warrior difficulty, EAC disabled
 - [x] Factorio (`applications/factorio/`) - 10.20.11.202:34197
+  - Save import: `kubectl cp save.zip factorio/<pod>:/factorio/save-importer/import/homelab.zip` then restart pod
 - [x] Factorio Mapshot (`applications/mapshot/`) - https://mapshot.codeofficer.com/mapshot/latest/
   - Zoomable web map, 4-hour CronJob render, checksum-gated, auto-cleanup
 - [x] Tailscale subnet router for remote friend access

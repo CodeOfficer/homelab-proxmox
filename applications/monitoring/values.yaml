@@ -177,6 +177,17 @@ kubeStateMetrics:
 pushgateway:
   enabled: false
 
+# K3s embeds these components - no separate metrics endpoints exist
+# Disabling prevents false "target disappeared" alerts
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
 # Prometheus Operator
 prometheusOperator:
   resources:
