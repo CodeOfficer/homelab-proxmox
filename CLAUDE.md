@@ -31,6 +31,46 @@ homelab-proxmox/
 
 ---
 
+## Architecture Rules
+
+### Node Allocation
+| Node | RAM | Purpose | Scheduling |
+|------|-----|---------|------------|
+| k3s-cp-01 | 64GB | Control plane + general workloads | Default |
+| k3s-cp-02 | 64GB | Control plane + general workloads | Default |
+| k3s-gpu-01 | 64GB | GPU-required workloads ONLY | Tainted: `dedicated=gpu:NoSchedule` |
+
+### GPU Node Policy
+- **NEVER schedule non-GPU workloads on k3s-gpu-01**
+- GPU node has RTX 4000 Ada - the ONLY discrete GPU in the cluster
+- CP nodes have weak integrated graphics only
+- GPU node has taint `dedicated=gpu:NoSchedule`
+- Only pods with matching toleration can run there
+- GPU workloads MUST have both toleration AND nodeSelector:
+  ```yaml
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "gpu"
+      effect: "NoSchedule"
+  nodeSelector:
+    nvidia.com/gpu.present: "true"
+  ```
+
+### When to Use GPU Node
+- LLM inference (Ollama)
+- Video transcoding requiring hardware acceleration
+- Any workload needing CUDA/nvidia runtime
+- NOT for: game servers, databases, web apps, monitoring
+
+### Memory Sizing Guidelines
+- Game servers (7DTD, Factorio): 8Gi limit typical
+- Mapshot (Factorio renderer): 16Gi limit (Space Age is memory-hungry)
+- Monitoring (Prometheus): 2Gi limit
+- GPU workloads (Ollama): 16Gi+ limit depending on models
+
+---
+
 ## Workflow
 
 The complete orchestration workflow:

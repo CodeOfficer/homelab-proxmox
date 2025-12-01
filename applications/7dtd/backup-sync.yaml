@@ -29,6 +29,18 @@ spec:
                   set -e
                   apk add --no-cache rsync curl tar >/dev/null 2>&1
 
+                  # Check for player activity marker (set by auto-save when players online)
+                  ACTIVITY_MARKER="/dest/sdtd/activity/player-activity"
+                  if [ ! -f "$ACTIVITY_MARKER" ]; then
+                    echo "No player activity since last backup - skipping"
+                    if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+                      curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                        -d chat_id="${TELEGRAM_CHAT_ID}" \
+                        -d text="⏭️ 7DTD backup skipped%0AReason: No player activity" >/dev/null || true
+                    fi
+                    exit 0
+                  fi
+
                   # Notify start
                   if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
                     curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
@@ -123,6 +135,10 @@ spec:
                   echo "Latest: latest.tar.gz ($LATEST_SIZE)"
                   echo "Total backups: $BACKUP_COUNT timestamped + latest ($BACKUP_SIZE)"
                   ls -lht "$DEST_DIR" | head -12
+
+                  # Clear activity marker (backup complete, wait for next play session)
+                  rm -f "$ACTIVITY_MARKER"
+                  echo "Activity marker cleared"
 
                   # Notify completion
                   if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then

@@ -12,7 +12,7 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      ttlSecondsAfterFinished: 86400  # Clean up after 24 hours
+      ttlSecondsAfterFinished: 3600  # Clean up after 1 hour
       template:
         spec:
           serviceAccountName: mapshot-render
@@ -407,7 +407,7 @@ spec:
                   memory: "2Gi"
                   cpu: "1"
                 limits:
-                  memory: "8Gi"
+                  memory: "16Gi"
                   cpu: "2"
 
           volumes:

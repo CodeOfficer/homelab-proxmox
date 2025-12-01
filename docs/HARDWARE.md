@@ -12,6 +12,20 @@ Physical hardware specifications for the homelab.
 | `pve-02`   | Minisforum MS-01 | Intel i9-12900H (14C/20T) | 96 GB | 1TB NVMe   | —                   | JetKVM     | K3s Control Plane    |
 | `pve-03`   | Minisforum MS-01 | Intel i9-12900H (14C/20T) | 96 GB | 1TB NVMe   | —                   | JetKVM     | K3s Control Plane    |
 
+### K3s Virtual Machine Allocation
+
+| VM Name      | Host     | VMID | IP Address   | CPU   | RAM   | Disk   | Role | Taint |
+|--------------|----------|------|--------------|-------|-------|--------|------|-------|
+| `k3s-cp-01`  | pve-02   | 200  | 10.20.11.80  | 4 cores | 64 GB | 50 GB  | Control Plane + Workloads | — |
+| `k3s-cp-02`  | pve-03   | 201  | 10.20.11.81  | 4 cores | 64 GB | 50 GB  | Control Plane + Workloads | — |
+| `k3s-gpu-01` | pve-01   | 210  | 10.20.11.85  | 8 cores | 64 GB | 800 GB | GPU Worker | `dedicated=gpu:NoSchedule` |
+
+**Notes:**
+- K3s server nodes (CP) are schedulable for general workloads
+- GPU node is tainted - only GPU-requiring workloads (with toleration) can run there
+- All VMs use QEMU/KVM with cloud-init for bootstrap
+- GPU VM uses OVMF BIOS + Q35 machine type for PCIe passthrough
+
 ### Detailed Specifications: Minisforum MS-01
 
 - **CPU**: Intel Core i9-12900H (Alder Lake, 12th Gen)

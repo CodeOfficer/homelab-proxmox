@@ -78,6 +78,27 @@ resource "proxmox_virtual_environment_vm" "k3s_server_init" {
   # K3s installation is handled by Ansible (Phase 3.5)
   # This module only provisions VMs with cloud-init
 
+  # Prevent replacement after import - clone is only for initial creation
+  # Also ignore BIOS/machine changes to avoid breaking existing VMs
+  lifecycle {
+    ignore_changes = [
+      clone,
+      efi_disk,
+      bios,
+      machine,
+      scsi_hardware,
+      initialization[0].interface,
+      agent,
+      operating_system,
+      vga,
+      tags,
+      disk[0].path_in_datastore,
+      disk[0].discard,
+      disk[0].iothread,
+      disk[0].replicate,
+    ]
+  }
+
   depends_on = [random_password.k3s_token]
 }
 
@@ -140,6 +161,27 @@ resource "proxmox_virtual_environment_vm" "k3s_server_additional" {
   }
 
   # K3s installation is handled by Ansible (Phase 3.5)
+
+  # Prevent replacement after import - clone is only for initial creation
+  # Also ignore BIOS/machine changes to avoid breaking existing VMs
+  lifecycle {
+    ignore_changes = [
+      clone,
+      efi_disk,
+      bios,
+      machine,
+      scsi_hardware,
+      initialization[0].interface,
+      agent,
+      operating_system,
+      vga,
+      tags,
+      disk[0].path_in_datastore,
+      disk[0].discard,
+      disk[0].iothread,
+      disk[0].replicate,
+    ]
+  }
 
   depends_on = [proxmox_virtual_environment_vm.k3s_server_init]
 }
@@ -223,6 +265,27 @@ resource "proxmox_virtual_environment_vm" "k3s_agent" {
   }
 
   # K3s installation is handled by Ansible (Phase 3.5)
+
+  # Prevent replacement after import - clone is only for initial creation
+  # Also ignore BIOS/machine changes to avoid breaking existing VMs
+  lifecycle {
+    ignore_changes = [
+      clone,
+      efi_disk,
+      bios,
+      machine,
+      scsi_hardware,
+      initialization[0].interface,
+      agent,
+      operating_system,
+      vga,
+      tags,
+      disk[0].path_in_datastore,
+      disk[0].discard,
+      disk[0].iothread,
+      disk[0].replicate,
+    ]
+  }
 
   depends_on = [proxmox_virtual_environment_vm.k3s_server_init]
 }

@@ -1,5 +1,5 @@
-# CronJob to send saveworld command every 5 minutes via telnet
-# Ensures world state is saved periodically, protecting against crashes
+# CronJob to save world when players are online
+# Only saves if players > 0, touches activity marker for backup gating
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -29,24 +29,49 @@ spec:
                   set -e
                   apk add --no-cache netcat-openbsd >/dev/null 2>&1
 
-                  # Send password, wait, send saveworld command
-                  # Protocol: connect -> password prompt -> auth -> command prompt -> saveworld
-                  {
+                  # Query player count via telnet
+                  PLAYERS_OUTPUT=$({
                     sleep 1
                     echo "$TELNET_PASSWORD"
                     sleep 1
-                    echo "saveworld"
-                    sleep 3
+                    echo "listplayers"
+                    sleep 2
                     echo "exit"
-                  } | nc -w 10 sdtd-7dtd-telnet.sdtd.svc.cluster.local 8081 2>&1 || true
+                  } | nc -w 10 sdtd-7dtd-telnet.sdtd.svc.cluster.local 8081 2>&1 || echo "")
 
-                  echo "[$(date)] Auto-save completed"
+                  PLAYER_COUNT=$(echo "$PLAYERS_OUTPUT" | grep -o 'Total of [0-9]*' | grep -o '[0-9]*' || echo "0")
+                  echo "[$(date)] Players online: $PLAYER_COUNT"
+
+                  if [ "$PLAYER_COUNT" -gt 0 ]; then
+                    echo "[$(date)] Saving world..."
+
+                    # Touch activity marker for backup gating
+                    mkdir -p /nfs/sdtd/activity
+                    touch /nfs/sdtd/activity/player-activity
+
+                    # Send saveworld command
+                    {
+                      sleep 1
+                      echo "$TELNET_PASSWORD"
+                      sleep 1
+                      echo "saveworld"
+                      sleep 3
+                      echo "exit"
+                    } | nc -w 10 sdtd-7dtd-telnet.sdtd.svc.cluster.local 8081 2>&1 || true
+
+                    echo "[$(date)] Auto-save completed"
+                  else
+                    echo "[$(date)] No players - skipping save"
+                  fi
               env:
                 - name: TELNET_PASSWORD
                   valueFrom:
                     secretKeyRef:
                       name: sdtd-telnet
                       key: password
+              volumeMounts:
+                - name: nfs
+                  mountPath: /nfs
               resources:
                 requests:
                   memory: "32Mi"
@@ -54,4 +79,9 @@ spec:
                 limits:
                   memory: "64Mi"
                   cpu: "100m"
+          volumes:
+            - name: nfs
+              nfs:
+                server: 10.20.10.20
+                path: /volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data
           restartPolicy: OnFailure
