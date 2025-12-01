@@ -162,9 +162,25 @@ Run `make help` for full list. Key targets:
 - [ ] 5.3: MCP server for infrastructure access
 
 ### Phase 6: Operations
-- [ ] Configure Proxmox backup schedules
-- [ ] Set up etcd snapshots
-- [ ] Security hardening
+- [ ] 6.0: **Full teardown/rebuild test** - Verify idempotency
+  - **Pre-test checklist:**
+    - Backup critical data (game saves already on NAS)
+    - Note current pod/IP state for comparison
+    - Verify `.secrets/k3s-token` exists (or will be regenerated)
+    - Confirm NFS exports are independent of K3s
+  - **SKIP `make template`** - VM template (vmid 9000) already exists and is stable
+    - Only rebuild template if corrupted or Ubuntu version upgrade needed
+    - Packer builds are expensive and historically flaky
+  - **Execute:**
+    - `terraform destroy` - destroy VMs only (template preserved)
+    - `terraform apply` - recreate VMs from existing template
+    - `make ansible-k3s` - reinstall K3s cluster
+    - `make deploy-k8s` - redeploy all applications
+  - **Verify:** All apps recover, NFS data persists, no manual intervention
+  - **Document:** Any gaps found, update automation as needed
+- [ ] 6.1: Configure Proxmox backup schedules
+- [ ] 6.2: Set up etcd snapshots
+- [ ] 6.3: Security hardening
 
 ### Game Servers
 - [x] 7 Days to Die (`applications/7dtd/`) - 10.20.11.201:26900
