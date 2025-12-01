@@ -1,0 +1,67 @@
+# Tailscale Subnet Router Installation
+# Installs Tailscale on k3s-cp-01 to expose 10.20.11.0/24 to Tailscale network
+# After running: ssh to node and run 'sudo tailscale up --advertise-routes=10.20.11.0/24'
+
+- name: Install Tailscale subnet router
+  hosts: k3s_cp_01
+  become: true
+  vars:
+    tailscale_subnet: "10.20.11.0/24"
+
+  tasks:
+    - name: Enable IP forwarding (required for subnet routing)
+      sysctl:
+        name: "{{ item }}"
+        value: "1"
+        sysctl_set: true
+        state: present
+        reload: true
+      loop:
+        - net.ipv4.ip_forward
+        - net.ipv6.conf.all.forwarding
+
+    - name: Add Tailscale GPG key
+      apt_key:
+        url: https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg
+        state: present
+
+    - name: Add Tailscale repository
+      apt_repository:
+        repo: "deb https://pkgs.tailscale.com/stable/ubuntu noble main"
+        state: present
+        filename: tailscale
+
+    - name: Install Tailscale
+      apt:
+        name: tailscale
+        state: present
+        update_cache: true
+
+    - name: Enable and start tailscaled service
+      systemd:
+        name: tailscaled
+        enabled: true
+        state: started
+
+    - name: Check if Tailscale is authenticated
+      command: tailscale status
+      register: tailscale_status
+      ignore_errors: true
+      changed_when: false
+
+    - name: Display authentication instructions
+      debug:
+        msg: |
+          Tailscale installed but needs authentication!
+
+          SSH to k3s-cp-01 and run:
+            sudo tailscale up --advertise-routes={{ tailscale_subnet }}
+
+          Then approve the subnet route in Tailscale admin:
+            https://login.tailscale.com/admin/machines
+
+          After approval, friends can connect to game servers via:
+            - Factorio: 10.20.11.202:34197
+            - 7DTD: 10.20.11.201:26900
+            - Grafana: https://grafana.codeofficer.com
+      when: tailscale_status.rc != 0 or 'Logged out' in tailscale_status.stdout

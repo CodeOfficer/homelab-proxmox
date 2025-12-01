@@ -51,7 +51,7 @@ persistence:
 # Factorio server settings
 factorioServer:
   save_name: "homelab"
-  generate_new_save: true
+  generate_new_save: false  # Don't overwrite existing saves on restart
   load_latest_save: true
   update_mods_on_start: false
   enable_space_age: true  # Enable Space Age DLC support

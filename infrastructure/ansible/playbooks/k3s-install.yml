@@ -32,27 +32,30 @@
       register: sda_size
       changed_when: false
 
+    # Expand partition (may already be done by cloud-init, rc=1 means NOCHANGE)
     - name: Expand partition if disk is larger than partition
       command: growpart /dev/sda 3
-      when: (sda_size.stdout | int) > (sda3_size.stdout | int + 1073741824)
       register: growpart_result
       failed_when: growpart_result.rc not in [0, 1]
       changed_when: growpart_result.rc == 0
 
-    - name: Resize physical volume
+    # Always resize PV - cloud-init expands partition but not LVM
+    - name: Resize physical volume to fill partition
       command: pvresize /dev/sda3
-      when: growpart_result is changed
+      register: pvresize_result
+      changed_when: "'0 free' not in pvresize_result.stdout"
 
+    # Always try to extend LV to use free space (rc=5 means already at max)
     - name: Extend logical volume to use all free space
       command: lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv
-      when: growpart_result is changed
       register: lvextend_result
       failed_when: lvextend_result.rc not in [0, 5]
       changed_when: lvextend_result.rc == 0
 
-    - name: Resize filesystem
+    # Resize filesystem if LV was extended
+    - name: Resize filesystem to fill logical volume
       command: resize2fs /dev/ubuntu-vg/ubuntu-lv
-      when: lvextend_result is changed
+      when: lvextend_result.rc == 0
 
 - name: Install K3s Cluster
   hosts: all

@@ -3,9 +3,9 @@
 .PHONY: logs status kubectl ssh-server ssh-agent
 .PHONY: template template-validate template-init template-clean
 .PHONY: iso-upload iso-check
-.PHONY: ansible-deps ansible-k3s ansible-expand-disk kubeconfig save-token
+.PHONY: ansible-deps ansible-k3s ansible-expand-disk ansible-tailscale kubeconfig save-token clean-known-hosts
 .PHONY: deploy-7dtd 7dtd-logs 7dtd-shell 7dtd-update 7dtd-status
-.PHONY: deploy-factorio factorio-logs factorio-status factorio-rcon
+.PHONY: deploy-factorio factorio-logs factorio-status factorio-rcon factorio-restore-import factorio-restore-latest
 .PHONY: deploy-monitoring monitoring-status grafana-password
 .PHONY: deploy-mapshot mapshot-render mapshot-status mapshot-logs
 .PHONY: deploy-loki loki-status
@@ -232,7 +232,14 @@ ansible-deps: ## Install Ansible dependencies (k3s-ansible role)
 	$(DIRENV) ansible-galaxy install -r $(ANSIBLE_DIR)/requirements.yml
 	@echo "$(GREEN)Ansible dependencies installed!$(NC)"
 
-ansible-k3s: ansible-deps ## Install K3s on VMs using Ansible
+clean-known-hosts: ## Remove K3s VM host keys from known_hosts (for rebuilds)
+	@echo "$(BLUE)Clearing known_hosts for K3s VMs...$(NC)"
+	@ssh-keygen -R 10.20.11.80 2>/dev/null || true
+	@ssh-keygen -R 10.20.11.81 2>/dev/null || true
+	@ssh-keygen -R 10.20.11.85 2>/dev/null || true
+	@echo "$(GREEN)Known hosts cleared$(NC)"
+
+ansible-k3s: ansible-deps clean-known-hosts ## Install K3s on VMs using Ansible
 	@echo "$(BLUE)Installing K3s cluster...$(NC)"
 	$(DIRENV) ansible-playbook -i $(ANSIBLE_DIR)/inventory/hosts.yml $(ANSIBLE_DIR)/playbooks/k3s-install.yml
 	@$(MAKE) save-token
@@ -251,6 +258,17 @@ ansible-expand-disk: ## Expand filesystem after disk resize (idempotent)
 	@echo "$(BLUE)Expanding filesystems to fill disks...$(NC)"
 	$(DIRENV) ansible-playbook -i $(ANSIBLE_DIR)/inventory/hosts.yml $(ANSIBLE_DIR)/playbooks/expand-disk.yml
 	@echo "$(GREEN)Filesystems expanded!$(NC)"
+
+ansible-tailscale: ansible-deps ## Install Tailscale subnet router on k3s-cp-01
+	@echo "$(BLUE)Installing Tailscale subnet router...$(NC)"
+	$(DIRENV) ansible-playbook -i $(ANSIBLE_DIR)/inventory/hosts.yml $(ANSIBLE_DIR)/playbooks/tailscale-install.yml
+	@echo "$(GREEN)Tailscale installed!$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Next: SSH to k3s-cp-01 and run:$(NC)"
+	@echo "  sudo tailscale up --advertise-routes=10.20.11.0/24"
+	@echo ""
+	@echo "$(YELLOW)Then approve route in Tailscale admin:$(NC)"
+	@echo "  https://login.tailscale.com/admin/machines"
 
 kubeconfig: ## Fetch kubeconfig from K3s cluster
 	@echo "$(BLUE)Fetching kubeconfig...$(NC)"
@@ -496,6 +514,36 @@ factorio-status: ## Show Factorio server status
 factorio-rcon: ## Port-forward to Factorio RCON
 	@echo "$(BLUE)Port-forwarding to RCON on localhost:27015...$(NC)"
 	kubectl port-forward -n factorio svc/factorio-factorio-server-charts-rcon 27015:27015
+
+factorio-restore-import: ## Restore Factorio save from game-imports/homelab.zip
+	@echo "$(BLUE)Restoring Factorio save from game-imports...$(NC)"
+	@echo "Scaling down deployment..."
+	@kubectl scale deployment/factorio-factorio-server-charts -n factorio --replicas=0
+	@sleep 10
+	@echo "Copying save from NFS..."
+	@kubectl run factorio-restore --rm -i --restart=Never --image=alpine:latest -n factorio \
+		--overrides='{"spec":{"nodeSelector":{"node-role.kubernetes.io/control-plane":"true"},"tolerations":[{"key":"node-role.kubernetes.io/control-plane","operator":"Exists","effect":"NoSchedule"}],"containers":[{"name":"restore","image":"alpine:latest","command":["/bin/sh","-c","cp /nfs/factorio/game-imports/homelab.zip /factorio/saves/homelab.zip && chown 845:845 /factorio/saves/homelab.zip && echo Done && ls -la /factorio/saves/"],"volumeMounts":[{"name":"data","mountPath":"/factorio"},{"name":"nfs","mountPath":"/nfs"}]}],"volumes":[{"name":"data","persistentVolumeClaim":{"claimName":"factorio-factorio-server-charts-datadir"}},{"name":"nfs","nfs":{"server":"10.20.10.20","path":"/volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data"}}]}}'
+	@echo "Scaling up deployment..."
+	@kubectl scale deployment/factorio-factorio-server-charts -n factorio --replicas=1
+	@kubectl rollout status deployment/factorio-factorio-server-charts -n factorio --timeout=120s
+	@echo "$(GREEN)Restore complete! Verifying...$(NC)"
+	@sleep 10
+	@kubectl logs -n factorio -l app=factorio-factorio-server-charts --tail=5 | grep -E "Loading map|bytes" || true
+
+factorio-restore-latest: ## Restore Factorio save from backups/latest.zip
+	@echo "$(BLUE)Restoring Factorio save from backups/latest.zip...$(NC)"
+	@echo "Scaling down deployment..."
+	@kubectl scale deployment/factorio-factorio-server-charts -n factorio --replicas=0
+	@sleep 10
+	@echo "Copying save from NFS..."
+	@kubectl run factorio-restore --rm -i --restart=Never --image=alpine:latest -n factorio \
+		--overrides='{"spec":{"nodeSelector":{"node-role.kubernetes.io/control-plane":"true"},"tolerations":[{"key":"node-role.kubernetes.io/control-plane","operator":"Exists","effect":"NoSchedule"}],"containers":[{"name":"restore","image":"alpine:latest","command":["/bin/sh","-c","cp /nfs/factorio/backups/latest.zip /factorio/saves/homelab.zip && chown 845:845 /factorio/saves/homelab.zip && echo Done && ls -la /factorio/saves/"],"volumeMounts":[{"name":"data","mountPath":"/factorio"},{"name":"nfs","mountPath":"/nfs"}]}],"volumes":[{"name":"data","persistentVolumeClaim":{"claimName":"factorio-factorio-server-charts-datadir"}},{"name":"nfs","nfs":{"server":"10.20.10.20","path":"/volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data"}}]}}'
+	@echo "Scaling up deployment..."
+	@kubectl scale deployment/factorio-factorio-server-charts -n factorio --replicas=1
+	@kubectl rollout status deployment/factorio-factorio-server-charts -n factorio --timeout=120s
+	@echo "$(GREEN)Restore complete! Verifying...$(NC)"
+	@sleep 10
+	@kubectl logs -n factorio -l app=factorio-factorio-server-charts --tail=5 | grep -E "Loading map|bytes" || true
 
 # =============================================================================
 # Monitoring (Prometheus + Grafana)

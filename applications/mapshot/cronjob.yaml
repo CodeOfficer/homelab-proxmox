@@ -260,10 +260,33 @@ spec:
                   # Step 2: Validate inputs
                   validate_paths || exit 1
 
-                  # Step 3: Ensure Factorio is installed
+                  # Step 3: Ensure Factorio is installed (with version check)
+                  NEED_DOWNLOAD=false
                   if [ ! -f "$FACTORIO_BIN" ]; then
-                    log "Downloading Factorio headless..."
-                    curl -L "https://www.factorio.com/get-download/stable/headless/linux64?username=$FACTORIO_USERNAME&token=$FACTORIO_TOKEN" -o /tmp/factorio.tar.xz
+                    log "Factorio not installed"
+                    NEED_DOWNLOAD=true
+                  else
+                    # Check installed version matches save version (Space Age compatibility)
+                    INSTALLED_VERSION=$("$FACTORIO_BIN" --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+                    # Extract save version from zip (level.dat contains version info)
+                    SAVE_VERSION=$(unzip -p "$SAVE_FILE" level.dat 2>/dev/null | strings | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+                    log "Installed Factorio: $INSTALLED_VERSION, Save version: $SAVE_VERSION"
+
+                    # Compare major.minor (e.g., 1.1 vs 2.0)
+                    INSTALLED_MAJOR=$(echo "$INSTALLED_VERSION" | cut -d. -f1-2)
+                    SAVE_MAJOR=$(echo "$SAVE_VERSION" | cut -d. -f1-2)
+
+                    if [ "$INSTALLED_MAJOR" != "$SAVE_MAJOR" ] && [ "$SAVE_MAJOR" != "unknown" ]; then
+                      log "Version mismatch detected ($INSTALLED_MAJOR vs $SAVE_MAJOR) - clearing old installation"
+                      rm -rf "$FACTORIO_DIR"
+                      NEED_DOWNLOAD=true
+                    fi
+                  fi
+
+                  if [ "$NEED_DOWNLOAD" = "true" ]; then
+                    log "Downloading Factorio full client (required for screenshot rendering)..."
+                    # IMPORTANT: Download full client (alpha), NOT headless - headless cannot render screenshots
+                    curl -L "https://www.factorio.com/get-download/stable/alpha/linux64?username=$FACTORIO_USERNAME&token=$FACTORIO_TOKEN" -o /tmp/factorio.tar.xz
                     log "Extracting to $PVC_ROOT..."
                     tar xf /tmp/factorio.tar.xz -C "$PVC_ROOT"
                     mkdir -p "$FACTORIO_DIR/mods"
@@ -274,9 +297,20 @@ spec:
                       error "Factorio installation failed - binary not found at $FACTORIO_BIN"
                       exit 1
                     fi
+
+                    # NOTE: No wrapper needed! Factorio 2.0 full client (alpha, not headless)
+                    # still supports --disable-audio and --load-game flags. Only headless
+                    # removed them. Since we download the full client for rendering, just
+                    # use the binary directly.
                     log "Factorio installed successfully"
                   else
-                    log "Factorio already installed at $FACTORIO_BIN"
+                    log "Factorio already installed at $FACTORIO_BIN (version OK)"
+                    # Migrate from wrapper-based install if needed (wrapper broke rendering)
+                    if [ -f "${FACTORIO_BIN}.real" ]; then
+                      log "Removing deprecated wrapper (full client supports --load-game natively)..."
+                      rm -f "$FACTORIO_BIN"
+                      mv "${FACTORIO_BIN}.real" "$FACTORIO_BIN"
+                    fi
                   fi
 
                   # Step 4: Run mapshot render
@@ -286,6 +320,15 @@ spec:
                   log "  Save: $SAVE_FILE"
                   log "  Output: $SCRIPT_OUTPUT"
 
+                  # Clear stale lock file from any previous failed render
+                  # Without this, Factorio will hang waiting for lock acquisition
+                  if [ -f "$FACTORIO_DIR/.lock" ]; then
+                    log "Removing stale lock file (from previous failed render)"
+                    rm -f "$FACTORIO_DIR/.lock"
+                  fi
+
+                  # Use --work_dir so mapshot writes done-file to correct location.
+                  # Lock file is cleared above before each render.
                   timeout ${MAPSHOT_INTERVAL:-3600} xvfb-run mapshot render \
                     --logtostderr \
                     --factorio_binary "$FACTORIO_BIN" \

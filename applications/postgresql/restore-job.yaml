@@ -1,0 +1,90 @@
+# PostgreSQL Restore from UNAS K3sStorage
+# Runs after Helm install to restore database from NFS backup
+# Only restores if database is empty AND backup exists
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgresql-restore
+  namespace: databases
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: restore
+          image: postgres:18-alpine
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+
+              BACKUP_FILE="/nfs/postgresql/backups/latest.sql.gz"
+
+              echo "Checking restore conditions..."
+              echo "Backup file: $BACKUP_FILE"
+
+              # Check if backup exists
+              if [ ! -f "$BACKUP_FILE" ]; then
+                echo "No backup found at $BACKUP_FILE - fresh install"
+                exit 0
+              fi
+
+              # Check if database already has data (look for user tables)
+              echo "Checking if database has existing data..."
+              TABLE_COUNT=$(PGPASSWORD="${POSTGRES_PASSWORD}" psql \
+                -h postgresql.databases.svc.cluster.local \
+                -U postgres \
+                -d shared \
+                -t -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null || echo "0")
+
+              TABLE_COUNT=$(echo "$TABLE_COUNT" | tr -d ' ')
+              echo "Found $TABLE_COUNT tables in 'shared' database"
+
+              if [ "$TABLE_COUNT" -gt "0" ]; then
+                echo "Database already has data - skipping restore"
+                exit 0
+              fi
+
+              # Restore from backup
+              echo "Restoring from backup..."
+              gunzip -c "$BACKUP_FILE" | PGPASSWORD="${POSTGRES_PASSWORD}" psql \
+                -h postgresql.databases.svc.cluster.local \
+                -U postgres
+
+              echo "Restore complete!"
+
+              # Verify
+              echo "Verifying restore..."
+              PGPASSWORD="${POSTGRES_PASSWORD}" psql \
+                -h postgresql.databases.svc.cluster.local \
+                -U postgres \
+                -c "\l"
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-restore
+                  key: postgres-password
+          volumeMounts:
+            - name: nfs
+              mountPath: /nfs
+              readOnly: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: nfs
+          nfs:
+            server: 10.20.10.20
+            path: /volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data
+      restartPolicy: OnFailure

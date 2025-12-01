@@ -1,0 +1,101 @@
+# 7 Days to Die Save Restore from UNAS K3sStorage
+# Runs before Helm install to restore save from NFS backup
+# Only restores if saves directory is empty AND backup exists
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sdtd-restore
+  namespace: sdtd
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: restore
+          image: alpine:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              apk add --no-cache tar >/dev/null 2>&1
+
+              SAVES_DIR="/gamefiles/UserData/Saves"
+              GEN_WORLDS_DIR="/gamefiles/UserData/GeneratedWorlds"
+              BACKUP_FILE="/nfs/sdtd/backups/latest.tar.gz"
+              WORLD_BACKUP="/nfs/sdtd/backups/latest-world.tar.gz"
+
+              echo "Checking restore conditions..."
+              echo "Saves dir: $SAVES_DIR"
+              echo "Backup file: $BACKUP_FILE"
+
+              # Check if saves already exist (any world folder with save data)
+              if find "$SAVES_DIR" -maxdepth 2 -type d -name "FoundationRWG" 2>/dev/null | grep -q .; then
+                echo "Save data already exists - skipping restore"
+                find "$SAVES_DIR" -type d -maxdepth 2 2>/dev/null || true
+                exit 0
+              fi
+
+              # Check if backup exists
+              if [ ! -f "$BACKUP_FILE" ]; then
+                echo "No backup found at $BACKUP_FILE - fresh install"
+                exit 0
+              fi
+
+              echo "Restoring from backup..."
+
+              # Extract save data backup
+              # Backup contains: FoundationRWG/ folder
+              # Need to determine world name from world backup or use default
+              mkdir -p "$SAVES_DIR"
+
+              # First restore world terrain data if available (needed to know world name)
+              if [ -f "$WORLD_BACKUP" ]; then
+                echo "Restoring world terrain data..."
+                mkdir -p "$GEN_WORLDS_DIR"
+                tar -xzf "$WORLD_BACKUP" -C "$GEN_WORLDS_DIR"
+                # Get world name from extracted folder
+                WORLD_NAME=$(ls -1 "$GEN_WORLDS_DIR" | head -1)
+                echo "World name: $WORLD_NAME"
+              else
+                echo "No world backup - using default RWG world name"
+                WORLD_NAME="DefaultRWG"
+              fi
+
+              # Restore save data into proper location
+              echo "Restoring save data..."
+              mkdir -p "$SAVES_DIR/$WORLD_NAME"
+              tar -xzf "$BACKUP_FILE" -C "$SAVES_DIR/$WORLD_NAME"
+
+              echo "Restore complete!"
+              echo "Saves:"
+              ls -la "$SAVES_DIR" || true
+              echo "Generated Worlds:"
+              ls -la "$GEN_WORLDS_DIR" || true
+          volumeMounts:
+            - name: gamefiles
+              mountPath: /gamefiles
+            - name: nfs
+              mountPath: /nfs
+              readOnly: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: gamefiles
+          persistentVolumeClaim:
+            claimName: sdtd-7dtd-gamefiles
+        - name: nfs
+          nfs:
+            server: 10.20.10.20
+            path: /volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data
+      restartPolicy: OnFailure

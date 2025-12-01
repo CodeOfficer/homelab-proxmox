@@ -4,6 +4,37 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.11] - 2025-12-01
+
+### Added
+- **Save restore automation** for teardown/rebuild idempotency
+  - 7DTD restore job (`applications/7dtd/restore-job.yaml`) - restores from NFS backup before Helm install
+  - PostgreSQL restore job (`applications/postgresql/restore-job.yaml`) - restores databases on deploy
+  - Factorio restore Make targets: `factorio-restore-import`, `factorio-restore-latest`
+  - All restore jobs are idempotent (skip if data already exists)
+- **Tailscale Ansible playbook** (`infrastructure/ansible/playbooks/tailscale-install.yml`)
+  - Automated Tailscale installation with `make ansible-tailscale`
+  - Configures IP forwarding for subnet routing
+- **SSH key cleanup** for VM rebuilds
+  - `make clean-known-hosts` removes K3s VM entries from known_hosts
+  - Automatically runs before `make ansible-k3s`
+  - `host_key_checking = False` in ansible.cfg for rebuild tolerance
+
+### Changed
+- **Mapshot CronJob** - improved reliability for Space Age maps
+  - Version detection: compares installed Factorio vs save version, re-downloads on mismatch
+  - Downloads full client (alpha) instead of headless (headless can't render screenshots)
+  - Clears stale lock files before each render
+  - Removes deprecated wrapper script (full client supports --load-game natively)
+- **Factorio values.yaml** - `generate_new_save: false` to prevent overwriting restored saves
+- **7DTD deploy.sh** - pre-creates PVCs and runs restore job before Helm install
+
+### Technical Notes
+- Restore jobs use `nodeSelector` and `tolerations` to run on control plane nodes
+- Factorio headless build removed --load-game flag in 2.0 - must use full client for mapshot
+- PostgreSQL restore is non-blocking (deploy continues even if restore fails/skips)
+- Phase 6.0 teardown/rebuild test plan: `~/.claude/plans/partitioned-drifting-pike.md`
+
 ## [Phase 5.9] - 2025-12-01
 
 ### Fixed

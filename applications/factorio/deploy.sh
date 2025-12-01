@@ -32,7 +32,7 @@ echo "Adding Helm repo..."
 helm repo add factorio "$CHART_REPO" 2>/dev/null || true
 helm repo update factorio
 
-echo "Deploying Factorio..."
+echo "Deploying Factorio via Helm..."
 helm upgrade --install "$RELEASE" factorio/factorio-server-charts \
     --namespace "$NAMESPACE" \
     --values "${SCRIPT_DIR}/values.yaml" \
@@ -49,3 +49,7 @@ echo "Game Server: ${LB_IP}:34197 (UDP)"
 echo "RCON Password: $RCON_PASSWORD"
 echo ""
 echo "Connect via Factorio multiplayer -> Connect to address -> ${LB_IP}:34197"
+echo ""
+echo "To restore a save, use:"
+echo "  make factorio-restore-import  # From game-imports/homelab.zip"
+echo "  make factorio-restore-latest  # From backups/latest.zip"

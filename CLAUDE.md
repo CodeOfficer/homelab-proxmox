@@ -149,7 +149,7 @@ Run `make help` for full list. Key targets:
 
 ## Current Status
 
-**Completed:** Phases 0-5.9 (see `CHANGELOG.md`)
+**Completed:** Phases 0-5.11 (see `CHANGELOG.md`)
 
 **In Progress:** None
 
@@ -163,6 +163,7 @@ Run `make help` for full list. Key targets:
 
 ### Phase 6: Operations
 - [ ] 6.0: **Full teardown/rebuild test** - Verify idempotency
+  - **Detailed plan:** `~/.claude/plans/partitioned-drifting-pike.md`
   - **Pre-test checklist:**
     - Backup critical data (game saves already on NAS)
     - Note current pod/IP state for comparison
