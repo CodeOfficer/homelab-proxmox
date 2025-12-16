@@ -11,10 +11,28 @@ Design decisions and conventions for the homelab infrastructure.
 
 ## K3s Cluster Design
 
-- 2 server nodes (control plane) on pve-02, pve-03
-- 1 agent node (GPU worker) on pve-01
-- Embedded etcd for HA
-- MetalLB for LoadBalancer services
+- 3 server nodes (control plane) with embedded etcd for true HA
+  - k3s-cp-01 (10.20.11.80) on pve-02 - Init server, general workloads
+  - k3s-cp-02 (10.20.11.81) on pve-03 - General workloads
+  - k3s-gpu-01 (10.20.11.85) on pve-01 - GPU workloads only (tainted)
+- Survives single node failure (etcd quorum: 2 of 3)
+- MetalLB for LoadBalancer services (10.20.11.200-210)
+
+## K3s Cluster Initialization
+
+The xanmanning.k3s Ansible role selects the first host in the `server` group as the init server (cluster bootstrap node).
+
+**Selection criteria:**
+- Inventory file order (not alphabetical)
+- First host in `server` group with `k3s_control_node: true`
+- `k3s_registration_address` must match init server IP
+
+**Why order matters:**
+- Init server generates the cluster token
+- Joining nodes connect to `k3s_registration_address:6443`
+- Misalignment causes "dial tcp X.X.X.X:6443: connection refused" errors
+
+**Current order:** k3s-cp-01 (init) → k3s-cp-02 → k3s-gpu-01
 
 ## Network Design
 

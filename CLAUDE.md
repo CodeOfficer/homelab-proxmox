@@ -65,6 +65,12 @@ homelab-proxmox/
 - Any workload needing CUDA/nvidia runtime
 - NOT for: game servers, databases, web apps, monitoring
 
+### K3s Init Server Selection
+- xanmanning.k3s role uses **inventory file order** to select init server
+- First host in `server` group initializes the cluster
+- `k3s_registration_address` must match init server IP
+- Order in inventory: k3s-cp-01 → k3s-cp-02 → k3s-gpu-01
+
 ### Memory Sizing Guidelines
 - Game servers (7DTD, Factorio): 8Gi limit typical
 - Mapshot (Factorio renderer): 16Gi limit (Space Age is memory-hungry)
