@@ -346,7 +346,7 @@ NFS_SERVER ?= 10.20.10.20
 
 check-nfs: ## Verify NFS server is reachable before deployment
 	@echo "$(BLUE)Checking NFS availability...$(NC)"
-	@if timeout 5 bash -c "</dev/tcp/$(NFS_SERVER)/2049" 2>/dev/null; then \
+	@if nc -z -w 5 $(NFS_SERVER) 2049 2>/dev/null; then \
 		echo "$(GREEN)NFS server $(NFS_SERVER) is reachable$(NC)"; \
 	else \
 		echo "$(RED)ERROR: NFS server $(NFS_SERVER) is not reachable on port 2049$(NC)"; \
