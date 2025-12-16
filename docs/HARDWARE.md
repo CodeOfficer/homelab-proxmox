@@ -71,7 +71,7 @@ Physical hardware specifications for the homelab.
 | Device       | Model/Type | Capacity | RAID | Protocols | Intended Use                                  |
 | ------------ | ---------- | -------- | ---- | --------- | --------------------------------------------- |
 | **NAS**      | UNAS Pro (2U rack) | 40TB usable (3x WD 20TB Red Pro) | RAID 5 | NFS, SMB, 10GbE | Proxmox storage (VMStorage), K3s PVs (K3sStorage), Media |
-| **Backup**   | Synology DS713+ | 6TB usable (2x WD Red Pro 6TB) | RAID 1 | NFS, SMB | K3s database backups (PostgreSQL), Proxmox VM backups |
+| **Backup**   | Synology DS713+ | 6TB usable (2x WD Red Pro 6TB) | RAID 1 | NFS, SMB | Proxmox VM backups (K3s backups moved to UNAS in Phase 5.3) |
 
 ### Detailed Storage Specifications
 
@@ -91,19 +91,17 @@ Physical hardware specifications for the homelab.
   - Shared application data
   - Mac Time Machine backups
 
-#### Synology DS713+ (Backup Target - synology.home.arpa, 10.20.11.10)
+#### Synology DS713+ (Secondary Backup - synology.home.arpa, 10.20.11.10)
 - **Model**: Synology DS713+ (2-bay NAS)
 - **Drives**: 2x Western Digital WD Red Pro 6TB NAS 7200 RPM SATA 6 Gb/s 256MB Cache (WD6003FFBX)
 - **RAID**: RAID 1 (mirror, 6TB usable)
 - **Network**: 1 Gbps Ethernet (connected via port 3 on switch)
 - **Protocols**: NFS (primary), SMB
-- **NFS Exports**:
-  - `/volume1/k3s-backups` → PostgreSQL backups (daily CronJob at 3 AM, 7-day retention)
+- **Status**: Currently unused for K3s (all backups consolidated to UNAS in Phase 5.3)
 - **Use Cases**:
-  - K3s database backups (PostgreSQL via CronJob)
   - Proxmox VM/CT backups (separate from production storage)
+  - Available for offsite backup copies (3-2-1 rule) if needed
   - Critical configuration backups
-  - Disaster recovery storage
 
 ### Proxmox Storage Pools
 

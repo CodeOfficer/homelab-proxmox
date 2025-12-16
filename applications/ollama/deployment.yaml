@@ -4,6 +4,9 @@ kind: Namespace
 metadata:
   name: ollama
 ---
+# Ollama models stored on GPU node local disk (not NFS)
+# Tradeoff: Models re-download on rebuild, but faster load times
+# GPU node has 800GB disk - plenty for LLM models
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -12,7 +15,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: nfs-client
+  storageClassName: local-path
   resources:
     requests:
       storage: 100Gi
@@ -47,6 +50,22 @@ spec:
           image: ollama/ollama:latest
           ports:
             - containerPort: 11434
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 11434
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 11434
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           resources:
             requests:
               memory: "4Gi"

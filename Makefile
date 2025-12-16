@@ -241,6 +241,12 @@ clean-known-hosts: ## Remove K3s VM host keys from known_hosts (for rebuilds)
 
 ansible-k3s: ansible-deps clean-known-hosts ## Install K3s on VMs using Ansible
 	@echo "$(BLUE)Installing K3s cluster...$(NC)"
+	@if [ ! -f ".secrets/k3s-token" ] && [ -z "$${K3S_TOKEN:-}" ]; then \
+		echo "$(YELLOW)WARNING: No K3s token found (.secrets/k3s-token or K3S_TOKEN env)$(NC)"; \
+		echo "$(YELLOW)This will create a FRESH cluster. If rebuilding, restore token first.$(NC)"; \
+		echo ""; \
+		read -p "Continue with fresh install? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1; \
+	fi
 	$(DIRENV) ansible-playbook -i $(ANSIBLE_DIR)/inventory/hosts.yml $(ANSIBLE_DIR)/playbooks/k3s-install.yml
 	@$(MAKE) save-token
 	@echo "$(GREEN)K3s cluster installed!$(NC)"
@@ -336,7 +342,19 @@ kubectl: ## Run arbitrary kubectl command (usage: make kubectl CMD="get pods")
 # Application Deployment
 # =============================================================================
 
-deploy-k8s: ## Deploy all K8s manifests from applications/ (ordered)
+NFS_SERVER ?= 10.20.10.20
+
+check-nfs: ## Verify NFS server is reachable before deployment
+	@echo "$(BLUE)Checking NFS availability...$(NC)"
+	@if timeout 5 bash -c "</dev/tcp/$(NFS_SERVER)/2049" 2>/dev/null; then \
+		echo "$(GREEN)NFS server $(NFS_SERVER) is reachable$(NC)"; \
+	else \
+		echo "$(RED)ERROR: NFS server $(NFS_SERVER) is not reachable on port 2049$(NC)"; \
+		echo "$(RED)Deployment will fail - ensure UNAS is online$(NC)"; \
+		exit 1; \
+	fi
+
+deploy-k8s: check-nfs ## Deploy all K8s manifests from applications/ (ordered)
 	@echo "$(BLUE)Deploying K8s manifests...$(NC)"
 	@export KUBECONFIG=$(TF_DIR)/kubeconfig; \
 	echo "$(YELLOW)1/10 Installing MetalLB...$(NC)"; \
@@ -383,17 +401,38 @@ deploy: ## Deploy a specific application (usage: make deploy APP=postgresql)
 	@echo "$(BLUE)Deploying $(APP)...$(NC)"
 	./scripts/deploy-app.sh $(APP)
 
-deploy-all: deploy-infrastructure deploy-applications ## Deploy all infrastructure services and applications
+deploy-all-apps: ## Deploy all applications with deploy.sh scripts (after deploy-k8s)
+	@echo "$(BLUE)Deploying all applications...$(NC)"
+	@echo "$(YELLOW)1/7 PostgreSQL...$(NC)"
+	@./applications/postgresql/deploy.sh
+	@echo "$(YELLOW)2/7 Monitoring (Prometheus/Grafana)...$(NC)"
+	@./applications/monitoring/deploy.sh
+	@echo "$(YELLOW)3/7 Loki...$(NC)"
+	@./applications/loki/deploy.sh
+	@echo "$(YELLOW)4/7 7 Days to Die...$(NC)"
+	@./applications/7dtd/deploy.sh
+	@echo "$(YELLOW)5/7 Factorio...$(NC)"
+	@./applications/factorio/deploy.sh
+	@echo "$(YELLOW)6/7 Mapshot...$(NC)"
+	@./applications/mapshot/deploy.sh
+	@echo "$(YELLOW)7/7 UnPoller...$(NC)"
+	@./applications/unpoller/deploy.sh || echo "$(YELLOW)UnPoller skipped (credentials may be missing)$(NC)"
 	@echo "$(GREEN)All applications deployed!$(NC)"
 
-deploy-infrastructure: ## Deploy infrastructure services (PostgreSQL, Redis, MinIO)
+deploy-full: deploy-k8s deploy-all-apps ## Full deployment (infrastructure + all applications)
+	@echo "$(GREEN)Full deployment complete!$(NC)"
+
+deploy-all: deploy-infrastructure deploy-applications ## [DEPRECATED] Use deploy-full instead
+	@echo "$(GREEN)All applications deployed!$(NC)"
+
+deploy-infrastructure: ## [DEPRECATED] Infrastructure deployed via deploy-k8s
 	@echo "$(BLUE)Deploying infrastructure services...$(NC)"
 	@make deploy APP=postgresql
 	@make deploy APP=redis
 	@make deploy APP=minio
 	@echo "$(GREEN)Infrastructure services deployed!$(NC)"
 
-deploy-applications: ## Deploy application services (Home Assistant, n8n, Grafana)
+deploy-applications: ## [DEPRECATED] Use deploy-all-apps instead
 	@echo "$(BLUE)Deploying applications...$(NC)"
 	@make deploy APP=homeassistant
 	@make deploy APP=n8n

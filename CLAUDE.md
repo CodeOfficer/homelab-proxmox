@@ -33,12 +33,14 @@ homelab-proxmox/
 
 ## Architecture Rules
 
-### Node Allocation
-| Node | RAM | Purpose | Scheduling |
-|------|-----|---------|------------|
-| k3s-cp-01 | 64GB | Control plane + general workloads | Default |
-| k3s-cp-02 | 64GB | Control plane + general workloads | Default |
-| k3s-gpu-01 | 64GB | GPU-required workloads ONLY | Tainted: `dedicated=gpu:NoSchedule` |
+### Node Allocation (3-Node HA)
+| Node | RAM | Purpose | Scheduling | etcd |
+|------|-----|---------|------------|------|
+| k3s-cp-01 | 64GB | Control plane + general workloads | Default | Yes |
+| k3s-cp-02 | 64GB | Control plane + general workloads | Default | Yes |
+| k3s-gpu-01 | 64GB | Control plane + GPU workloads | Tainted: `dedicated=gpu:NoSchedule` | Yes |
+
+**HA Note:** All 3 nodes run etcd. Cluster survives single node failure.
 
 ### GPU Node Policy
 - **NEVER schedule non-GPU workloads on k3s-gpu-01**
@@ -96,8 +98,9 @@ make ansible-k3s              # Install K3s cluster + GPU drivers + auto-saves t
 make kubeconfig               # Fetch cluster credentials
 
 # 5. Deploy K8s services
-make deploy-k8s               # Deploy MetalLB, cert-manager, NVIDIA plugin, apps
-                              # (cert-manager secret auto-generated from $CLOUDFLARE_API_TOKEN)
+make deploy-k8s               # Deploy MetalLB, cert-manager, NVIDIA plugin, core infra
+make deploy-all-apps          # Deploy all applications (7DTD, Factorio, monitoring, etc.)
+# Or: make deploy-full        # Both deploy-k8s + deploy-all-apps in one command
 
 # 6. Verify
 make test                     # Cluster health checks
@@ -129,7 +132,10 @@ Run `make help` for full list. Key targets:
 | **K3s** | |
 | `make kubeconfig` | Fetch kubeconfig from cluster |
 | `make save-token` | Save K3s token to .secrets/k3s-token |
-| `make deploy-k8s` | Deploy all K8s manifests |
+| `make deploy-k8s` | Deploy core infrastructure (MetalLB, cert-manager, etc.) |
+| `make deploy-all-apps` | Deploy all applications with deploy.sh scripts |
+| `make deploy-full` | Full deployment (deploy-k8s + deploy-all-apps) |
+| `make check-nfs` | Verify NFS server is reachable |
 | `make test` | Run cluster health checks |
 | **Utilities** | |
 | `make ssh-server` | SSH to first control plane node |
@@ -163,20 +169,24 @@ Run `make help` for full list. Key targets:
 
 ### Phase 6: Operations
 - [ ] 6.0: **Full teardown/rebuild test** - Verify idempotency
-  - **Detailed plan:** `~/.claude/plans/partitioned-drifting-pike.md`
+  - **Detailed plan:** `~/.claude/plans/clever-swimming-creek.md`
+  - **Recent improvements (Phase 5.12):**
+    - K3s token warning prompt prevents accidental cluster split
+    - NFS pre-flight check (`make check-nfs`) catches offline NAS early
+    - Factorio now has automated restore job (like 7DTD)
+    - Ollama uses local-path storage (faster model loading)
+    - 3-node HA control plane (survives single node failure)
+    - `make deploy-full` consolidates all deployment steps
   - **Pre-test checklist:**
-    - Backup critical data (game saves already on NAS)
+    - Verify `.secrets/k3s-token` exists (Makefile will warn if missing)
+    - Confirm NFS server is reachable (`make check-nfs`)
     - Note current pod/IP state for comparison
-    - Verify `.secrets/k3s-token` exists (or will be regenerated)
-    - Confirm NFS exports are independent of K3s
   - **SKIP `make template`** - VM template (vmid 9000) already exists and is stable
-    - Only rebuild template if corrupted or Ubuntu version upgrade needed
-    - Packer builds are expensive and historically flaky
   - **Execute:**
     - `terraform destroy` - destroy VMs only (template preserved)
     - `terraform apply` - recreate VMs from existing template
-    - `make ansible-k3s` - reinstall K3s cluster
-    - `make deploy-k8s` - redeploy all applications
+    - `make ansible-k3s` - reinstall K3s cluster (3-node HA)
+    - `make deploy-full` - deploy infrastructure + all applications
   - **Verify:** All apps recover, NFS data persists, no manual intervention
   - **Document:** Any gaps found, update automation as needed
 - [ ] 6.1: Configure Proxmox backup schedules

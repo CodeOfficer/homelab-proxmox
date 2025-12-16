@@ -1,0 +1,82 @@
+# Factorio Save Restore from UNAS K3sStorage
+# Runs before Helm install to restore save from NFS backup
+# Only restores if saves directory is empty AND backup exists
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: factorio-restore
+  namespace: factorio
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      securityContext:
+        runAsUser: 845
+        runAsGroup: 845
+        fsGroup: 845
+      containers:
+        - name: restore
+          image: alpine:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+
+              SAVES_DIR="/factorio/saves"
+              BACKUP_FILE="/nfs/factorio/backups/latest.zip"
+              SAVE_NAME="homelab"
+
+              echo "Checking restore conditions..."
+              echo "Saves dir: $SAVES_DIR"
+              echo "Backup file: $BACKUP_FILE"
+
+              # Check if saves already exist
+              if ls "$SAVES_DIR"/*.zip 2>/dev/null | grep -q .; then
+                echo "Save files already exist - skipping restore"
+                ls -la "$SAVES_DIR"/*.zip || true
+                exit 0
+              fi
+
+              # Check if backup exists
+              if [ ! -f "$BACKUP_FILE" ]; then
+                echo "No backup found at $BACKUP_FILE - fresh install"
+                exit 0
+              fi
+
+              echo "Restoring from backup..."
+              mkdir -p "$SAVES_DIR"
+
+              # Copy backup to saves directory
+              cp "$BACKUP_FILE" "$SAVES_DIR/${SAVE_NAME}.zip"
+              chmod 644 "$SAVES_DIR/${SAVE_NAME}.zip"
+
+              echo "Restore complete!"
+              ls -la "$SAVES_DIR"
+          volumeMounts:
+            - name: factorio-data
+              mountPath: /factorio
+            - name: nfs
+              mountPath: /nfs
+              readOnly: true
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      volumes:
+        - name: factorio-data
+          persistentVolumeClaim:
+            claimName: factorio-factorio-server-charts-datadir
+        - name: nfs
+          nfs:
+            server: 10.20.10.20
+            path: /volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data
+      restartPolicy: OnFailure
