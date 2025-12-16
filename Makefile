@@ -9,6 +9,7 @@
 .PHONY: deploy-monitoring monitoring-status grafana-password
 .PHONY: deploy-mapshot mapshot-render mapshot-status mapshot-logs
 .PHONY: deploy-loki loki-status
+.PHONY: deploy-k8s-dashboard k8s-dashboard-token k8s-dashboard-status
 
 # =============================================================================
 # Homelab Proxmox Infrastructure Management
@@ -403,20 +404,22 @@ deploy: ## Deploy a specific application (usage: make deploy APP=postgresql)
 
 deploy-all-apps: ## Deploy all applications with deploy.sh scripts (after deploy-k8s)
 	@echo "$(BLUE)Deploying all applications...$(NC)"
-	@echo "$(YELLOW)1/7 PostgreSQL...$(NC)"
+	@echo "$(YELLOW)1/8 PostgreSQL...$(NC)"
 	@./applications/postgresql/deploy.sh
-	@echo "$(YELLOW)2/7 Monitoring (Prometheus/Grafana)...$(NC)"
+	@echo "$(YELLOW)2/8 Monitoring (Prometheus/Grafana)...$(NC)"
 	@./applications/monitoring/deploy.sh
-	@echo "$(YELLOW)3/7 Loki...$(NC)"
+	@echo "$(YELLOW)3/8 Loki...$(NC)"
 	@./applications/loki/deploy.sh
-	@echo "$(YELLOW)4/7 7 Days to Die...$(NC)"
+	@echo "$(YELLOW)4/8 7 Days to Die...$(NC)"
 	@./applications/7dtd/deploy.sh
-	@echo "$(YELLOW)5/7 Factorio...$(NC)"
+	@echo "$(YELLOW)5/8 Factorio...$(NC)"
 	@./applications/factorio/deploy.sh
-	@echo "$(YELLOW)6/7 Mapshot...$(NC)"
+	@echo "$(YELLOW)6/8 Mapshot...$(NC)"
 	@./applications/mapshot/deploy.sh
-	@echo "$(YELLOW)7/7 UnPoller...$(NC)"
+	@echo "$(YELLOW)7/8 UnPoller...$(NC)"
 	@./applications/unpoller/deploy.sh || echo "$(YELLOW)UnPoller skipped (credentials may be missing)$(NC)"
+	@echo "$(YELLOW)8/8 Kubernetes Dashboard...$(NC)"
+	@./applications/kubernetes-dashboard/deploy.sh
 	@echo "$(GREEN)All applications deployed!$(NC)"
 
 deploy-full: deploy-k8s deploy-all-apps ## Full deployment (infrastructure + all applications)
@@ -660,3 +663,40 @@ loki-status: ## Show Loki deployment status
 	kubectl get pods -n loki 2>/dev/null || true
 	@echo ""
 	@echo "$(YELLOW)Query logs in Grafana: Explore -> Loki datasource$(NC)"
+# =============================================================================
+# Kubernetes Dashboard
+# =============================================================================
+
+deploy-k8s-dashboard: ## Deploy Kubernetes Dashboard with Let's Encrypt TLS
+	@echo "$(BLUE)Deploying Kubernetes Dashboard...$(NC)"
+	@./applications/kubernetes-dashboard/deploy.sh
+
+k8s-dashboard-token: ## Display dashboard login token
+	@if [ -f ".secrets/k8s-dashboard-token" ]; then \
+		echo "$(BLUE)Dashboard Login Token:$(NC)"; \
+		echo ""; \
+		cat .secrets/k8s-dashboard-token; \
+		echo ""; \
+		echo ""; \
+		echo "$(YELLOW)Dashboard URL: https://k8s.codeofficer.com$(NC)"; \
+	else \
+		echo "$(RED)Token not found. Generate with:$(NC)"; \
+		echo "  kubectl -n kubernetes-dashboard create token admin-user --duration=87600h > .secrets/k8s-dashboard-token"; \
+	fi
+
+k8s-dashboard-status: ## Show Kubernetes Dashboard status
+	@echo "$(BLUE)Kubernetes Dashboard Status$(NC)"
+	@echo ""
+	helm status kubernetes-dashboard -n kubernetes-dashboard 2>/dev/null || echo "$(YELLOW)Not deployed$(NC)"
+	@echo ""
+	@echo "$(BLUE)Pods:$(NC)"
+	kubectl get pods -n kubernetes-dashboard 2>/dev/null || true
+	@echo ""
+	@echo "$(BLUE)Certificate:$(NC)"
+	kubectl get certificate -n kubernetes-dashboard 2>/dev/null || true
+	@echo ""
+	@echo "$(BLUE)Ingress:$(NC)"
+	kubectl get ingress -n kubernetes-dashboard 2>/dev/null || true
+	@echo ""
+	@echo "$(YELLOW)Dashboard URL: https://k8s.codeofficer.com$(NC)"
+	@echo "$(YELLOW)Get token: make k8s-dashboard-token$(NC)"

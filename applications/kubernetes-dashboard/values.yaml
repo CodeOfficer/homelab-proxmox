@@ -1,0 +1,32 @@
+# Kubernetes Dashboard Helm Chart Values
+
+# Use official kubernetes-dashboard chart
+# helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
+
+app:
+  ingress:
+    enabled: false  # We'll create a custom Ingress with cert-manager
+
+# Security settings
+service:
+  externalPort: 443
+
+# Resources
+resources:
+  limits:
+    cpu: 100m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
+
+# Metrics scraper
+metricsScraper:
+  enabled: true
+  resources:
+    limits:
+      cpu: 100m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
