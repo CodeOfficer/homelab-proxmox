@@ -44,6 +44,14 @@ helm template "$RELEASE" 7dtd/7dtd \
   | grep -A 20 "kind: PersistentVolumeClaim" \
   | kubectl apply -f - 2>/dev/null || true
 
+# Wait for PVCs to be bound (with timeout)
+echo "Waiting for PVCs to be bound..."
+for pvc in $(kubectl get pvc -n "$NAMESPACE" -o name 2>/dev/null | grep sdtd-7dtd); do
+  kubectl wait --for=jsonpath='{.status.phase}'=Bound "$pvc" -n "$NAMESPACE" --timeout=60s || {
+    echo "Warning: PVC $pvc did not bind within timeout"
+  }
+done
+
 # Run restore job if backup exists (idempotent - skips if saves exist)
 if [ -f "${SCRIPT_DIR}/restore-job.yaml" ]; then
   echo "Running restore job..."

@@ -175,3 +175,8 @@
       command: kubectl label node {{ item }} nvidia.com/gpu.present=true --overwrite
       loop: "{{ groups['gpu_nodes'] }}"
       changed_when: true
+
+    - name: Taint GPU nodes to prevent non-GPU workloads
+      command: kubectl taint node {{ item }} dedicated=gpu:NoSchedule --overwrite
+      loop: "{{ groups['gpu_nodes'] }}"
+      changed_when: true
