@@ -58,7 +58,8 @@
       when: lvextend_result.rc == 0
 
 - name: Install K3s Cluster
-  hosts: all
+  hosts: server
+  order: inventory
   become: true
   gather_facts: true
 
