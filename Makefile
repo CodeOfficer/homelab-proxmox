@@ -451,10 +451,16 @@ restore-7dtd: ## Restore 7 Days to Die from NFS backup
 	@read -p "Continue? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		echo "$(BLUE)Scaling 7DTD to 0...$(NC)" && \
+		kubectl scale deployment -n sdtd -l app.kubernetes.io/name=7dtd --replicas=0 && \
+		kubectl wait --for=delete pod -n sdtd -l app.kubernetes.io/name=7dtd --timeout=2m || true && \
+		echo "$(BLUE)Running restore Job...$(NC)" && \
 		kubectl delete job sdtd-restore -n sdtd --ignore-not-found=true && \
 		kubectl apply -f applications/7dtd/restore-job.yaml && \
 		kubectl wait --for=condition=complete job/sdtd-restore -n sdtd --timeout=30m && \
-		kubectl delete pod -n sdtd -l app.kubernetes.io/name=7dtd && \
+		kubectl delete job sdtd-restore -n sdtd && \
+		echo "$(BLUE)Scaling 7DTD back to 1...$(NC)" && \
+		kubectl scale deployment -n sdtd -l app.kubernetes.io/name=7dtd --replicas=1 && \
 		echo "$(GREEN)7DTD restored and restarted!$(NC)"; \
 	else \
 		echo "$(RED)Restore cancelled$(NC)"; \
@@ -466,10 +472,16 @@ restore-factorio: ## Restore Factorio from NFS backup
 	@read -p "Continue? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		echo "$(BLUE)Scaling Factorio to 0...$(NC)" && \
+		kubectl scale deployment -n factorio -l app.kubernetes.io/name=factorio-server-charts --replicas=0 && \
+		kubectl wait --for=delete pod -n factorio -l app.kubernetes.io/name=factorio-server-charts --timeout=2m || true && \
+		echo "$(BLUE)Running restore Job...$(NC)" && \
 		kubectl delete job factorio-restore -n factorio --ignore-not-found=true && \
 		kubectl apply -f applications/factorio/restore-job.yaml && \
 		kubectl wait --for=condition=complete job/factorio-restore -n factorio --timeout=30m && \
-		kubectl delete pod -n factorio -l app.kubernetes.io/name=factorio-server-charts && \
+		kubectl delete job factorio-restore -n factorio && \
+		echo "$(BLUE)Scaling Factorio back to 1...$(NC)" && \
+		kubectl scale deployment -n factorio -l app.kubernetes.io/name=factorio-server-charts --replicas=1 && \
 		echo "$(GREEN)Factorio restored and restarted!$(NC)"; \
 	else \
 		echo "$(RED)Restore cancelled$(NC)"; \
@@ -481,6 +493,10 @@ restore-postgresql: ## Restore PostgreSQL from NFS backup
 	@read -p "Continue? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		echo "$(BLUE)Scaling PostgreSQL to 0...$(NC)" && \
+		kubectl scale statefulset postgresql -n databases --replicas=0 && \
+		kubectl wait --for=delete pod -n databases postgresql-0 --timeout=2m || true && \
+		echo "$(BLUE)Running restore Job...$(NC)" && \
 		kubectl delete job postgresql-restore -n databases --ignore-not-found=true && \
 		kubectl create secret generic postgresql-restore \
 			--namespace databases \
@@ -488,7 +504,9 @@ restore-postgresql: ## Restore PostgreSQL from NFS backup
 			--dry-run=client -o yaml | kubectl apply -f - && \
 		kubectl apply -f applications/postgresql/restore-job.yaml && \
 		kubectl wait --for=condition=complete job/postgresql-restore -n databases --timeout=30m && \
-		kubectl delete pod -n databases postgresql-0 && \
+		kubectl delete job postgresql-restore -n databases && \
+		echo "$(BLUE)Scaling PostgreSQL back to 1...$(NC)" && \
+		kubectl scale statefulset postgresql -n databases --replicas=1 && \
 		echo "$(GREEN)PostgreSQL restored and restarted!$(NC)"; \
 	else \
 		echo "$(RED)Restore cancelled$(NC)"; \

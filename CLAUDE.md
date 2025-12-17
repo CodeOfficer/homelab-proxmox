@@ -116,13 +116,13 @@ make test                     # Cluster health checks
 
 ### Restore Workflow
 
-**Restores are SEPARATE from deploys.** Run only when needed (Architecture #1).
+**Restores are SEPARATE from deploys (Architecture #1).**
 
 ```bash
-# Deploy creates workloads + empty PVCs (or auto-restores via initContainer)
+# Deploy creates workloads + empty PVCs
 make deploy-all-apps
 
-# Manual restore (explicit - overwrites data)
+# Restore data from NFS backups (manual - explicit)
 make restore-7dtd          # Restore 7 Days to Die from latest NFS backup
 make restore-factorio      # Restore Factorio from latest NFS backup
 make restore-postgresql    # Restore PostgreSQL databases from latest NFS backup
@@ -130,15 +130,17 @@ make restore-all           # Restore all apps (interactive prompts)
 ```
 
 **When to restore:**
-- After cluster rebuild (Phase 6.0 scenario) - initContainers handle automatically
-- Rolling back to previous save state - use manual `make restore-*`
-- Recovering from data corruption - use manual `make restore-*`
+- After cluster rebuild (Phase 6.0 scenario) - must run manual `make restore-*`
+- Rolling back to previous save state
+- Recovering from data corruption
 
 **Restore source:** NFS backups at `10.20.10.20:/volume1/K3sStorage/`
 
 **How it works:**
-- **Auto-restore (first boot):** InitContainers check for `.restored` marker file. If missing, restore from NFS `latest.*` backup automatically. Zero-touch recovery.
-- **Manual restore:** `make restore-*` runs Job, waits 30m for completion, restarts pod. Interactive confirmation prevents accidental data loss.
+1. Scale workload to 0 (stops app)
+2. Run restore Job (mounts PVC, copies backup → PVC)
+3. Scale workload back to 1 (starts app with restored data)
+4. Interactive confirmation prevents accidental data loss
 
 ### Changelog Protocol
 

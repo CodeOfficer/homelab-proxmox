@@ -114,51 +114,6 @@ backups:
   frequency: 30
   maxBackups: 48
 
-# InitContainer for zero-touch restore from NFS backup
-# Only runs on first boot when PVC is empty
-extraInitContainers:
-  - name: restore-if-empty
-    image: busybox:1.36
-    command:
-      - sh
-      - -c
-      - |
-        if [ ! -f /gamefiles/.restored ]; then
-          echo "First boot detected - restoring from latest backup..."
-
-          # Check for 7DTD backups on NFS
-          if [ -f /nfs/sdtd/backups/latest.tar.gz ]; then
-            echo "Restoring save data..."
-            tar -xzf /nfs/sdtd/backups/latest.tar.gz -C /gamefiles/
-          fi
-
-          if [ -f /nfs/sdtd/backups/latest-world.tar.gz ]; then
-            echo "Restoring world terrain..."
-            tar -xzf /nfs/sdtd/backups/latest-world.tar.gz -C /gamefiles/
-          fi
-
-          # Mark as restored
-          touch /gamefiles/.restored
-          echo "Restore complete!"
-        else
-          echo "PVC already initialized - skipping restore"
-        fi
-    volumeMounts:
-      - name: gamefiles
-        mountPath: /gamefiles
-      - name: nfs
-        mountPath: /nfs
-        readOnly: true
-    securityContext:
-      runAsUser: 0  # May need root for tar extraction
-
-# NFS volume for restore initContainer
-extraVolumes:
-  - name: nfs
-    hostPath:
-      path: /mnt/k3s-nfs
-      type: Directory
-
 # Soft anti-affinity to spread game servers across nodes
 affinity:
   podAntiAffinity:
