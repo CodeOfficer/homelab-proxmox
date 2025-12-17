@@ -37,21 +37,17 @@ spec:
               echo "Saves dir: $SAVES_DIR"
               echo "Backup file: $BACKUP_FILE"
 
-              # Check if saves already exist
-              if ls "$SAVES_DIR"/*.zip 2>/dev/null | grep -q .; then
-                echo "Save files already exist - skipping restore"
-                ls -la "$SAVES_DIR"/*.zip || true
-                exit 0
-              fi
-
               # Check if backup exists
               if [ ! -f "$BACKUP_FILE" ]; then
-                echo "No backup found at $BACKUP_FILE - fresh install"
-                exit 0
+                echo "No backup found at $BACKUP_FILE - cannot restore"
+                exit 1
               fi
 
               echo "Restoring from backup..."
               mkdir -p "$SAVES_DIR"
+
+              # Remove existing saves (explicit restore should overwrite)
+              rm -f "$SAVES_DIR"/*.zip
 
               # Copy backup to saves directory
               cp "$BACKUP_FILE" "$SAVES_DIR/${SAVE_NAME}.zip"

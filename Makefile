@@ -473,15 +473,15 @@ restore-factorio: ## Restore Factorio from NFS backup
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
 		echo "$(BLUE)Scaling Factorio to 0...$(NC)" && \
-		kubectl scale deployment -n factorio -l app.kubernetes.io/name=factorio-server-charts --replicas=0 && \
-		kubectl wait --for=delete pod -n factorio -l app.kubernetes.io/name=factorio-server-charts --timeout=2m || true && \
+		kubectl scale deployment factorio-factorio-server-charts -n factorio --replicas=0 && \
+		kubectl wait --for=delete pod -n factorio -l app=factorio-factorio-server-charts --timeout=2m || true && \
 		echo "$(BLUE)Running restore Job...$(NC)" && \
 		kubectl delete job factorio-restore -n factorio --ignore-not-found=true && \
 		kubectl apply -f applications/factorio/restore-job.yaml && \
 		kubectl wait --for=condition=complete job/factorio-restore -n factorio --timeout=30m && \
 		kubectl delete job factorio-restore -n factorio && \
 		echo "$(BLUE)Scaling Factorio back to 1...$(NC)" && \
-		kubectl scale deployment -n factorio -l app.kubernetes.io/name=factorio-server-charts --replicas=1 && \
+		kubectl scale deployment factorio-factorio-server-charts -n factorio --replicas=1 && \
 		echo "$(GREEN)Factorio restored and restarted!$(NC)"; \
 	else \
 		echo "$(RED)Restore cancelled$(NC)"; \

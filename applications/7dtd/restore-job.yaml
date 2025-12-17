@@ -35,20 +35,17 @@ spec:
               echo "Saves dir: $SAVES_DIR"
               echo "Backup file: $BACKUP_FILE"
 
-              # Check if saves already exist (any world folder with save data)
-              if find "$SAVES_DIR" -maxdepth 2 -type d -name "FoundationRWG" 2>/dev/null | grep -q .; then
-                echo "Save data already exists - skipping restore"
-                find "$SAVES_DIR" -type d -maxdepth 2 2>/dev/null || true
-                exit 0
-              fi
-
               # Check if backup exists
               if [ ! -f "$BACKUP_FILE" ]; then
-                echo "No backup found at $BACKUP_FILE - fresh install"
-                exit 0
+                echo "No backup found at $BACKUP_FILE - cannot restore"
+                exit 1
               fi
 
               echo "Restoring from backup..."
+
+              # Clear existing saves (explicit restore should overwrite)
+              rm -rf "$SAVES_DIR"/*
+              rm -rf "$GEN_WORLDS_DIR"/*
 
               # Extract save data backup
               # Backup contains: FoundationRWG/ folder
