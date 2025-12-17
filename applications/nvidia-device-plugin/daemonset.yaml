@@ -23,6 +23,10 @@ spec:
         - key: nvidia.com/gpu
           operator: Exists
           effect: NoSchedule
+        - key: dedicated
+          operator: Equal
+          value: gpu
+          effect: NoSchedule
       containers:
         - name: nvidia-device-plugin-ctr
           image: nvcr.io/nvidia/k8s-device-plugin:v0.17.0

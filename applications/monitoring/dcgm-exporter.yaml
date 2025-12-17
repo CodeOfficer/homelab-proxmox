@@ -20,6 +20,11 @@ spec:
       runtimeClassName: nvidia
       nodeSelector:
         nvidia.com/gpu.present: "true"
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: gpu
+          effect: NoSchedule
       containers:
         - name: dcgm-exporter
           image: nvcr.io/nvidia/k8s/dcgm-exporter:3.3.5-3.4.1-ubuntu22.04
