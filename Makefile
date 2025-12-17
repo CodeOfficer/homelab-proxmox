@@ -3,7 +3,7 @@
 .PHONY: logs status kubectl ssh-server ssh-agent
 .PHONY: template template-validate template-init template-clean
 .PHONY: iso-upload iso-check
-.PHONY: ansible-deps ansible-k3s ansible-expand-disk ansible-tailscale kubeconfig save-token clean-known-hosts
+.PHONY: ansible-deps ansible-k3s ansible-expand-disk ansible-tailscale kubeconfig save-token clean-known-hosts mount-nfs verify-nfs
 .PHONY: deploy-7dtd 7dtd-logs 7dtd-shell 7dtd-update 7dtd-status
 .PHONY: deploy-factorio factorio-logs factorio-status factorio-rcon factorio-restore-import factorio-restore-latest
 .PHONY: deploy-monitoring monitoring-status grafana-password
@@ -223,6 +223,20 @@ infra: apply ## Alias for apply
 # =============================================================================
 # Ansible / K3s Installation
 # =============================================================================
+
+mount-nfs: ansible-deps ## Mount NFS storage on all K3s nodes (for existing clusters)
+	@echo "$(BLUE)Mounting NFS on K3s nodes...$(NC)"
+	$(DIRENV) ansible-playbook -i $(ANSIBLE_DIR)/inventory/hosts.yml $(ANSIBLE_DIR)/playbooks/nfs-mount.yml
+	@echo "$(GREEN)NFS mounted on all nodes!$(NC)"
+
+verify-nfs: ## Verify NFS mounts on all K3s nodes (troubleshooting)
+	@echo "$(BLUE)Verifying NFS mounts on K3s nodes...$(NC)"
+	@for ip in 10.20.11.80 10.20.11.81 10.20.11.85; do \
+		echo "$(YELLOW)Checking $$ip...$(NC)"; \
+		ssh -o StrictHostKeyChecking=no ubuntu@$$ip "sudo mount | grep k3s-nfs && ls -la /mnt/k3s-nfs | head -5" || \
+		echo "$(RED)Not mounted on $$ip$(NC)"; \
+	done
+	@echo "$(GREEN)NFS verification complete$(NC)"
 
 ansible-deps: ## Install Ansible dependencies (k3s-ansible role)
 	@echo "$(BLUE)Installing Ansible dependencies...$(NC)"

@@ -460,9 +460,9 @@ spec:
               persistentVolumeClaim:
                 claimName: mapshot-data
             - name: nas-dest
-              nfs:
-                server: 10.20.10.20
-                path: /volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data
+              hostPath:
+                path: /mnt/k3s-nfs
+                type: Directory
 
           # Schedule on control plane nodes (same as Factorio for local-path PVC locality)
           nodeSelector:

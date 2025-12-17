@@ -57,6 +57,39 @@
       command: resize2fs /dev/ubuntu-vg/ubuntu-lv
       when: lvextend_result.rc == 0
 
+    # Mount NFS storage for K8s app backups/restores
+    - name: Install NFS client
+      apt:
+        name: nfs-common
+        state: present
+
+    - name: Create NFS mount directory
+      file:
+        path: /mnt/k3s-nfs
+        state: directory
+        mode: '0755'
+
+    - name: Add NFS mount to /etc/fstab
+      lineinfile:
+        path: /etc/fstab
+        line: '10.20.10.20:/volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data /mnt/k3s-nfs nfs defaults,_netdev 0 0'
+        state: present
+        backup: true
+
+    - name: Mount NFS share
+      mount:
+        path: /mnt/k3s-nfs
+        src: 10.20.10.20:/volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data
+        fstype: nfs
+        opts: defaults,_netdev
+        state: mounted
+
+    - name: Verify NFS mount is accessible
+      stat:
+        path: /mnt/k3s-nfs
+      register: nfs_check
+      failed_when: not nfs_check.stat.exists
+
 - name: Install K3s Cluster
   hosts: server
   order: inventory
