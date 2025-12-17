@@ -4,6 +4,40 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 6.0] - 2025-12-16
+
+### Changed
+- **Architecture #1: Separate deploy from restore**
+  - Deploy now ONLY runs `helm upgrade --install` (no restore logic)
+  - Restore is explicit manual operation: `make restore-7dtd`, `make restore-factorio`, `make restore-postgresql`
+  - Scale-to-0 pattern: stop app → run restore Job → restart app
+  - Interactive confirmation prevents accidental data loss
+
+### Fixed
+- **Critical: Restore Jobs PVC-node affinity**
+  - Restore Jobs now derive node from PVC's `nodeAffinity` (not pod `nodeName`)
+  - Use Python JSON manipulation to inject `nodeName` dynamically in Makefile
+  - Removed control-plane `nodeSelector` from restore Jobs
+  - **Root cause:** local-path PVCs are node-sticky - Jobs MUST run on same node as PVC
+  - Previous approach could schedule Job on wrong node, causing "successful" restore with no effect
+- **Restore Jobs safety checks**
+  - Added `set -euo pipefail` for immediate failure on errors
+  - Added `test -s` checks to verify backup files are not empty
+  - Added `ls -lh` output to show restored file sizes
+
+### Tested
+- **Phase 6.0 Re-test: Full cluster rebuild**
+  - `terraform destroy` → `terraform apply` → `make ansible-k3s` → `make deploy-full`
+  - All infrastructure deployed successfully (VMs, K3s, apps)
+  - Factorio restore verified: homelab.zip (7.2MB) restored, logs show "Loading map /factorio/saves/homelab.zip"
+  - PVC-to-node derivation working: Job ran on k3s-cp-01 (same node as PVC)
+
+### Technical Notes
+- Dropped zero-touch restore (initContainers) - Helm charts don't support `extraInitContainers`
+- Restore derivation: `PV=$(kubectl get pvc -o jsonpath)` → `NODE=$(kubectl get pv "$PV" -o jsonpath)`
+- Job spec injection: `kubectl create --dry-run=client -o json | python3 -c "..." | kubectl apply`
+- Pattern works for both 7DTD and Factorio (PostgreSQL uses different approach)
+
 ## [Phase 5.11] - 2025-12-01
 
 ### Added
