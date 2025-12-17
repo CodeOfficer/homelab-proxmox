@@ -9,21 +9,21 @@ This document covers failure modes, their symptoms, and recovery procedures.
 │                    Failure Impact Map                            │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  UNAS (10.20.10.20) ──────┐                                     │
-│       │                    │                                     │
-│       ▼                    ▼                                     │
-│  ┌─────────┐         ┌──────────┐                               │
-│  │ Ollama  │         │ Open     │  ← NFS dependent              │
-│  │ (100Gi) │         │ WebUI    │                               │
-│  └─────────┘         └──────────┘                               │
+│  UNAS (10.20.10.20) ─────────────┐                               │
+│                                  │                               │
+│                                  ▼                               │
+│                            ┌──────────┐                          │
+│                            │ Open     │  ← NFS dependent         │
+│                            │ WebUI    │                          │
+│                            └──────────┘                          │
 │                                                                  │
-│  k3s-gpu-01 (pve-01) ─────┐                                     │
-│       │                    │                                     │
-│       ▼                    ▼                                     │
-│  ┌─────────┐         ┌──────────┐                               │
-│  │ Ollama  │         │PostgreSQL│  ← local-path on this node    │
-│  │ (GPU)   │         │  Redis   │                               │
-│  └─────────┘         └──────────┘                               │
+│  k3s-gpu-01 (pve-01) ─────────────────┐                         │
+│       │                    │           │                         │
+│       ▼                    ▼           ▼                         │
+│  ┌─────────┐         ┌──────────┐  ┌─────────┐                 │
+│  │ Ollama  │         │PostgreSQL│  │  Redis  │ ← local-path    │
+│  │ (100Gi) │         │          │  │         │                  │
+│  └─────────┘         └──────────┘  └─────────┘                 │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -33,13 +33,13 @@ This document covers failure modes, their symptoms, and recovery procedures.
 ### 1. UNAS NFS Server Down
 
 **Symptoms:**
-- Ollama/Open WebUI pods stuck in `ContainerCreating` or crash with I/O errors
+- Open WebUI pods stuck in `ContainerCreating` or crash with I/O errors
 - `kubectl describe pod` shows `MountVolume.SetUp failed`
 - Existing running pods may hang on disk I/O
 
 **Impact:**
-- Ollama: DOWN (models on NFS)
 - Open WebUI: DOWN (data on NFS)
+- Ollama: UNAFFECTED (local-path storage)
 - PostgreSQL: UNAFFECTED (local-path)
 - Redis: UNAFFECTED (local-path)
 
@@ -52,11 +52,9 @@ ping 10.20.10.20
 ssh root@10.20.11.11 "showmount -e 10.20.10.20"
 
 # 3. Restart affected pods (they may be stuck)
-kubectl delete pod -n ollama -l app=ollama
 kubectl delete pod -n open-webui -l app=open-webui
 
 # 4. Verify recovery
-kubectl get pods -n ollama
 kubectl get pods -n open-webui
 ```
 

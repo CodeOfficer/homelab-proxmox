@@ -40,8 +40,6 @@ K3sStorage/
 │   └── backups/
 │       ├── latest.db               # Conversation history (~300 KB)
 │       └── history/                # Timestamped backups (7 max)
-├── ollama-ollama-models/           # Live LLM models (nfs-client PVC)
-│   └── models/                     # Downloaded models
 └── open-webui-open-webui-data/     # Live app data (nfs-client PVC)
     ├── cache/
     ├── uploads/
@@ -78,12 +76,25 @@ All backups are checksum-gated (skip if unchanged) with Telegram notifications.
 
 ## Cleanup Tasks
 
-**Manual cleanup required:**
-
-- [ ] **Remove SSH keys from ollama-ollama-models/** - `id_ed25519` and `id_ed25519.pub` should not be in the NFS share. Delete these files from Mac Finder.
-
 **Automated cleanup:**
 
 - **Mapshot renders** - Old render folders (`d-*`) are automatically deleted after each successful render. Only the latest render is kept on both PVC and NAS.
 
-**PVC naming note:** The `ollama-ollama-models` and `open-webui-open-webui-data` folders have redundant names due to nfs-client provisioner naming convention (`namespace-pvcname`). This is expected behavior.
+**PVC naming note:** The `open-webui-open-webui-data` folder has a redundant name due to nfs-client provisioner naming convention (`namespace-pvcname`). This is expected behavior.
+
+## UNAS Cleanup (Orphaned Data)
+
+**Legacy Ollama data from Phase 4.5 (Nov 28, 2025):**
+- Directory: `/K3sStorage/.data/ollama-ollama-models/` on UNAS
+- Contains: Old models + accidentally copied SSH keys (`id_ed25519*`)
+- Status: No longer used (Ollama switched to local-path storage in Phase 5.12)
+
+**Cleanup instructions:**
+1. Mac Finder → Network → UNAS (10.20.10.20) → K3sStorage → .data
+2. Delete `ollama-ollama-models/` directory entirely
+3. Verify no other sensitive files leaked: Check for `.ssh/`, `*.key`, `*.pem` files
+
+**Reason for cleanup:**
+- Ollama now uses `local-path` storage for performance (faster model loading)
+- UNAS copy is outdated and contains sensitive SSH keys
+- Storage reclamation: ~5-20GB depending on models cached
