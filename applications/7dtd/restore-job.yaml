@@ -7,6 +7,7 @@ metadata:
   name: sdtd-restore
   namespace: sdtd
 spec:
+  activeDeadlineSeconds: 1800  # 30 min timeout
   ttlSecondsAfterFinished: 300
   template:
     spec:

@@ -114,6 +114,32 @@ make test                     # Cluster health checks
 
 **Note:** No manual file copying required. K3s token is auto-saved to `.secrets/k3s-token` and cert-manager secret is generated from `.envrc`.
 
+### Restore Workflow
+
+**Restores are SEPARATE from deploys.** Run only when needed (Architecture #1).
+
+```bash
+# Deploy creates workloads + empty PVCs (or auto-restores via initContainer)
+make deploy-all-apps
+
+# Manual restore (explicit - overwrites data)
+make restore-7dtd          # Restore 7 Days to Die from latest NFS backup
+make restore-factorio      # Restore Factorio from latest NFS backup
+make restore-postgresql    # Restore PostgreSQL databases from latest NFS backup
+make restore-all           # Restore all apps (interactive prompts)
+```
+
+**When to restore:**
+- After cluster rebuild (Phase 6.0 scenario) - initContainers handle automatically
+- Rolling back to previous save state - use manual `make restore-*`
+- Recovering from data corruption - use manual `make restore-*`
+
+**Restore source:** NFS backups at `10.20.10.20:/volume1/K3sStorage/`
+
+**How it works:**
+- **Auto-restore (first boot):** InitContainers check for `.restored` marker file. If missing, restore from NFS `latest.*` backup automatically. Zero-touch recovery.
+- **Manual restore:** `make restore-*` runs Job, waits 30m for completion, restarts pod. Interactive confirmation prevents accidental data loss.
+
 ### Changelog Protocol
 
 When completing a phase or significant work:

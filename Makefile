@@ -441,6 +441,65 @@ deploy-all-apps: ## Deploy all applications with deploy.sh scripts (after deploy
 deploy-full: deploy-k8s deploy-all-apps ## Full deployment (infrastructure + all applications)
 	@echo "$(GREEN)Full deployment complete!$(NC)"
 
+# ==================== Restore Targets ====================
+# Restore data from NFS backups (separate from deploy)
+# Run these manually when recovering from backup or rolling back
+
+restore-7dtd: ## Restore 7 Days to Die from NFS backup
+	@echo "$(YELLOW)Restoring 7DTD from NFS backup...$(NC)"
+	@echo "$(YELLOW)⚠️  This will overwrite existing save data!$(NC)"
+	@read -p "Continue? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		kubectl delete job sdtd-restore -n sdtd --ignore-not-found=true && \
+		kubectl apply -f applications/7dtd/restore-job.yaml && \
+		kubectl wait --for=condition=complete job/sdtd-restore -n sdtd --timeout=30m && \
+		kubectl delete pod -n sdtd -l app.kubernetes.io/name=7dtd && \
+		echo "$(GREEN)7DTD restored and restarted!$(NC)"; \
+	else \
+		echo "$(RED)Restore cancelled$(NC)"; \
+	fi
+
+restore-factorio: ## Restore Factorio from NFS backup
+	@echo "$(YELLOW)Restoring Factorio from NFS backup...$(NC)"
+	@echo "$(YELLOW)⚠️  This will overwrite existing save data!$(NC)"
+	@read -p "Continue? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		kubectl delete job factorio-restore -n factorio --ignore-not-found=true && \
+		kubectl apply -f applications/factorio/restore-job.yaml && \
+		kubectl wait --for=condition=complete job/factorio-restore -n factorio --timeout=30m && \
+		kubectl delete pod -n factorio -l app.kubernetes.io/name=factorio-server-charts && \
+		echo "$(GREEN)Factorio restored and restarted!$(NC)"; \
+	else \
+		echo "$(RED)Restore cancelled$(NC)"; \
+	fi
+
+restore-postgresql: ## Restore PostgreSQL from NFS backup
+	@echo "$(YELLOW)Restoring PostgreSQL from NFS backup...$(NC)"
+	@echo "$(YELLOW)⚠️  This will overwrite existing databases!$(NC)"
+	@read -p "Continue? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		kubectl delete job postgresql-restore -n databases --ignore-not-found=true && \
+		kubectl create secret generic postgresql-restore \
+			--namespace databases \
+			--from-literal=postgres-password="$$POSTGRESQL_PASSWORD" \
+			--dry-run=client -o yaml | kubectl apply -f - && \
+		kubectl apply -f applications/postgresql/restore-job.yaml && \
+		kubectl wait --for=condition=complete job/postgresql-restore -n databases --timeout=30m && \
+		kubectl delete pod -n databases postgresql-0 && \
+		echo "$(GREEN)PostgreSQL restored and restarted!$(NC)"; \
+	else \
+		echo "$(RED)Restore cancelled$(NC)"; \
+	fi
+
+restore-all: ## Restore all apps from NFS backups (interactive)
+	@echo "$(YELLOW)This will restore ALL apps from NFS backups$(NC)"
+	@$(MAKE) restore-7dtd
+	@$(MAKE) restore-factorio
+	@$(MAKE) restore-postgresql
+
 deploy-all: deploy-infrastructure deploy-applications ## [DEPRECATED] Use deploy-full instead
 	@echo "$(GREEN)All applications deployed!$(NC)"
 
