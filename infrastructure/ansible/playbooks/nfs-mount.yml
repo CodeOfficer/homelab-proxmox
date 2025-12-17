@@ -14,18 +14,18 @@
         state: present
         update_cache: true
 
+    - name: Check if NFS is already mounted
+      shell: mountpoint -q /mnt/k3s-nfs
+      register: nfs_mounted
+      failed_when: false
+      changed_when: false
+
     - name: Create NFS mount directory
       file:
         path: /mnt/k3s-nfs
         state: directory
         mode: '0755'
-
-    - name: Add NFS mount to /etc/fstab
-      lineinfile:
-        path: /etc/fstab
-        line: '10.20.10.20:/volume/567898ba-8471-4adb-9be9-d3e1f96fa7ba/.srv/.unifi-drive/K3sStorage/.data /mnt/k3s-nfs nfs defaults,_netdev 0 0'
-        state: present
-        backup: true
+      when: nfs_mounted.rc != 0
 
     - name: Mount NFS share
       mount:

@@ -28,7 +28,7 @@ spec:
             - /bin/sh
             - -c
             - |
-              set -e
+              set -euo pipefail
               apk add --no-cache curl >/dev/null 2>&1
 
               DEST_DIR="/backup/postgresql/backups"
@@ -48,10 +48,13 @@ spec:
                   -d text="🔄 PostgreSQL backup started" >/dev/null || true
               fi
 
-              # Dump all databases, compress output
-              PGPASSWORD="${POSTGRES_PASSWORD}" pg_dumpall \
+              # Dump shared database, compress output
+              PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump \
                 -h postgresql.databases.svc.cluster.local \
                 -U postgres \
+                -d shared \
+                --no-owner \
+                --no-privileges \
                 | gzip > "${BACKUP_FILE}"
 
               # Create latest.sql.gz for easy Mac access
