@@ -451,12 +451,18 @@ restore-7dtd: ## Restore 7 Days to Die from NFS backup
 	@read -p "Continue? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		echo "$(BLUE)Deriving node from PVC...$(NC)" && \
+		PV=$$(kubectl -n sdtd get pvc sdtd-7dtd-gamefiles -o jsonpath='{.spec.volumeName}') && \
+		NODE=$$(kubectl get pv "$$PV" -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}') && \
+		echo "PVC is on node: $$NODE" && \
 		echo "$(BLUE)Scaling 7DTD to 0...$(NC)" && \
 		kubectl scale deployment -n sdtd -l app.kubernetes.io/name=7dtd --replicas=0 && \
 		kubectl wait --for=delete pod -n sdtd -l app.kubernetes.io/name=7dtd --timeout=2m || true && \
-		echo "$(BLUE)Running restore Job...$(NC)" && \
+		echo "$(BLUE)Running restore Job on $$NODE...$(NC)" && \
 		kubectl delete job sdtd-restore -n sdtd --ignore-not-found=true && \
-		kubectl apply -f applications/7dtd/restore-job.yaml && \
+		kubectl create -f applications/7dtd/restore-job.yaml --dry-run=client -o json | \
+			python3 -c "import sys,json; d=json.load(sys.stdin); d['spec']['template']['spec']['nodeName']=sys.argv[1]; print(json.dumps(d))" "$$NODE" | \
+			kubectl apply -f - && \
 		kubectl wait --for=condition=complete job/sdtd-restore -n sdtd --timeout=30m && \
 		kubectl delete job sdtd-restore -n sdtd && \
 		echo "$(BLUE)Scaling 7DTD back to 1...$(NC)" && \
@@ -472,12 +478,18 @@ restore-factorio: ## Restore Factorio from NFS backup
 	@read -p "Continue? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		echo "$(BLUE)Deriving node from PVC...$(NC)" && \
+		PV=$$(kubectl -n factorio get pvc factorio-factorio-server-charts-datadir -o jsonpath='{.spec.volumeName}') && \
+		NODE=$$(kubectl get pv "$$PV" -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}') && \
+		echo "PVC is on node: $$NODE" && \
 		echo "$(BLUE)Scaling Factorio to 0...$(NC)" && \
 		kubectl scale deployment factorio-factorio-server-charts -n factorio --replicas=0 && \
 		kubectl wait --for=delete pod -n factorio -l app=factorio-factorio-server-charts --timeout=2m || true && \
-		echo "$(BLUE)Running restore Job...$(NC)" && \
+		echo "$(BLUE)Running restore Job on $$NODE...$(NC)" && \
 		kubectl delete job factorio-restore -n factorio --ignore-not-found=true && \
-		kubectl apply -f applications/factorio/restore-job.yaml && \
+		kubectl create -f applications/factorio/restore-job.yaml --dry-run=client -o json | \
+			python3 -c "import sys,json; d=json.load(sys.stdin); d['spec']['template']['spec']['nodeName']=sys.argv[1]; print(json.dumps(d))" "$$NODE" | \
+			kubectl apply -f - && \
 		kubectl wait --for=condition=complete job/factorio-restore -n factorio --timeout=30m && \
 		kubectl delete job factorio-restore -n factorio && \
 		echo "$(BLUE)Scaling Factorio back to 1...$(NC)" && \

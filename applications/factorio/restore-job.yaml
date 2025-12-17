@@ -11,12 +11,8 @@ spec:
   ttlSecondsAfterFinished: 300
   template:
     spec:
-      nodeSelector:
-        node-role.kubernetes.io/control-plane: "true"
-      tolerations:
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
+      # nodeName will be set dynamically by Makefile to match Factorio pod's node
+      # (required for local-path PVC access)
       securityContext:
         runAsUser: 845
         runAsGroup: 845
@@ -27,7 +23,7 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              set -e
+              set -euo pipefail
 
               SAVES_DIR="/factorio/saves"
               BACKUP_FILE="/nfs/factorio/backups/latest.zip"
@@ -37,11 +33,19 @@ spec:
               echo "Saves dir: $SAVES_DIR"
               echo "Backup file: $BACKUP_FILE"
 
-              # Check if backup exists
+              # Check if backup exists and is not empty
               if [ ! -f "$BACKUP_FILE" ]; then
-                echo "No backup found at $BACKUP_FILE - cannot restore"
+                echo "ERROR: No backup found at $BACKUP_FILE"
                 exit 1
               fi
+
+              if ! test -s "$BACKUP_FILE"; then
+                echo "ERROR: Backup file is empty"
+                exit 1
+              fi
+
+              echo "Backup file:"
+              ls -lh "$BACKUP_FILE"
 
               echo "Restoring from backup..."
               mkdir -p "$SAVES_DIR"
@@ -53,8 +57,8 @@ spec:
               cp "$BACKUP_FILE" "$SAVES_DIR/${SAVE_NAME}.zip"
               chmod 644 "$SAVES_DIR/${SAVE_NAME}.zip"
 
-              echo "Restore complete!"
-              ls -la "$SAVES_DIR"
+              echo "Restore complete! Restored file:"
+              ls -lh "$SAVES_DIR/${SAVE_NAME}.zip"
           volumeMounts:
             - name: factorio-data
               mountPath: /factorio

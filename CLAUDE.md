@@ -137,10 +137,13 @@ make restore-all           # Restore all apps (interactive prompts)
 **Restore source:** NFS backups at `10.20.10.20:/volume1/K3sStorage/`
 
 **How it works:**
-1. Scale workload to 0 (stops app)
-2. Run restore Job (mounts PVC, copies backup → PVC)
-3. Scale workload back to 1 (starts app with restored data)
-4. Interactive confirmation prevents accidental data loss
+1. Derive node from PVC's nodeAffinity (local-path PVCs are node-sticky)
+2. Scale workload to 0 (stops app)
+3. Run restore Job on correct node (mounts PVC, copies backup → PVC)
+4. Scale workload back to 1 (starts app with restored data)
+5. Interactive confirmation prevents accidental data loss
+
+**Critical:** Restore Jobs MUST run on the same node as the PVC. The Makefile derives this from the PV's `nodeAffinity` and injects `nodeName` into the Job spec dynamically.
 
 ### Changelog Protocol
 

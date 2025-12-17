@@ -11,19 +11,15 @@ spec:
   ttlSecondsAfterFinished: 300
   template:
     spec:
-      nodeSelector:
-        node-role.kubernetes.io/control-plane: "true"
-      tolerations:
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
+      # nodeName will be set dynamically by Makefile to match 7DTD pod's node
+      # (required for local-path PVC access)
       containers:
         - name: restore
           image: alpine:latest
           command: ["/bin/sh", "-c"]
           args:
             - |
-              set -e
+              set -euo pipefail
               apk add --no-cache tar >/dev/null 2>&1
 
               SAVES_DIR="/gamefiles/UserData/Saves"
@@ -35,11 +31,20 @@ spec:
               echo "Saves dir: $SAVES_DIR"
               echo "Backup file: $BACKUP_FILE"
 
-              # Check if backup exists
+              # Check if backup exists and is not empty
               if [ ! -f "$BACKUP_FILE" ]; then
-                echo "No backup found at $BACKUP_FILE - cannot restore"
+                echo "ERROR: No backup found at $BACKUP_FILE"
                 exit 1
               fi
+
+              if ! test -s "$BACKUP_FILE"; then
+                echo "ERROR: Backup file is empty"
+                exit 1
+              fi
+
+              echo "Backup files:"
+              ls -lh "$BACKUP_FILE"
+              [ -f "$WORLD_BACKUP" ] && ls -lh "$WORLD_BACKUP" || echo "No world backup"
 
               echo "Restoring from backup..."
 
