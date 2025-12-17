@@ -1,6 +1,6 @@
 # PostgreSQL Restore from UNAS K3sStorage
-# Runs after Helm install to restore database from NFS backup
-# Only restores if database is empty AND backup exists
+# Runs to restore database from NFS backup
+# Network-based restore (PostgreSQL must be running)
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -11,58 +11,98 @@ spec:
   ttlSecondsAfterFinished: 300
   template:
     spec:
-      nodeSelector:
-        node-role.kubernetes.io/control-plane: "true"
-      tolerations:
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
+      # NFS is mounted on all nodes - no nodeSelector needed
       containers:
         - name: restore
           image: postgres:18-alpine
           command: ["/bin/sh", "-c"]
           args:
             - |
-              set -e
+              set -euo pipefail
 
               BACKUP_FILE="/nfs/postgresql/backups/latest.sql.gz"
+              PGHOST="postgresql.databases.svc.cluster.local"
+              PGUSER="postgres"
+              export PGPASSWORD="${POSTGRES_PASSWORD}"
 
               echo "Checking restore conditions..."
               echo "Backup file: $BACKUP_FILE"
 
               # Check if backup exists
               if [ ! -f "$BACKUP_FILE" ]; then
-                echo "No backup found at $BACKUP_FILE - fresh install"
-                exit 0
+                echo "No backup found at $BACKUP_FILE - fresh install, skipping restore"
+                exit 0  # Success exit for fresh installs
+              fi
+
+              # If backup exists, it must not be empty
+              if ! test -s "$BACKUP_FILE"; then
+                echo "ERROR: Backup file exists but is empty"
+                exit 1  # Failure exit for corrupt backups
+              fi
+
+              echo "Backup file exists:"
+              ls -lh "$BACKUP_FILE"
+
+              # Wait for PostgreSQL to be ready
+              echo "Waiting for PostgreSQL to be ready..."
+              until pg_isready -h "$PGHOST" -U "$PGUSER"; do
+                echo "PostgreSQL not ready yet, waiting..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready!"
+
+              # Safety guard - require explicit confirmation
+              if [ "$CONFIRM_RESTORE" != "yes" ]; then
+                echo "ERROR: CONFIRM_RESTORE environment variable must be set to 'yes'"
+                echo "This restore will DROP and recreate the 'shared' database"
+                echo "Set CONFIRM_RESTORE=yes in the Job spec to proceed"
+                exit 1
               fi
 
               # Drop and recreate database (explicit restore should overwrite)
               echo "Dropping and recreating 'shared' database..."
+
+              # Terminate active connections to 'shared' database
+              echo "Terminating active connections..."
               PGPASSWORD="${POSTGRES_PASSWORD}" psql \
-                -h postgresql.databases.svc.cluster.local \
-                -U postgres \
+                -v ON_ERROR_STOP=1 \
+                -h "$PGHOST" \
+                -U "$PGUSER" \
                 -d postgres \
-                -c "DROP DATABASE IF EXISTS shared;"
+                -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'shared' AND pid <> pg_backend_pid();"
+
+              # Drop database (FORCE option available in PostgreSQL 13+)
+              PGPASSWORD="${POSTGRES_PASSWORD}" psql \
+                -v ON_ERROR_STOP=1 \
+                -h "$PGHOST" \
+                -U "$PGUSER" \
+                -d postgres \
+                -c "DROP DATABASE IF EXISTS shared WITH (FORCE);"
 
               PGPASSWORD="${POSTGRES_PASSWORD}" psql \
-                -h postgresql.databases.svc.cluster.local \
-                -U postgres \
+                -v ON_ERROR_STOP=1 \
+                -h "$PGHOST" \
+                -U "$PGUSER" \
                 -d postgres \
-                -c "CREATE DATABASE shared OWNER admin;"
+                -c "CREATE DATABASE shared;"
 
-              # Restore from backup
+              # Restore from backup (target the 'shared' database)
               echo "Restoring from backup..."
               gunzip -c "$BACKUP_FILE" | PGPASSWORD="${POSTGRES_PASSWORD}" psql \
-                -h postgresql.databases.svc.cluster.local \
-                -U postgres
+                -v ON_ERROR_STOP=1 \
+                -h "$PGHOST" \
+                -U "$PGUSER" \
+                -d shared
 
               echo "Restore complete!"
 
               # Verify
               echo "Verifying restore..."
               PGPASSWORD="${POSTGRES_PASSWORD}" psql \
-                -h postgresql.databases.svc.cluster.local \
-                -U postgres \
+                -v ON_ERROR_STOP=1 \
+                -h "$PGHOST" \
+                -U "$PGUSER" \
+                -d postgres \
                 -c "\l"
           env:
             - name: POSTGRES_PASSWORD
@@ -70,6 +110,8 @@ spec:
                 secretKeyRef:
                   name: postgresql-restore
                   key: postgres-password
+            - name: CONFIRM_RESTORE
+              value: "no"  # Must be explicitly set to "yes" in Makefile
           volumeMounts:
             - name: nfs
               mountPath: /nfs

@@ -501,25 +501,23 @@ restore-factorio: ## Restore Factorio from NFS backup
 
 restore-postgresql: ## Restore PostgreSQL from NFS backup
 	@echo "$(YELLOW)Restoring PostgreSQL from NFS backup...$(NC)"
-	@echo "$(YELLOW)⚠️  This will overwrite existing databases!$(NC)"
+	@echo "$(YELLOW)⚠️  This will DROP and recreate the 'shared' database!$(NC)"
 	@read -p "Continue? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		echo "$(BLUE)Scaling PostgreSQL to 0...$(NC)" && \
-		kubectl scale statefulset postgresql -n databases --replicas=0 && \
-		kubectl wait --for=delete pod -n databases postgresql-0 --timeout=2m || true && \
+		echo "$(BLUE)Creating restore secret...$(NC)" && \
+		kubectl delete secret postgresql-restore -n databases --ignore-not-found=true && \
+		kubectl create secret generic postgresql-restore \
+			-n databases \
+			--from-literal="postgres-password=$$POSTGRESQL_PASSWORD" \
+			--dry-run=client -o yaml | kubectl apply -f - && \
 		echo "$(BLUE)Running restore Job...$(NC)" && \
 		kubectl delete job postgresql-restore -n databases --ignore-not-found=true && \
-		kubectl create secret generic postgresql-restore \
-			--namespace databases \
-			--from-literal=postgres-password="$$POSTGRESQL_PASSWORD" \
-			--dry-run=client -o yaml | kubectl apply -f - && \
-		kubectl apply -f applications/postgresql/restore-job.yaml && \
+		kubectl -n databases apply -f applications/postgresql/restore-job.yaml && \
+		kubectl -n databases set env job/postgresql-restore CONFIRM_RESTORE=yes && \
 		kubectl wait --for=condition=complete job/postgresql-restore -n databases --timeout=30m && \
 		kubectl delete job postgresql-restore -n databases && \
-		echo "$(BLUE)Scaling PostgreSQL back to 1...$(NC)" && \
-		kubectl scale statefulset postgresql -n databases --replicas=1 && \
-		echo "$(GREEN)PostgreSQL restored and restarted!$(NC)"; \
+		echo "$(GREEN)PostgreSQL restored successfully!$(NC)"; \
 	else \
 		echo "$(RED)Restore cancelled$(NC)"; \
 	fi
