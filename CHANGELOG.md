@@ -4,25 +4,37 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [Phase 6.0] - 2025-12-16
+## [Phase 6.0] - 2025-12-17
 
 ### Changed
 - **Architecture #1: Separate deploy from restore**
   - Deploy now ONLY runs `helm upgrade --install` (no restore logic)
   - Restore is explicit manual operation: `make restore-7dtd`, `make restore-factorio`, `make restore-postgresql`
-  - Scale-to-0 pattern: stop app → run restore Job → restart app
+  - Scale-to-0 pattern for game servers: stop app → run restore Job → restart app
   - Interactive confirmation prevents accidental data loss
 
 ### Fixed
-- **Critical: Restore Jobs PVC-node affinity**
+- **Critical: Restore Jobs PVC-node affinity (Game Servers)**
   - Restore Jobs now derive node from PVC's `nodeAffinity` (not pod `nodeName`)
   - Use Python JSON manipulation to inject `nodeName` dynamically in Makefile
-  - Removed control-plane `nodeSelector` from restore Jobs
+  - Removed control-plane `nodeSelector` from 7DTD/Factorio restore Jobs
   - **Root cause:** local-path PVCs are node-sticky - Jobs MUST run on same node as PVC
   - Previous approach could schedule Job on wrong node, causing "successful" restore with no effect
+- **PostgreSQL restore safety improvements**
+  - Removed control-plane nodeSelector (NFS verified on all 3 nodes via DaemonSet)
+  - Added `pg_isready` wait loop (prevents premature restore)
+  - Added `CONFIRM_RESTORE=yes` guard (explicit confirmation required via Makefile)
+  - Added `-v ON_ERROR_STOP=1` to all psql commands (fail fast)
+  - Terminate active connections before DROP DATABASE
+  - Use `DROP DATABASE ... WITH (FORCE)` (PostgreSQL 13+)
+  - Target `-d shared` for restore (correct database)
+  - Removed `OWNER admin` from CREATE DATABASE
+  - PostgreSQL stays running (network-based restore requires connectivity)
 - **Restore Jobs safety checks**
   - Added `set -euo pipefail` for immediate failure on errors
   - Added `test -s` checks to verify backup files are not empty
+  - Fresh install: exit 0 (no backup found)
+  - Corrupt backup: exit 1 (backup exists but empty)
   - Added `ls -lh` output to show restored file sizes
 
 ### Tested
@@ -31,12 +43,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   - All infrastructure deployed successfully (VMs, K3s, apps)
   - Factorio restore verified: homelab.zip (7.2MB) restored, logs show "Loading map /factorio/saves/homelab.zip"
   - PVC-to-node derivation working: Job ran on k3s-cp-01 (same node as PVC)
+- **NFS mount verification**
+  - DaemonSet verified `/mnt/k3s-nfs` mounted on all 3 nodes (k3s-cp-01, k3s-cp-02, k3s-gpu-01)
 
 ### Technical Notes
 - Dropped zero-touch restore (initContainers) - Helm charts don't support `extraInitContainers`
-- Restore derivation: `PV=$(kubectl get pvc -o jsonpath)` → `NODE=$(kubectl get pv "$PV" -o jsonpath)`
+- Game server restore derivation: `PV=$(kubectl get pvc -o jsonpath)` → `NODE=$(kubectl get pv "$PV" -o jsonpath)`
 - Job spec injection: `kubectl create --dry-run=client -o json | python3 -c "..." | kubectl apply`
-- Pattern works for both 7DTD and Factorio (PostgreSQL uses different approach)
+- PostgreSQL restore uses `kubectl set env job/postgresql-restore CONFIRM_RESTORE=yes` (no Python/sed/yq)
+- PostgreSQL restore is network-based (different from game servers which mount PVCs directly)
 
 ## [Phase 5.11] - 2025-12-01
 
