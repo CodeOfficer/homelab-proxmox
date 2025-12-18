@@ -255,10 +255,18 @@ Run `make help` for full list. Key targets:
 - [x] K8s cluster dashboards (dotdc: global, nodes, namespaces, pods views)
 - [ ] GPU metrics dashboard (RTX 4000 Ada utilization, temp, memory)
 
+### Platform Services
+- **Kubernetes Dashboard**: https://k8s.codeofficer.com
+  - Auto-login enabled (Traefik injects Bearer token via middleware)
+  - No manual token entry required
+  - Token valid for 1 year (regenerates on deploy)
+  - Fully idempotent - survives reboots and cluster rebuilds
+
 ### Remote Access (Tailscale)
 Tailscale installed on k3s-cp-01 as subnet router exposing 10.20.11.0/24.
 - Invite friends via: https://login.tailscale.com/admin/users
 - Grafana: https://grafana.codeofficer.com
+- Kubernetes Dashboard: https://k8s.codeofficer.com (auto-login)
 - 7 Days to Die: `10.20.11.201:26900`
 - Factorio: `10.20.11.202:34197`
 

@@ -9,6 +9,8 @@ spec:
   routes:
     - kind: Rule
       match: Host(`k8s.codeofficer.com`)
+      middlewares:
+        - name: dashboard-auth-inject
       services:
         - name: kubernetes-dashboard-kong-proxy
           port: 443

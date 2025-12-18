@@ -1,0 +1,23 @@
+---
+# Secret containing the dashboard token for auto-injection
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dashboard-auth-token
+  namespace: kubernetes-dashboard
+type: Opaque
+stringData:
+  token: "PLACEHOLDER_TOKEN"
+
+---
+# Traefik middleware to inject Authorization header
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: dashboard-auth-inject
+  namespace: kubernetes-dashboard
+spec:
+  headers:
+    customRequestHeaders:
+      # This will be replaced with actual token by deploy.sh
+      Authorization: "Bearer PLACEHOLDER_TOKEN"

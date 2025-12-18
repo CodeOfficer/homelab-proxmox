@@ -770,22 +770,24 @@ loki-status: ## Show Loki deployment status
 # Kubernetes Dashboard
 # =============================================================================
 
-deploy-k8s-dashboard: ## Deploy Kubernetes Dashboard with Let's Encrypt TLS
+deploy-k8s-dashboard: ## Deploy Kubernetes Dashboard with auto-login (no token required)
 	@echo "$(BLUE)Deploying Kubernetes Dashboard...$(NC)"
 	@./applications/kubernetes-dashboard/deploy.sh
 
-k8s-dashboard-token: ## Display dashboard login token
-	@if [ -f ".secrets/k8s-dashboard-token" ]; then \
-		echo "$(BLUE)Dashboard Login Token:$(NC)"; \
+k8s-dashboard-token: ## Display dashboard login token (regenerates if expired)
+	@if [ ! -f ".secrets/k8s-dashboard-token" ]; then \
+		echo "$(YELLOW)Token not found. Creating token (valid 1 year)...$(NC)"; \
+		kubectl -n kubernetes-dashboard create token admin-user --duration=8760h > .secrets/k8s-dashboard-token; \
+		echo "$(GREEN)Token created and saved$(NC)"; \
 		echo ""; \
-		cat .secrets/k8s-dashboard-token; \
-		echo ""; \
-		echo ""; \
-		echo "$(YELLOW)Dashboard URL: https://k8s.codeofficer.com$(NC)"; \
-	else \
-		echo "$(RED)Token not found. Generate with:$(NC)"; \
-		echo "  kubectl -n kubernetes-dashboard create token admin-user --duration=87600h > .secrets/k8s-dashboard-token"; \
-	fi
+	fi; \
+	echo "$(BLUE)Dashboard Login Token:$(NC)"; \
+	echo ""; \
+	cat .secrets/k8s-dashboard-token; \
+	echo ""; \
+	echo ""; \
+	echo "$(YELLOW)Dashboard URL: https://k8s.codeofficer.com (auto-login enabled)$(NC)"; \
+	echo "$(YELLOW)Token expires after 1 year. Regenerate with: ./applications/kubernetes-dashboard/deploy.sh$(NC)"
 
 k8s-dashboard-status: ## Show Kubernetes Dashboard status
 	@echo "$(BLUE)Kubernetes Dashboard Status$(NC)"
