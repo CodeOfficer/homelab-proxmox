@@ -41,8 +41,8 @@ echo ""
 # Function to count fresh tiles (modified in last 30 minutes)
 count_tiles() {
   kubectl exec -n mapshot "$POD_NAME" -c render -- sh -c '
-    if [ -d /mapshot/factorio/script-output/mapshot ]; then
-      find /mapshot/factorio/script-output/mapshot -type f -name "tile_*.jpg" -mmin -30 2>/dev/null | wc -l
+    if [ -d /mapshot/factorio/script-output/mapshot/latest ]; then
+      find /mapshot/factorio/script-output/mapshot/latest -type f -name "tile_*.jpg" -mmin -30 2>/dev/null | wc -l
     else
       echo 0
     fi
@@ -100,8 +100,8 @@ while true; do
   # Calculate total tiles dynamically (count all tiles including old ones)
   # This gives us the actual total for this render's detail level
   TOTAL_TILES=$(kubectl exec -n mapshot "$POD_NAME" -c render -- sh -c '
-    if [ -d /mapshot/factorio/script-output/mapshot ]; then
-      find /mapshot/factorio/script-output/mapshot -type f -name "tile_*.jpg" 2>/dev/null | wc -l
+    if [ -d /mapshot/factorio/script-output/mapshot/latest ]; then
+      find /mapshot/factorio/script-output/mapshot/latest -type f -name "tile_*.jpg" 2>/dev/null | wc -l
     else
       echo 0
     fi

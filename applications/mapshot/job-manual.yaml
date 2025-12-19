@@ -121,7 +121,7 @@ spec:
               FACTORIO_DIR="$PVC_ROOT/factorio"
               FACTORIO_BIN="$FACTORIO_DIR/bin/x64/factorio"
               SCRIPT_OUTPUT="$FACTORIO_DIR/script-output"
-              VIEWER_DIR="$SCRIPT_OUTPUT/mapshot"
+              VIEWER_DIR="$SCRIPT_OUTPUT/mapshot/latest"
               CHECKSUM_FILE="$PVC_ROOT/.last-render-checksum"
               SAVE_FILE="/opt/factorio/saves/latest.zip"
               STATUS_FILE="/opt/factorio/saves/.render-status"
@@ -399,9 +399,13 @@ spec:
               # Step 8: Sync to NAS for web server access
               log "Syncing to NAS..."
               NAS_DEST="/nas/mapshot"
+
+              # Clear old NAS contents (ensure clean slate for each render)
+              log "Clearing old NAS contents..."
+              rm -rf "$NAS_DEST"/*
               mkdir -p "$NAS_DEST"
 
-              # Copy the latest viewer files to NAS
+              # Copy the latest viewer files to NAS root
               cp -r "$VIEWER_DIR"/* "$NAS_DEST/" 2>/dev/null || true
               log "NAS sync complete: $NAS_DEST"
               ls -la "$NAS_DEST" | head -10
