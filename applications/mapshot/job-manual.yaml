@@ -1,11 +1,12 @@
 # Mapshot CPU Manual Render Job - Software rendering (llvmpipe)
 # Trigger: make mapshot-render
-# Expected time: ~3-6 hours with tilemin=256 (maximum detail)
+# Expected time: Hours to complete (depends on map size)
 # No timeout - runs until completion
 #
 # Performance tuning via tilemin (in-game units per tile):
-# - tilemin=256 (default): Maximum detail, ~1313 tiles (current setting)
-# - tilemin=512: Medium detail, moderate speed
+# - tilemin=16: MAXIMUM detail (64 pixels/tile, Factorio asset limit) - CURRENT
+# - tilemin=256: Default detail (~4 pixels/tile)
+# - tilemin=512: Medium detail
 # - tilemin=1024: Lower detail, faster
 # - tilemin=2048: Low detail, fastest
 ---
@@ -345,13 +346,18 @@ spec:
                 fi
               fi
 
-              # Step 5: Run mapshot render with CPU (no timeout)
+              # Step 5: Clear old render output (force fresh render)
+              log "Clearing old render output..."
+              rm -rf "$VIEWER_DIR"/*
+              mkdir -p "$VIEWER_DIR"
+
+              # Step 6: Run mapshot render with CPU (no timeout)
               log "Running CPU mapshot render (software rendering)..."
               log "  Binary: $FACTORIO_BIN"
               log "  Data dir: $FACTORIO_DIR"
               log "  Save: $SAVE_FILE"
               log "  Output: $SCRIPT_OUTPUT"
-              log "  Tile min: ${MAPSHOT_TILEMIN} units (maximum detail - ~1313 tiles)"
+              log "  Tile min: ${MAPSHOT_TILEMIN} units (64 pixels/tile - maximum detail)"
               log "  Tile max: ${MAPSHOT_TILEMAX} units (zoom out)"
               log "  Surface: ${MAPSHOT_SURFACE}"
               log "  NO TIMEOUT - Will run until completion"
@@ -470,7 +476,7 @@ spec:
                   name: factorio-credentials
                   key: token
             - name: MAPSHOT_TILEMIN
-              value: "256"  # Maximum detail (generates ~1313 tiles). Default: 256
+              value: "16"  # Maximum detail: 64 pixels/in-game tile (Factorio max). Default: 256
             - name: MAPSHOT_TILEMAX
               value: "16384"  # Default zoom out level
             - name: MAPSHOT_AREA

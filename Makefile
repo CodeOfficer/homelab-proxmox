@@ -781,11 +781,11 @@ deploy-mapshot: ## Deploy Mapshot for Factorio map rendering
 	@echo "$(BLUE)Deploying Mapshot...$(NC)"
 	@./applications/mapshot/deploy.sh
 
-mapshot-render: ## Trigger manual CPU map render (3-6 hours, maximum detail)
+mapshot-render: ## Trigger manual CPU map render (hours, MAXIMUM detail)
 	@echo "$(BLUE)Triggering CPU Mapshot render...$(NC)"
 	@echo "$(YELLOW)Mode: Software rendering (llvmpipe)$(NC)"
-	@echo "$(YELLOW)Detail: tilemin=256 (MAXIMUM DETAIL - ~1313 tiles)$(NC)"
-	@echo "$(YELLOW)Expected duration: 3-6 hours$(NC)"
+	@echo "$(YELLOW)Detail: tilemin=16 (64 pixels/tile - Factorio asset limit)$(NC)"
+	@echo "$(YELLOW)Expected duration: Hours (depends on map size)$(NC)"
 	@echo "$(YELLOW)Monitor in parallel: make mapshot-monitor$(NC)"
 	@cat applications/mapshot/job-manual.yaml | \
 		sed 's/name: mapshot-manual/name: mapshot-manual-'$$(date +%s)'/' | \
