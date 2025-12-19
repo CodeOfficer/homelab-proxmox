@@ -1,0 +1,190 @@
+# Ollama Models Backup to UNAS K3sStorage
+# Backs up models to NAS for disaster recovery
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ollama-backup
+  namespace: ollama
+spec:
+  schedule: "0 8 * * *"  # Daily at 8 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: ollama-backup
+          nodeSelector:
+            nvidia.com/gpu.present: "true"
+          tolerations:
+            - key: "dedicated"
+              operator: "Equal"
+              value: "gpu"
+              effect: "NoSchedule"
+          securityContext:
+            runAsUser: 0
+            fsGroup: 0
+          initContainers:
+            - name: scale-down
+              image: bitnami/kubectl:latest
+              command: ["/bin/bash", "-c"]
+              args:
+                - |
+                  set -e
+                  echo "Scaling down Ollama..."
+                  kubectl scale deployment ollama -n ollama --replicas=0
+                  kubectl wait --for=delete pod -l app=ollama -n ollama --timeout=2m || true
+                  echo "Ollama scaled down"
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "256Mi"
+                  cpu: "200m"
+          containers:
+            - name: rsync
+              image: alpine:latest
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -e
+                  apk add --no-cache rsync curl >/dev/null 2>&1
+                  
+                  # Wait for Ollama to scale down
+                  sleep 10
+                  
+                  LOCAL_MODELS="/root/.ollama/models"
+                  NFS_BACKUP="/nfs/ollama/backups/models"
+                  
+                  # Check if there are models to backup
+                  if [ ! -d "$LOCAL_MODELS/blobs" ]; then
+                    echo "No models directory found - skipping backup"
+                    exit 0
+                  fi
+                  
+                  BLOB_COUNT=$(ls -1 "$LOCAL_MODELS/blobs/" 2>/dev/null | wc -l | tr -d ' ')
+                  if [ "$BLOB_COUNT" -eq 0 ]; then
+                    echo "No model blobs found - skipping backup"
+                    exit 0
+                  fi
+                  
+                  echo "Found $BLOB_COUNT blobs to backup"
+                  
+                  # Checksum current state
+                  echo "Calculating checksum..."
+                  CHECKSUM_FILE="$NFS_BACKUP/.last-backup-checksum"
+                  CURRENT_CHECKSUM=$(find "$LOCAL_MODELS" -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum | cut -d' ' -f1)
+                  LAST_CHECKSUM=$(cat "$CHECKSUM_FILE" 2>/dev/null || echo "none")
+                  
+                  echo "Current checksum: $CURRENT_CHECKSUM"
+                  echo "Last checksum: $LAST_CHECKSUM"
+                  
+                  if [ "$CURRENT_CHECKSUM" = "$LAST_CHECKSUM" ]; then
+                    echo "No changes detected since last backup - skipping"
+                    exit 0
+                  fi
+                  
+                  # Notify start
+                  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                      -d chat_id="${TELEGRAM_CHAT_ID}" \
+                      -d text="🔄 Ollama backup started" >/dev/null || true
+                  fi
+                  
+                  # Backup models
+                  echo "Syncing models to NFS..."
+                  mkdir -p "$NFS_BACKUP"
+                  
+                  rsync -av --no-perms --no-owner --no-group --delete \
+                    --exclude='id_ed25519*' --exclude='.DS_Store' \
+                    "$LOCAL_MODELS/" "$NFS_BACKUP/"
+                  
+                  # Save checksum
+                  echo "$CURRENT_CHECKSUM" > "$CHECKSUM_FILE"
+                  
+                  # Get stats
+                  BACKUP_SIZE=$(du -sh "$NFS_BACKUP" | cut -f1)
+                  MODEL_LIST=$(find "$NFS_BACKUP/manifests/registry.ollama.ai/library/" -type f 2>/dev/null | \
+                    sed 's|.*/library/||' | sed 's|/|:|g' | tr '\n' ', ' | sed 's/,$//')
+                  
+                  echo "Backup complete!"
+                  echo "Size: $BACKUP_SIZE"
+                  echo "Models: $MODEL_LIST"
+                  
+                  # Notify completion
+                  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                      -d chat_id="${TELEGRAM_CHAT_ID}" \
+                      -d text="✅ Ollama backup complete%0ASize: ${BACKUP_SIZE}%0AModels: ${MODEL_LIST}" >/dev/null || true
+                  fi
+                  
+                  # Signal completion for scale-up
+                  touch /shared/backup-done
+              env:
+                - name: TELEGRAM_BOT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: telegram-credentials
+                      key: bot-token
+                      optional: true
+                - name: TELEGRAM_CHAT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: telegram-credentials
+                      key: chat-id
+                      optional: true
+              volumeMounts:
+                - name: ollama-data
+                  mountPath: /root/.ollama
+                  readOnly: true
+                - name: nfs
+                  mountPath: /nfs
+                - name: shared
+                  mountPath: /shared
+              resources:
+                requests:
+                  memory: "128Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "512Mi"
+                  cpu: "500m"
+            - name: scale-up
+              image: bitnami/kubectl:latest
+              command: ["/bin/bash", "-c"]
+              args:
+                - |
+                  set -e
+                  # Wait for backup to complete
+                  echo "Waiting for backup to complete..."
+                  while [ ! -f /shared/backup-done ]; do
+                    sleep 2
+                  done
+                  
+                  echo "Scaling Ollama back to 1..."
+                  kubectl scale deployment ollama -n ollama --replicas=1
+                  kubectl wait --for=condition=ready pod -l app=ollama -n ollama --timeout=5m
+                  echo "Ollama scaled up"
+              volumeMounts:
+                - name: shared
+                  mountPath: /shared
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "256Mi"
+                  cpu: "200m"
+          volumes:
+            - name: shared
+              emptyDir: {}
+            - name: ollama-data
+              persistentVolumeClaim:
+                claimName: ollama-models
+            - name: nfs
+              hostPath:
+                path: /mnt/k3s-nfs
+                type: Directory
+          restartPolicy: OnFailure
+      backoffLimit: 3

@@ -522,11 +522,68 @@ restore-postgresql: ## Restore PostgreSQL from NFS backup
 		echo "$(RED)Restore cancelled$(NC)"; \
 	fi
 
+restore-ollama: ## Restore Ollama models from NFS backup
+	@echo "$(BLUE)Checking NFS backup...$(NC)"
+	@kubectl run nfs-check --rm -i --restart=Never --image=alpine:latest \
+		--overrides='{"spec":{"containers":[{"name":"check","image":"alpine:latest","command":["/bin/sh","-c","if [ ! -d /nfs/ollama/backups/models/blobs ]; then echo ERROR: No blobs in NFS; exit 1; fi; echo NFS backup found; ls /nfs/ollama/backups/models/manifests/registry.ollama.ai/library/ 2>/dev/null | sed \"s#^#  Model: #\" || true; echo Blobs: $$(ls /nfs/ollama/backups/models/blobs/ | wc -l) files"],"volumeMounts":[{"name":"nfs","mountPath":"/nfs"}]}],"volumes":[{"name":"nfs","hostPath":{"path":"/mnt/k3s-nfs"}}]}}' \
+		2>&1 | grep -v "pod.*deleted"
+	@echo ""
+	@echo "$(YELLOW)Restoring Ollama models from NFS backup...$(NC)"
+	@echo "$(YELLOW)⚠️  This will overwrite local models!$(NC)"
+	@read -p "Continue? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		echo "$(BLUE)Deriving node from PVC...$(NC)" && \
+		PV=$$(kubectl -n ollama get pvc ollama-models -o jsonpath='{.spec.volumeName}') && \
+		NODE=$$(kubectl get pv "$$PV" -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}') && \
+		echo "PVC is on node: $$NODE" && \
+		echo "$(BLUE)Scaling Ollama to 0...$(NC)" && \
+		kubectl scale deployment ollama -n ollama --replicas=0 && \
+		kubectl wait --for=delete pod -l app=ollama -n ollama --timeout=2m || true && \
+		echo "$(BLUE)Running restore Job on $$NODE...$(NC)" && \
+		kubectl delete job ollama-restore -n ollama --ignore-not-found=true && \
+		kubectl create -f applications/ollama/restore-job.yaml --dry-run=client -o json | \
+			python3 -c "import sys,json; d=json.load(sys.stdin); d['spec']['template']['spec']['nodeName']=sys.argv[1]; print(json.dumps(d))" "$$NODE" | \
+			kubectl apply -f - && \
+		kubectl wait --for=condition=complete job/ollama-restore -n ollama --timeout=30m && \
+		kubectl logs job/ollama-restore -n ollama | tail -20 && \
+		kubectl delete job ollama-restore -n ollama && \
+		echo "$(BLUE)Scaling Ollama back to 1...$(NC)" && \
+		kubectl scale deployment ollama -n ollama --replicas=1 && \
+		kubectl wait --for=condition=ready pod -l app=ollama -n ollama --timeout=5m && \
+		echo "$(GREEN)Ollama restored and restarted!$(NC)"; \
+	else \
+		echo "$(RED)Restore cancelled$(NC)"; \
+	fi
+
+backup-ollama: ## Backup Ollama models from local-path to NFS
+	@echo "$(YELLOW)This will scale down Ollama and backup models to NFS$(NC)"
+	@read -p "Continue? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		echo "$(BLUE)Scaling down Ollama...$(NC)" && \
+		kubectl scale deployment ollama -n ollama --replicas=0 && \
+		kubectl wait --for=delete pod -l app=ollama -n ollama --timeout=2m || true && \
+		echo "$(BLUE)Running backup Job...$(NC)" && \
+		kubectl delete job ollama-backup-manual -n ollama --ignore-not-found=true && \
+		kubectl create job ollama-backup-manual --from=cronjob/ollama-backup -n ollama && \
+		kubectl wait --for=condition=complete job/ollama-backup-manual -n ollama --timeout=30m && \
+		kubectl logs job/ollama-backup-manual -n ollama | tail -30 && \
+		kubectl delete job ollama-backup-manual -n ollama && \
+		echo "$(BLUE)Scaling up Ollama...$(NC)" && \
+		kubectl scale deployment ollama -n ollama --replicas=1 && \
+		kubectl wait --for=condition=ready pod -l app=ollama -n ollama --timeout=5m && \
+		echo "$(GREEN)Ollama backup complete!$(NC)"; \
+	else \
+		echo "$(RED)Backup cancelled$(NC)"; \
+	fi
+
 restore-all: ## Restore all apps from NFS backups (interactive)
 	@echo "$(YELLOW)This will restore ALL apps from NFS backups$(NC)"
 	@$(MAKE) restore-7dtd
 	@$(MAKE) restore-factorio
 	@$(MAKE) restore-postgresql
+	@$(MAKE) restore-ollama
 
 deploy-all: deploy-infrastructure deploy-applications ## [DEPRECATED] Use deploy-full instead
 	@echo "$(GREEN)All applications deployed!$(NC)"

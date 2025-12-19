@@ -1,0 +1,36 @@
+---
+# ServiceAccount for Ollama backup CronJob
+# Needs permissions to scale Ollama deployment during backup
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ollama-backup
+  namespace: ollama
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ollama-backup
+  namespace: ollama
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "deployments/scale"]
+    verbs: ["get", "patch", "update"]
+    resourceNames: ["ollama"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ollama-backup
+  namespace: ollama
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ollama-backup
+subjects:
+  - kind: ServiceAccount
+    name: ollama-backup
+    namespace: ollama

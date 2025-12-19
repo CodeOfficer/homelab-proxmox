@@ -1,0 +1,108 @@
+# Ollama Models Restore from UNAS K3sStorage
+# Restores models from NFS backup to local-path PVC
+# Run via: make restore-ollama
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ollama-restore
+  namespace: ollama
+spec:
+  activeDeadlineSeconds: 1800  # 30 min timeout
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      # nodeName will be set dynamically by Makefile to match Ollama pod's node
+      # (required for local-path PVC access - must be k3s-gpu-01)
+      securityContext:
+        runAsUser: 0  # root for PVC write access
+        fsGroup: 0
+      containers:
+        - name: restore
+          image: alpine:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              apk add --no-cache rsync >/dev/null 2>&1
+
+              NFS_BACKUP="/nfs/ollama/backups/models"
+              LOCAL_MODELS="/root/.ollama/models"
+
+              echo "=== Ollama Models Restore ==="
+              echo "Checking NFS backup..."
+
+              # Early exit if NFS backup doesn't exist or is empty
+              if [ ! -d "$NFS_BACKUP/blobs" ]; then
+                echo "ERROR: No blobs directory at $NFS_BACKUP/blobs"
+                exit 1
+              fi
+
+              BLOB_COUNT=$(ls -1 "$NFS_BACKUP/blobs/" 2>/dev/null | wc -l | tr -d ' ')
+              if [ "$BLOB_COUNT" -eq 0 ]; then
+                echo "ERROR: No model blobs found in NFS backup"
+                exit 1
+              fi
+
+              echo "NFS backup found:"
+              echo "  Blobs: $BLOB_COUNT files"
+              
+              if [ -d "$NFS_BACKUP/manifests" ]; then
+                echo "  Models:"
+                find "$NFS_BACKUP/manifests/registry.ollama.ai/library/" -type f 2>/dev/null | \
+                  sed 's|.*/library/||' | sed 's|/| |g' | \
+                  awk '{printf "    - %s:%s\n", $1, $2}' || echo "    (none)"
+              fi
+
+              echo ""
+              echo "Current local state:"
+              LOCAL_BLOB_COUNT=$(ls -1 "$LOCAL_MODELS/blobs/" 2>/dev/null | wc -l | tr -d ' ')
+              echo "  Local blobs: $LOCAL_BLOB_COUNT files"
+
+              echo ""
+              echo "Restoring models from NFS..."
+              mkdir -p "$LOCAL_MODELS"
+
+              # Rsync NFS → local-path
+              # --no-perms/owner/group: Avoid NFS permission issues
+              # --delete: Remove local files not in NFS (clean restore)
+              rsync -av --no-perms --no-owner --no-group --delete \
+                --exclude='id_ed25519*' --exclude='.DS_Store' \
+                "$NFS_BACKUP/" "$LOCAL_MODELS/"
+
+              echo ""
+              echo "=== Restore Complete ==="
+              echo "Final local state:"
+              FINAL_BLOB_COUNT=$(ls -1 "$LOCAL_MODELS/blobs/" 2>/dev/null | wc -l | tr -d ' ')
+              echo "  Blobs: $FINAL_BLOB_COUNT files"
+              
+              if [ -d "$LOCAL_MODELS/manifests" ]; then
+                echo "  Models:"
+                find "$LOCAL_MODELS/manifests/registry.ollama.ai/library/" -type f 2>/dev/null | \
+                  sed 's|.*/library/||' | sed 's|/| |g' | \
+                  awk '{printf "    - %s:%s\n", $1, $2}' || echo "    (none)"
+              fi
+
+              echo ""
+              echo "Ollama can now use these models"
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+            - name: nfs
+              mountPath: /nfs
+              readOnly: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: ollama-data
+          persistentVolumeClaim:
+            claimName: ollama-models
+        - name: nfs
+          hostPath:
+            path: /mnt/k3s-nfs
+            type: Directory
+      restartPolicy: OnFailure

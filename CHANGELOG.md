@@ -4,6 +4,43 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.14] - 2025-12-19
+
+### Added
+- **Ollama: Model persistence via NFS backup/restore**
+  - Daily backup at 8 AM: local-path → NFS (`ollama/backups/models/`)
+  - Manual triggers: `make backup-ollama`, `make restore-ollama`
+  - Included in `make restore-all` for cluster rebuild scenarios
+  - Checksum-gated backups (skip if unchanged)
+  - Telegram notifications on actual backup completion
+  - RBAC for CronJob to scale Ollama deployment during backup
+  - NFS structure: mirrors Ollama's native `models/{blobs/,manifests/}` layout
+
+### Changed
+- **Ollama: Consolidated NFS directory structure**
+  - Cleaned up duplicate `ollama-ollama-models/` and nested paths
+  - Removed accidentally copied SSH keys from NFS backups
+  - Canonical path: `/mnt/k3s-nfs/ollama/backups/models/`
+  - Models: llama3.2:1b, gpt-oss:20b, qwen2.5:0.5b
+
+### Technical Notes
+- **Architecture: Hybrid local-path + NFS**
+  - Runtime: local-path PVC on k3s-gpu-01 SSD (fast model loading)
+  - Durability: Daily rsync to NFS (survives cluster rebuilds)
+  - Tradeoff: Manual restore required vs always-available NFS
+  - Justification: 5-10s load time vs ~30s NFS latency for 15GB models
+- **Backup/Restore workflow**
+  - Both operations scale Ollama to 0 replicas (prevent corruption)
+  - Rsync with `--checksum`, `--delete`, excludes SSH keys and .DS_Store
+  - Restore derives node from PVC nodeAffinity (must run on k3s-gpu-01)
+  - Backup uses init container (scale-down) + main container (rsync) + sidecar (scale-up)
+  - Round-trip tested: backup → delete → restore → verify (3 models, 15GB, ~2-3 min each)
+- **Files created**
+  - `applications/ollama/rbac.yaml` - ServiceAccount for CronJob
+  - `applications/ollama/backup-cronjob.yaml` - Daily backup at 8 AM
+  - `applications/ollama/restore-job.yaml` - Manual restore job
+  - `applications/ollama/README.md` - Documentation
+
 ## [Phase 5.13] - 2025-12-19
 
 ### Changed

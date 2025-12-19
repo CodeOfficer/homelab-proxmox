@@ -40,11 +40,21 @@ K3sStorage/
 │   └── backups/
 │       ├── latest.db               # Conversation history (~300 KB)
 │       └── history/                # Timestamped backups (7 max)
-└── open-webui-open-webui-data/     # Live app data (nfs-client PVC)
-    ├── cache/
-    ├── uploads/
-    ├── vector_db/
-    └── webui.db
+├── open-webui-open-webui-data/     # Live app data (nfs-client PVC)
+│   ├── cache/
+│   ├── uploads/
+│   ├── vector_db/
+│   └── webui.db
+└── ollama/
+    └── backups/
+        └── models/                 # LLM model files (~15 GB)
+            ├── blobs/
+            │   └── sha256-*        # Model weights
+            └── manifests/
+                └── registry.ollama.ai/library/
+                    ├── llama3.2/1b
+                    ├── gpt-oss/20b
+                    └── qwen2.5/0.5b
 ```
 
 ## Implementation
@@ -71,6 +81,7 @@ Scripts create their namespace/purpose directories: `mkdir -p /dest/sdtd/backups
 | Mapshot | mapshot | Every 4h | Latest only | `mapshot/renders/` |
 | PostgreSQL | databases | Daily 3AM | 7 + latest | `postgresql/backups/latest.sql.gz` |
 | Open-WebUI | open-webui | Daily 4AM | 7 + latest | `open-webui/backups/latest.db` |
+| Ollama | ollama | Daily 8AM | Latest only | `ollama/backups/models/` |
 
 All backups are checksum-gated (skip if unchanged) with Telegram notifications.
 
@@ -82,19 +93,21 @@ All backups are checksum-gated (skip if unchanged) with Telegram notifications.
 
 **PVC naming note:** The `open-webui-open-webui-data` folder has a redundant name due to nfs-client provisioner naming convention (`namespace-pvcname`). This is expected behavior.
 
-## UNAS Cleanup (Orphaned Data)
+## Ollama Backup/Restore
 
-**Legacy Ollama data from Phase 4.5 (Nov 28, 2025):**
-- Directory: `/K3sStorage/.data/ollama-ollama-models/` on UNAS
-- Contains: Old models + accidentally copied SSH keys (`id_ed25519*`)
-- Status: No longer used (Ollama switched to local-path storage in Phase 5.12)
+Ollama models sync bidirectionally between local-path storage (k3s-gpu-01) and NFS:
 
-**Cleanup instructions:**
-1. Mac Finder → Network → UNAS (10.20.10.20) → K3sStorage → .data
-2. Delete `ollama-ollama-models/` directory entirely
-3. Verify no other sensitive files leaked: Check for `.ssh/`, `*.key`, `*.pem` files
+**Backup:** `make backup-ollama` - Push local models to NFS
+- Manual trigger or daily CronJob at 8 AM
+- Checksum-gated (skip if unchanged)
+- Scales down Ollama during sync to prevent corruption
 
-**Reason for cleanup:**
-- Ollama now uses `local-path` storage for performance (faster model loading)
-- UNAS copy is outdated and contains sensitive SSH keys
-- Storage reclamation: ~5-20GB depending on models cached
+**Restore:** `make restore-ollama` - Pull models from NFS to local
+- Manual trigger only (after cluster rebuild or data loss)
+- Included in `make restore-all`
+- Scales down Ollama during sync
+
+**Workflow:**
+1. Pull new model: `kubectl exec -n ollama <pod> -- ollama pull <model>`
+2. Backup to NFS: `make backup-ollama`
+3. Models now persist across cluster rebuilds
