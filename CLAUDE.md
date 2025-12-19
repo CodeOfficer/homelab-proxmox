@@ -235,8 +235,9 @@ Run `make help` for full list. Key targets:
   - RWG 8K map "FoundationRWG", Warrior difficulty, EAC disabled
 - [x] Factorio (`applications/factorio/`) - 10.20.11.202:34197
   - Save import: `kubectl cp save.zip factorio/<pod>:/factorio/save-importer/import/homelab.zip` then restart pod
-- [x] Factorio Mapshot (`applications/mapshot/`) - https://mapshot.codeofficer.com/mapshot/latest/
-  - Zoomable web map, manual GPU rendering, 2-10 min render time
+- [x] Factorio Mapshot (`applications/mapshot/`) - https://mapshot.codeofficer.com/
+  - Zoomable web map, CPU rendering (llvmpipe), 3-6 hour render time
+  - Maximum detail (tilemin=256, ~1313 tiles)
   - Trigger: `make mapshot-render`
 - [x] Tailscale subnet router for remote friend access
 - [ ] Pod anti-affinity to spread game servers across nodes
@@ -287,7 +288,7 @@ Pattern: `namespace/purpose/` (e.g., `sdtd/backups/`, `factorio/backups/`)
 |-----|----------|-----------|--------|
 | 7DTD | 6h | 5 + latest | `sdtd/backups/latest.tar.gz` |
 | Factorio | 6h | 5 + latest | `factorio/backups/latest.zip` |
-| Mapshot | 4h | Latest only | `mapshot/renders/` |
+| Mapshot | 4h | Latest only | `mapshot/` |
 | PostgreSQL | 3 AM | 7 + latest | `postgresql/backups/latest.sql.gz` |
 | Open-WebUI | 4 AM | 7 + latest | `open-webui/backups/latest.db` |
 

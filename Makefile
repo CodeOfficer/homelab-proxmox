@@ -781,14 +781,18 @@ deploy-mapshot: ## Deploy Mapshot for Factorio map rendering
 	@echo "$(BLUE)Deploying Mapshot...$(NC)"
 	@./applications/mapshot/deploy.sh
 
-mapshot-render: ## Trigger manual GPU-accelerated map render
-	@echo "$(BLUE)Triggering GPU Mapshot render...$(NC)"
-	@echo "$(YELLOW)Note: Ensure Ollama is not heavily using GPU$(NC)"
+mapshot-render: ## Trigger manual CPU map render (3-6 hours, maximum detail)
+	@echo "$(BLUE)Triggering CPU Mapshot render...$(NC)"
+	@echo "$(YELLOW)Mode: Software rendering (llvmpipe)$(NC)"
+	@echo "$(YELLOW)Detail: tilemin=256 (MAXIMUM DETAIL - ~1313 tiles)$(NC)"
+	@echo "$(YELLOW)Expected duration: 3-6 hours$(NC)"
+	@echo "$(YELLOW)Monitor in parallel: make mapshot-monitor$(NC)"
 	@cat applications/mapshot/job-manual.yaml | \
 		sed 's/name: mapshot-manual/name: mapshot-manual-'$$(date +%s)'/' | \
 		kubectl apply -f -
-	@echo "$(GREEN)GPU render job created. View logs with: make mapshot-logs$(NC)"
-	@echo "$(GREEN)Expected time: 2-10 minutes$(NC)"
+	@echo "$(GREEN)Render job created$(NC)"
+	@echo "$(GREEN)Monitor progress: make mapshot-monitor$(NC)"
+	@echo "$(GREEN)View logs: make mapshot-logs$(NC)"
 
 mapshot-check-gpu: ## Check if GPU is available for mapshot
 	@echo "$(BLUE)GPU Availability Check$(NC)"
@@ -819,6 +823,43 @@ mapshot-logs: ## View latest Mapshot render logs
 	if [ -n "$$LATEST" ]; then \
 		echo "Job: $$LATEST"; \
 		kubectl logs -n mapshot job/$$LATEST --all-containers; \
+	else \
+		echo "$(YELLOW)No render jobs found$(NC)"; \
+	fi
+
+mapshot-monitor: ## Monitor render progress in real-time (tiles, GPU, logs)
+	@./scripts/monitor-mapshot-render.sh
+
+mapshot-watch-tiles: ## Watch tile generation in real-time
+	@echo "$(BLUE)Watching tile generation...$(NC)"
+	@LATEST=$$(kubectl get jobs -n mapshot --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}' 2>/dev/null); \
+	if [ -n "$$LATEST" ]; then \
+		POD=$$(kubectl get pods -n mapshot -l job-name=$$LATEST -o jsonpath='{.items[0].metadata.name}' 2>/dev/null); \
+		if [ -n "$$POD" ]; then \
+			echo "Monitoring pod: $$POD"; \
+			echo "Press Ctrl+C to exit"; \
+			while true; do \
+				COUNT=$$(kubectl exec -n mapshot $$POD -c render -- sh -c 'find /mapshot/factorio/script-output/mapshot/latest -name "tile_*.jpg" 2>/dev/null | wc -l' 2>/dev/null || echo "0"); \
+				echo -ne "\rTiles generated: $$COUNT  "; \
+				sleep 2; \
+			done; \
+		else \
+			echo "$(YELLOW)No active render pod found$(NC)"; \
+		fi; \
+	else \
+		echo "$(YELLOW)No render jobs found$(NC)"; \
+	fi
+
+mapshot-exec: ## Exec into latest render pod (for debugging)
+	@LATEST=$$(kubectl get jobs -n mapshot --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}' 2>/dev/null); \
+	if [ -n "$$LATEST" ]; then \
+		POD=$$(kubectl get pods -n mapshot -l job-name=$$LATEST -o jsonpath='{.items[0].metadata.name}' 2>/dev/null); \
+		if [ -n "$$POD" ]; then \
+			echo "$(BLUE)Execing into $$POD$(NC)"; \
+			kubectl exec -it -n mapshot $$POD -c render -- /bin/bash; \
+		else \
+			echo "$(YELLOW)No active render pod found$(NC)"; \
+		fi; \
 	else \
 		echo "$(YELLOW)No render jobs found$(NC)"; \
 	fi

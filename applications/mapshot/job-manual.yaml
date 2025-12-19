@@ -1,6 +1,13 @@
-# Mapshot GPU Manual Render Job - Hardware OpenGL rendering on RTX 4000 Ada
+# Mapshot CPU Manual Render Job - Software rendering (llvmpipe)
 # Trigger: make mapshot-render
-# Expected time: 2-10 minutes at 2048px resolution
+# Expected time: ~3-6 hours with tilemin=256 (maximum detail)
+# No timeout - runs until completion
+#
+# Performance tuning via tilemin (in-game units per tile):
+# - tilemin=256 (default): Maximum detail, ~1313 tiles (current setting)
+# - tilemin=512: Medium detail, moderate speed
+# - tilemin=1024: Lower detail, faster
+# - tilemin=2048: Low detail, fastest
 ---
 apiVersion: batch/v1
 kind: Job
@@ -9,27 +16,25 @@ metadata:
   namespace: mapshot
   labels:
     app: mapshot
-    render-type: "gpu"
+    render-type: "cpu-manual"
 spec:
   backoffLimit: 0  # Don't retry on failure
-  ttlSecondsAfterFinished: 3600  # Clean up after 1 hour
+  ttlSecondsAfterFinished: 7200  # Clean up after 2 hours
   template:
     metadata:
       labels:
         app: mapshot
-        render-type: "gpu"
+        render-type: "cpu-manual"
     spec:
       serviceAccountName: mapshot-render
       restartPolicy: Never
 
-      # GPU node scheduling
-      runtimeClassName: nvidia
+      # CPU node scheduling - prefer control plane nodes
       nodeSelector:
-        nvidia.com/gpu.present: "true"
+        node-role.kubernetes.io/control-plane: "true"
       tolerations:
-        - key: "dedicated"
-          operator: "Equal"
-          value: "gpu"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
           effect: "NoSchedule"
 
       initContainers:
@@ -102,7 +107,7 @@ spec:
                     curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
                       -d chat_id="${TELEGRAM_CHAT_ID}" \
                       -d parse_mode="HTML" \
-                      -d text="❌ <b>Factorio Mapshot (GPU)</b>%0ARender failed (exit code: $exit_code)" \
+                      -d text="❌ <b>Factorio Mapshot (CPU)</b>%0ARender failed (exit code: $exit_code)" \
                       >/dev/null 2>&1 || true
                   fi
                 fi
@@ -116,7 +121,7 @@ spec:
               FACTORIO_DIR="$PVC_ROOT/factorio"
               FACTORIO_BIN="$FACTORIO_DIR/bin/x64/factorio"
               SCRIPT_OUTPUT="$FACTORIO_DIR/script-output"
-              VIEWER_DIR="$SCRIPT_OUTPUT/mapshot/latest"
+              VIEWER_DIR="$SCRIPT_OUTPUT/mapshot"
               CHECKSUM_FILE="$PVC_ROOT/.last-render-checksum"
               SAVE_FILE="/opt/factorio/saves/latest.zip"
               STATUS_FILE="/opt/factorio/saves/.render-status"
@@ -148,6 +153,34 @@ spec:
                 fi
 
                 log "Path validation passed"
+                return 0
+              }
+
+              validate_factorio_installation() {
+                log "Validating Factorio installation..."
+
+                if [ ! -f "$FACTORIO_BIN" ]; then
+                  error "Factorio binary not found at $FACTORIO_BIN"
+                  return 1
+                fi
+
+                # Check critical directories
+                for dir in "$FACTORIO_DIR/data/base" "$FACTORIO_DIR/bin"; do
+                  if [ ! -d "$dir" ]; then
+                    error "Critical directory missing: $dir"
+                    return 1
+                  fi
+                done
+
+                # Count files in data/base (should be ~1000+ files for complete install)
+                local file_count=$(find "$FACTORIO_DIR/data" -type f 2>/dev/null | wc -l)
+                if [ "$file_count" -lt 100 ]; then
+                  error "Factorio data incomplete: only $file_count files (expected 1000+)"
+                  error "Factorio may be corrupted. Run 'rm -rf $FACTORIO_DIR' to force reinstall."
+                  return 1
+                fi
+
+                log "✓ Factorio installation validated ($file_count data files)"
                 return 0
               }
 
@@ -238,23 +271,17 @@ spec:
                 curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
                   -d chat_id="${TELEGRAM_CHAT_ID}" \
                   -d parse_mode="HTML" \
-                  -d text="${emoji} <b>Factorio Mapshot (GPU)</b>%0A${message}" \
+                  -d text="${emoji} <b>Factorio Mapshot (CPU)</b>%0A${message}" \
                   >/dev/null || log "Warning: Telegram notification failed (non-fatal)"
               }
 
               # =============================================================================
               # MAIN EXECUTION
               # =============================================================================
-              log "=== GPU Mapshot Render Job Started ==="
-
-              # Check GPU availability
-              if ! nvidia-smi &>/dev/null; then
-                error "nvidia-smi not available"
-                send_notification "error" "GPU not accessible on render node"
-                exit 1
-              fi
-              log "✓ GPU detected:"
-              nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
+              START_TIME=$(date +%s)
+              log "=== CPU Mapshot Render Job Started ==="
+              log "Rendering mode: Software (llvmpipe)"
+              log "Expected duration: 3-6 hours (maximum detail)"
 
               # Step 1: Check if render is needed (set by init container)
               if [ -f "$STATUS_FILE" ]; then
@@ -268,7 +295,13 @@ spec:
               # Step 2: Validate inputs
               validate_paths || exit 1
 
-              # Step 3: Ensure Factorio is installed (with version check)
+              # Step 3: Validate Factorio installation (fail early if corrupted)
+              validate_factorio_installation || {
+                send_notification "error" "Factorio installation corrupted - requires manual cleanup"
+                exit 1
+              }
+
+              # Step 4: Ensure Factorio is installed (with version check)
               NEED_DOWNLOAD=false
               if [ ! -f "$FACTORIO_BIN" ]; then
                 log "Factorio not installed"
@@ -312,14 +345,16 @@ spec:
                 fi
               fi
 
-              # Step 4: Run mapshot render with GPU acceleration
-              log "Running GPU-accelerated mapshot render..."
+              # Step 5: Run mapshot render with CPU (no timeout)
+              log "Running CPU mapshot render (software rendering)..."
               log "  Binary: $FACTORIO_BIN"
               log "  Data dir: $FACTORIO_DIR"
               log "  Save: $SAVE_FILE"
               log "  Output: $SCRIPT_OUTPUT"
-              log "  Resolution: ${MAPSHOT_RESOLUTION}px"
+              log "  Tile min: ${MAPSHOT_TILEMIN} units (maximum detail - ~1313 tiles)"
+              log "  Tile max: ${MAPSHOT_TILEMAX} units (zoom out)"
               log "  Surface: ${MAPSHOT_SURFACE}"
+              log "  NO TIMEOUT - Will run until completion"
 
               # Clear stale lock file
               if [ -f "$FACTORIO_DIR/.lock" ]; then
@@ -327,13 +362,17 @@ spec:
                 rm -f "$FACTORIO_DIR/.lock"
               fi
 
-              timeout ${MAPSHOT_INTERVAL} xvfb-run mapshot render \
+              # Send start notification
+              send_notification "success" "Render started%0ATilemin: ${MAPSHOT_TILEMIN} units%0ASurface: ${MAPSHOT_SURFACE}"
+
+              xvfb-run mapshot render \
                 --logtostderr \
                 --factorio_binary "$FACTORIO_BIN" \
                 --factorio_datadir "$FACTORIO_DIR" \
                 --work_dir "$FACTORIO_DIR" \
                 --area "${MAPSHOT_AREA}" \
-                --resolution "${MAPSHOT_RESOLUTION}" \
+                --tilemin "${MAPSHOT_TILEMIN}" \
+                --tilemax "${MAPSHOT_TILEMAX}" \
                 --jpgquality "${MAPSHOT_JPEG_QUALITY}" \
                 --surface "${MAPSHOT_SURFACE}" \
                 -v 5 \
@@ -359,7 +398,7 @@ spec:
 
               # Step 8: Sync to NAS for web server access
               log "Syncing to NAS..."
-              NAS_DEST="/nas/mapshot/renders"
+              NAS_DEST="/nas/mapshot"
               mkdir -p "$NAS_DEST"
 
               # Copy the latest viewer files to NAS
@@ -392,15 +431,28 @@ spec:
               # Remove stale zoom symlinks
               find "$VIEWER_DIR" -maxdepth 1 -type l ! -xtype f ! -xtype d -delete 2>/dev/null || true
 
-              # Step 10: Final summary
+              # Step 10: Calculate render duration
+              END_TIME=$(date +%s)
+              DURATION=$((END_TIME - START_TIME))
+              DURATION_HOURS=$((DURATION / 3600))
+              DURATION_MINS=$(((DURATION % 3600) / 60))
+              DURATION_SECS=$((DURATION % 60))
+              DURATION_FORMATTED="${DURATION_HOURS}h ${DURATION_MINS}m ${DURATION_SECS}s"
+
+              # Count generated tiles
+              TILE_COUNT=$(find "$RENDER_DIR" -type f -name 'tile_*.jpg' 2>/dev/null | wc -l)
+
+              # Step 11: Final summary
               log "=== Render Complete ==="
-              log "Viewer URL: https://mapshot.codeofficer.com/mapshot/latest/"
+              log "Viewer URL: https://mapshot.codeofficer.com/"
               log "Render dir: $RENDER_NAME"
+              log "Duration: $DURATION_FORMATTED ($DURATION seconds)"
+              log "Tiles generated: $TILE_COUNT"
               log "Files:"
               ls -la "$VIEWER_DIR" | head -15
 
-              # Step 11: Send success notification
-              send_notification "success" "New GPU-rendered map available%0Ahttps://mapshot.codeofficer.com/mapshot/latest/"
+              # Step 12: Send success notification with timing
+              send_notification "success" "New map available (CPU rendered)%0A%0A⏱ Duration: $DURATION_FORMATTED%0A🗺 Tiles: $TILE_COUNT%0A🔗 https://mapshot.codeofficer.com/"
 
           env:
             - name: FACTORIO_USERNAME
@@ -413,10 +465,10 @@ spec:
                 secretKeyRef:
                   name: factorio-credentials
                   key: token
-            - name: MAPSHOT_INTERVAL
-              value: "1800"  # 30 min timeout (GPU should be faster)
-            - name: MAPSHOT_RESOLUTION
-              value: "2048"
+            - name: MAPSHOT_TILEMIN
+              value: "256"  # Maximum detail (generates ~1313 tiles). Default: 256
+            - name: MAPSHOT_TILEMAX
+              value: "16384"  # Default zoom out level
             - name: MAPSHOT_AREA
               value: "all"
             - name: MAPSHOT_SURFACE
@@ -439,13 +491,11 @@ spec:
 
           resources:
             requests:
-              memory: "4Gi"
-              cpu: "2"
-              nvidia.com/gpu: "1"
+              memory: "2Gi"
+              cpu: "1"
             limits:
-              memory: "16Gi"
+              memory: "8Gi"
               cpu: "4"
-              nvidia.com/gpu: "1"
 
           volumeMounts:
             - name: saves
@@ -460,7 +510,7 @@ spec:
           emptyDir: {}
         - name: mapshot-data
           persistentVolumeClaim:
-            claimName: mapshot-data-gpu
+            claimName: mapshot-data
         - name: nas-dest
           hostPath:
             path: /mnt/k3s-nfs

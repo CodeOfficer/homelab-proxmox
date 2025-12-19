@@ -19,10 +19,7 @@ data:
         # CORS headers
         add_header Access-Control-Allow-Origin *;
 
-        # Redirect root to map viewer
-        location = / {
-            return 301 /mapshot/latest/;
-        }
+        # Root serves viewer directly (index.html at volume root)
 
         location / {
             autoindex on;
@@ -66,7 +63,7 @@ spec:
           volumeMounts:
             - name: mapshot-data
               mountPath: /usr/share/nginx/html
-              subPath: mapshot/renders
+              subPath: mapshot
               readOnly: true
             - name: nginx-config
               mountPath: /etc/nginx/conf.d
