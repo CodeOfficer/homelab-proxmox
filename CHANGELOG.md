@@ -4,6 +4,49 @@ All notable changes to the homelab-proxmox infrastructure.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Phase 5.13] - 2025-12-19
+
+### Changed
+- **Mapshot: Converted to manual-only GPU rendering**
+  - Removed 4-hour CronJob (CPU timeouts at 60+ min even at 1024px)
+  - GPU rendering: 2-10 minutes expected vs 60+ min CPU timeout
+  - Manual trigger: `make mapshot-render`
+  - RTX 4000 Ada required (k3s-gpu-01)
+  - Resolution: 2048px (vs 1024px CPU before timeout)
+
+### Added
+- **Mapshot: Server now mounts NAS instead of node-sticky PVC**
+  - Eliminates PVC node-locality constraints (local-path PVCs are ReadWriteOnce node-sticky)
+  - All control plane nodes can serve maps from NFS mount
+  - Simplifies GPU/CPU hybrid operation (render on any node, serve from any node)
+  - Path: `/mnt/k3s-nfs/mapshot/renders/` → Nginx `/usr/share/nginx/html`
+- **Mapshot: Separate GPU PVC for isolation**
+  - `mapshot-data-gpu` (10Gi, local-path) on k3s-gpu-01
+  - Factorio client installed independently from CPU PVC
+  - Prevents cross-node PVC access issues
+- **Makefile targets for GPU rendering**
+  - `make mapshot-render` - trigger GPU render (uses job-manual.yaml template)
+  - `make mapshot-check-gpu` - verify GPU availability and Ollama status
+
+### Technical Notes
+- **Architecture Decision: Manual-only operation**
+  - CPU rendering not viable (timeouts even at reduced resolution)
+  - Single GPU requires manual coordination with Ollama workloads
+  - Map renders infrequent (on-demand when desired)
+  - Automation would require complex GPU time-slicing or priority preemption
+- **GPU Job template (`job-manual.yaml`)**
+  - Based on job-gpu.yaml test file
+  - Added init container for Factorio save copying (from Factorio pod)
+  - Checksum gating (skip render if save unchanged)
+  - 30-min timeout (GPU should complete in 2-10 min)
+  - Writes to mapshot-data-gpu PVC, copies to NAS for serving
+- **Archived files** (moved to `applications/mapshot/archive/`)
+  - `cronjob-cpu.yaml` - old 4-hour CPU CronJob
+  - `job-gpu-test.yaml` - test GPU job template
+  - `job-cpu-fast.yaml`, `job-cpu-llvmpipe.yaml` - CPU test variants
+  - `job-gpu-all.yaml` - all-surfaces test (Space Age)
+  - GPU-FIX-PLAN.md, START-HERE-TOMORROW.md, TESTING.md - planning docs
+
 ## [Phase 6.0] - 2025-12-17
 
 ### Changed

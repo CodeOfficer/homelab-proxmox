@@ -1,0 +1,14 @@
+# Temporary PVC for GPU node testing
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mapshot-data-gpu
+  namespace: mapshot
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi

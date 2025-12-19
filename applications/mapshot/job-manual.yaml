@@ -1,0 +1,467 @@
+# Mapshot GPU Manual Render Job - Hardware OpenGL rendering on RTX 4000 Ada
+# Trigger: make mapshot-render
+# Expected time: 2-10 minutes at 2048px resolution
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mapshot-manual
+  namespace: mapshot
+  labels:
+    app: mapshot
+    render-type: "gpu"
+spec:
+  backoffLimit: 0  # Don't retry on failure
+  ttlSecondsAfterFinished: 3600  # Clean up after 1 hour
+  template:
+    metadata:
+      labels:
+        app: mapshot
+        render-type: "gpu"
+    spec:
+      serviceAccountName: mapshot-render
+      restartPolicy: Never
+
+      # GPU node scheduling
+      runtimeClassName: nvidia
+      nodeSelector:
+        nvidia.com/gpu.present: "true"
+      tolerations:
+        - key: "dedicated"
+          operator: "Equal"
+          value: "gpu"
+          effect: "NoSchedule"
+
+      initContainers:
+        # Copy latest save from Factorio pod and check if render needed
+        - name: copy-save
+          image: bitnami/kubectl:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -e
+              echo "Finding Factorio pod..."
+              POD=$(kubectl get pods -n factorio -l app=factorio-factorio-server-charts -o jsonpath='{.items[0].metadata.name}')
+
+              if [ -z "$POD" ]; then
+                echo "ERROR: No Factorio pod found"
+                exit 1
+              fi
+
+              echo "Found pod: $POD"
+
+              # Find the most recent save file
+              SAVE=$(kubectl exec -n factorio "$POD" -- sh -c 'ls -t /factorio/saves/*.zip 2>/dev/null | head -1')
+
+              if [ -z "$SAVE" ]; then
+                echo "ERROR: No save files found"
+                exit 1
+              fi
+
+              echo "Copying save: $SAVE"
+              kubectl cp "factorio/$POD:$SAVE" /opt/factorio/saves/latest.zip
+
+              # Compute checksum
+              NEW_CHECKSUM=$(sha256sum /opt/factorio/saves/latest.zip | cut -d' ' -f1)
+              echo "Save checksum: $NEW_CHECKSUM"
+
+              # Check against previous checksum
+              if [ -f /mapshot/.last-render-checksum ]; then
+                OLD_CHECKSUM=$(cat /mapshot/.last-render-checksum)
+                echo "Previous checksum: $OLD_CHECKSUM"
+                if [ "$NEW_CHECKSUM" = "$OLD_CHECKSUM" ]; then
+                  echo "SKIP_RENDER: Save unchanged since last render"
+                  echo "skip" > /opt/factorio/saves/.render-status
+                  exit 0
+                fi
+              fi
+
+              echo "Render needed (save changed or first render)"
+              echo "$NEW_CHECKSUM" > /opt/factorio/saves/.new-checksum
+              echo "render" > /opt/factorio/saves/.render-status
+              ls -la /opt/factorio/saves/
+          volumeMounts:
+            - name: saves
+              mountPath: /opt/factorio/saves
+            - name: mapshot-data
+              mountPath: /mapshot
+
+      containers:
+        - name: render
+          image: martydingo/mapshot:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+
+              # Trap for unhandled failures - send Telegram alert
+              cleanup_on_error() {
+                local exit_code=$?
+                if [ $exit_code -ne 0 ]; then
+                  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                      -d chat_id="${TELEGRAM_CHAT_ID}" \
+                      -d parse_mode="HTML" \
+                      -d text="❌ <b>Factorio Mapshot (GPU)</b>%0ARender failed (exit code: $exit_code)" \
+                      >/dev/null 2>&1 || true
+                  fi
+                fi
+              }
+              trap cleanup_on_error EXIT
+
+              # =============================================================================
+              # PATH CONSTANTS
+              # =============================================================================
+              PVC_ROOT="/mapshot"
+              FACTORIO_DIR="$PVC_ROOT/factorio"
+              FACTORIO_BIN="$FACTORIO_DIR/bin/x64/factorio"
+              SCRIPT_OUTPUT="$FACTORIO_DIR/script-output"
+              VIEWER_DIR="$SCRIPT_OUTPUT/mapshot/latest"
+              CHECKSUM_FILE="$PVC_ROOT/.last-render-checksum"
+              SAVE_FILE="/opt/factorio/saves/latest.zip"
+              STATUS_FILE="/opt/factorio/saves/.render-status"
+              NEW_CHECKSUM_FILE="/opt/factorio/saves/.new-checksum"
+
+              # =============================================================================
+              # HELPER FUNCTIONS
+              # =============================================================================
+              log() { echo "[$(date '+%H:%M:%S')] $*"; }
+              error() { echo "[$(date '+%H:%M:%S')] ERROR: $*" >&2; }
+
+              validate_paths() {
+                log "Validating paths..."
+                local errors=0
+
+                if [ ! -d "$PVC_ROOT" ]; then
+                  error "PVC not mounted at $PVC_ROOT"
+                  errors=$((errors + 1))
+                fi
+
+                if [ ! -f "$SAVE_FILE" ]; then
+                  error "Save file not found: $SAVE_FILE"
+                  errors=$((errors + 1))
+                fi
+
+                if [ $errors -gt 0 ]; then
+                  error "Path validation failed with $errors errors"
+                  return 1
+                fi
+
+                log "Path validation passed"
+                return 0
+              }
+
+              validate_render_output() {
+                log "Validating render output..."
+                local errors=0
+
+                if [ ! -d "$VIEWER_DIR" ]; then
+                  error "Viewer directory not found: $VIEWER_DIR"
+                  log "Contents of $SCRIPT_OUTPUT:"
+                  ls -laR "$SCRIPT_OUTPUT" 2>/dev/null || echo "(empty or missing)"
+                  return 1
+                fi
+
+                local render_dirs=$(find "$VIEWER_DIR" -maxdepth 1 -type d -name 'd-*' 2>/dev/null | wc -l)
+                if [ "$render_dirs" -eq 0 ]; then
+                  error "No render directories (d-*) found in $VIEWER_DIR"
+                  log "Contents of $VIEWER_DIR:"
+                  ls -la "$VIEWER_DIR" 2>/dev/null || echo "(empty or missing)"
+                  return 1
+                fi
+
+                RENDER_DIR=$(ls -td "$VIEWER_DIR"/d-* 2>/dev/null | head -1)
+                RENDER_NAME=$(basename "$RENDER_DIR")
+                log "Latest render directory: $RENDER_NAME"
+
+                local required_files=("$VIEWER_DIR/index.html" "$VIEWER_DIR/viewer-"*".js" "$RENDER_DIR/mapshot.json")
+                for pattern in "${required_files[@]}"; do
+                  if ! ls $pattern >/dev/null 2>&1; then
+                    error "Required file not found: $pattern"
+                    errors=$((errors + 1))
+                  fi
+                done
+
+                if [ $errors -gt 0 ]; then
+                  error "Render validation failed with $errors missing files"
+                  log "Contents of $VIEWER_DIR:"
+                  ls -la "$VIEWER_DIR"
+                  log "Contents of $RENDER_DIR:"
+                  ls -la "$RENDER_DIR" 2>/dev/null || echo "(missing)"
+                  return 1
+                fi
+
+                log "Render validation passed"
+                return 0
+              }
+
+              create_symlinks() {
+                log "Creating symlinks for viewer compatibility..."
+
+                local json_target="$RENDER_NAME/mapshot.json"
+                local json_link="$VIEWER_DIR/mapshot.json"
+                rm -f "$json_link"
+                ln -sf "$json_target" "$json_link"
+                log "Symlinked: mapshot.json -> $json_target"
+
+                for zoom_dir in "$RENDER_DIR"/s*zoom_*; do
+                  if [ -d "$zoom_dir" ]; then
+                    local zoom_name=$(basename "$zoom_dir")
+                    local zoom_link="$VIEWER_DIR/$zoom_name"
+                    rm -rf "$zoom_link"
+                    ln -sf "$RENDER_NAME/$zoom_name" "$zoom_link"
+                    log "Symlinked: $zoom_name -> $RENDER_NAME/$zoom_name"
+                  fi
+                done
+
+                if [ ! -f "$json_link" ]; then
+                  error "Symlink verification failed: $json_link"
+                  return 1
+                fi
+
+                log "Symlinks created:"
+                ls -la "$VIEWER_DIR" | grep '^l'
+                return 0
+              }
+
+              send_notification() {
+                local status="$1"
+                local message="$2"
+
+                if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+                  return 0
+                fi
+
+                local emoji="✅"
+                [ "$status" = "error" ] && emoji="❌"
+
+                curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                  -d chat_id="${TELEGRAM_CHAT_ID}" \
+                  -d parse_mode="HTML" \
+                  -d text="${emoji} <b>Factorio Mapshot (GPU)</b>%0A${message}" \
+                  >/dev/null || log "Warning: Telegram notification failed (non-fatal)"
+              }
+
+              # =============================================================================
+              # MAIN EXECUTION
+              # =============================================================================
+              log "=== GPU Mapshot Render Job Started ==="
+
+              # Check GPU availability
+              if ! nvidia-smi &>/dev/null; then
+                error "nvidia-smi not available"
+                send_notification "error" "GPU not accessible on render node"
+                exit 1
+              fi
+              log "✓ GPU detected:"
+              nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
+
+              # Step 1: Check if render is needed (set by init container)
+              if [ -f "$STATUS_FILE" ]; then
+                STATUS=$(cat "$STATUS_FILE")
+                if [ "$STATUS" = "skip" ]; then
+                  log "Skipping render - save unchanged since last render"
+                  exit 0
+                fi
+              fi
+
+              # Step 2: Validate inputs
+              validate_paths || exit 1
+
+              # Step 3: Ensure Factorio is installed (with version check)
+              NEED_DOWNLOAD=false
+              if [ ! -f "$FACTORIO_BIN" ]; then
+                log "Factorio not installed"
+                NEED_DOWNLOAD=true
+              else
+                INSTALLED_VERSION=$("$FACTORIO_BIN" --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+                SAVE_VERSION=$(unzip -p "$SAVE_FILE" level.dat 2>/dev/null | strings | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+                log "Installed Factorio: $INSTALLED_VERSION, Save version: $SAVE_VERSION"
+
+                INSTALLED_MAJOR=$(echo "$INSTALLED_VERSION" | cut -d. -f1-2)
+                SAVE_MAJOR=$(echo "$SAVE_VERSION" | cut -d. -f1-2)
+
+                if [ "$INSTALLED_MAJOR" != "$SAVE_MAJOR" ] && [ "$SAVE_MAJOR" != "unknown" ]; then
+                  log "Version mismatch detected ($INSTALLED_MAJOR vs $SAVE_MAJOR) - clearing old installation"
+                  rm -rf "$FACTORIO_DIR"
+                  NEED_DOWNLOAD=true
+                fi
+              fi
+
+              if [ "$NEED_DOWNLOAD" = "true" ]; then
+                log "Downloading Factorio full client (required for screenshot rendering)..."
+                curl -L "https://www.factorio.com/get-download/stable/alpha/linux64?username=$FACTORIO_USERNAME&token=$FACTORIO_TOKEN" -o /tmp/factorio.tar.xz
+                log "Extracting to $PVC_ROOT..."
+                tar xf /tmp/factorio.tar.xz -C "$PVC_ROOT"
+                mkdir -p "$FACTORIO_DIR/mods"
+                echo '{}' > "$FACTORIO_DIR/mods/mod-list.json"
+                rm /tmp/factorio.tar.xz
+
+                if [ ! -f "$FACTORIO_BIN" ]; then
+                  error "Factorio installation failed - binary not found at $FACTORIO_BIN"
+                  exit 1
+                fi
+
+                log "Factorio installed successfully"
+              else
+                log "Factorio already installed at $FACTORIO_BIN (version OK)"
+                if [ -f "${FACTORIO_BIN}.real" ]; then
+                  log "Removing deprecated wrapper (full client supports --load-game natively)..."
+                  rm -f "$FACTORIO_BIN"
+                  mv "${FACTORIO_BIN}.real" "$FACTORIO_BIN"
+                fi
+              fi
+
+              # Step 4: Run mapshot render with GPU acceleration
+              log "Running GPU-accelerated mapshot render..."
+              log "  Binary: $FACTORIO_BIN"
+              log "  Data dir: $FACTORIO_DIR"
+              log "  Save: $SAVE_FILE"
+              log "  Output: $SCRIPT_OUTPUT"
+              log "  Resolution: ${MAPSHOT_RESOLUTION}px"
+              log "  Surface: ${MAPSHOT_SURFACE}"
+
+              # Clear stale lock file
+              if [ -f "$FACTORIO_DIR/.lock" ]; then
+                log "Removing stale lock file"
+                rm -f "$FACTORIO_DIR/.lock"
+              fi
+
+              timeout ${MAPSHOT_INTERVAL} xvfb-run mapshot render \
+                --logtostderr \
+                --factorio_binary "$FACTORIO_BIN" \
+                --factorio_datadir "$FACTORIO_DIR" \
+                --work_dir "$FACTORIO_DIR" \
+                --area "${MAPSHOT_AREA}" \
+                --resolution "${MAPSHOT_RESOLUTION}" \
+                --jpgquality "${MAPSHOT_JPEG_QUALITY}" \
+                --surface "${MAPSHOT_SURFACE}" \
+                -v 5 \
+                "$SAVE_FILE"
+
+              # Step 5: Validate render output
+              validate_render_output || {
+                send_notification "error" "Render failed - output validation failed"
+                exit 1
+              }
+
+              # Step 6: Create symlinks for viewer compatibility
+              create_symlinks || {
+                send_notification "error" "Render failed - symlink creation failed"
+                exit 1
+              }
+
+              # Step 7: Update checksum to prevent re-rendering same save
+              if [ -f "$NEW_CHECKSUM_FILE" ]; then
+                cp "$NEW_CHECKSUM_FILE" "$CHECKSUM_FILE"
+                log "Checksum updated"
+              fi
+
+              # Step 8: Sync to NAS for web server access
+              log "Syncing to NAS..."
+              NAS_DEST="/nas/mapshot/renders"
+              mkdir -p "$NAS_DEST"
+
+              # Copy the latest viewer files to NAS
+              cp -r "$VIEWER_DIR"/* "$NAS_DEST/" 2>/dev/null || true
+              log "NAS sync complete: $NAS_DEST"
+              ls -la "$NAS_DEST" | head -10
+
+              # Step 9: Cleanup old renders (keep latest only)
+              log "Cleaning up old renders..."
+              # Clean NAS renders
+              cd "$NAS_DEST"
+              NAS_LATEST=$(ls -td d-* 2>/dev/null | head -1)
+              if [ -n "$NAS_LATEST" ]; then
+                OLD_RENDERS=$(ls -d d-* 2>/dev/null | grep -v "^$NAS_LATEST$" || true)
+                if [ -n "$OLD_RENDERS" ]; then
+                  echo "$OLD_RENDERS" | xargs -r rm -rf
+                  log "Removed old NAS renders: $(echo "$OLD_RENDERS" | wc -l) folders"
+                fi
+              fi
+              # Clean PVC renders
+              cd "$VIEWER_DIR"
+              PVC_LATEST=$(ls -td d-* 2>/dev/null | head -1)
+              if [ -n "$PVC_LATEST" ]; then
+                OLD_PVC_RENDERS=$(ls -d d-* 2>/dev/null | grep -v "^$PVC_LATEST$" || true)
+                if [ -n "$OLD_PVC_RENDERS" ]; then
+                  echo "$OLD_PVC_RENDERS" | xargs -r rm -rf
+                  log "Removed old PVC renders: $(echo "$OLD_PVC_RENDERS" | wc -l) folders"
+                fi
+              fi
+              # Remove stale zoom symlinks
+              find "$VIEWER_DIR" -maxdepth 1 -type l ! -xtype f ! -xtype d -delete 2>/dev/null || true
+
+              # Step 10: Final summary
+              log "=== Render Complete ==="
+              log "Viewer URL: https://mapshot.codeofficer.com/mapshot/latest/"
+              log "Render dir: $RENDER_NAME"
+              log "Files:"
+              ls -la "$VIEWER_DIR" | head -15
+
+              # Step 11: Send success notification
+              send_notification "success" "New GPU-rendered map available%0Ahttps://mapshot.codeofficer.com/mapshot/latest/"
+
+          env:
+            - name: FACTORIO_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: factorio-credentials
+                  key: username
+            - name: FACTORIO_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: factorio-credentials
+                  key: token
+            - name: MAPSHOT_INTERVAL
+              value: "1800"  # 30 min timeout (GPU should be faster)
+            - name: MAPSHOT_RESOLUTION
+              value: "2048"
+            - name: MAPSHOT_AREA
+              value: "all"
+            - name: MAPSHOT_SURFACE
+              value: "nauvis"  # Primary surface only (can be changed to _all_ for Space Age)
+            - name: MAPSHOT_JPEG_QUALITY
+              value: "90"
+            # Optional Telegram notification
+            - name: TELEGRAM_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: telegram-credentials
+                  key: bot-token
+                  optional: true
+            - name: TELEGRAM_CHAT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: telegram-credentials
+                  key: chat-id
+                  optional: true
+
+          resources:
+            requests:
+              memory: "4Gi"
+              cpu: "2"
+              nvidia.com/gpu: "1"
+            limits:
+              memory: "16Gi"
+              cpu: "4"
+              nvidia.com/gpu: "1"
+
+          volumeMounts:
+            - name: saves
+              mountPath: /opt/factorio/saves
+            - name: mapshot-data
+              mountPath: /mapshot
+            - name: nas-dest
+              mountPath: /nas
+
+      volumes:
+        - name: saves
+          emptyDir: {}
+        - name: mapshot-data
+          persistentVolumeClaim:
+            claimName: mapshot-data-gpu
+        - name: nas-dest
+          hostPath:
+            path: /mnt/k3s-nfs
+            type: Directory

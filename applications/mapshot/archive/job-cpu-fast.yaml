@@ -1,0 +1,305 @@
+# Mapshot CPU Fast Test - Reduced resolution for faster CPU rendering
+# Surface: nauvis only | Resolution: 1024px | Expected: 6-30 minutes
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mapshot-render-cpu-fast
+  namespace: mapshot
+  labels:
+    test-scenario: "cpu-llvmpipe-reduced"
+    resolution: "1024"
+    surface: "nauvis"
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        test-scenario: "cpu-llvmpipe-reduced"
+    spec:
+      serviceAccountName: mapshot-render
+      restartPolicy: Never
+      
+      # Control plane node scheduling
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      
+      containers:
+        - name: render
+          image: martydingo/mapshot:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              
+              # =============================================================================
+              # TEST CONFIGURATION
+              # =============================================================================
+              TEST_NAME="CPU Fast (llvmpipe, 1024px reduced resolution)"
+              TEST_START=$(date +%s)
+              
+              # =============================================================================
+              # PATH CONSTANTS
+              # =============================================================================
+              PVC_ROOT="/mapshot"
+              FACTORIO_DIR="$PVC_ROOT/factorio"
+              FACTORIO_BIN="$FACTORIO_DIR/bin/x64/factorio"
+              SCRIPT_OUTPUT="$FACTORIO_DIR/script-output"
+              VIEWER_DIR="$SCRIPT_OUTPUT/mapshot/latest"
+              NAS_DEST="/nas/${MAPSHOT_OUTPUT_SUFFIX}"
+              SAVE_FILE="$PVC_ROOT/test-save.zip"
+              
+              # =============================================================================
+              # HELPER FUNCTIONS
+              # =============================================================================
+              log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+              error() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $*" >&2; }
+              
+              log_test_result() {
+                local status=$1
+                local message=$2
+                local duration=$(($(date +%s) - TEST_START))
+                log "=========================================="
+                log "TEST: $TEST_NAME"
+                log "STATUS: $status"
+                log "DURATION: ${duration}s ($(($duration / 60))m $(($duration % 60))s)"
+                log "MESSAGE: $message"
+                log "=========================================="
+              }
+              
+              # =============================================================================
+              # STEP 1: PRE-FLIGHT CHECKS
+              # =============================================================================
+              log "=== STEP 1: Pre-flight Checks ==="
+              
+              log "Checking OpenGL renderer..."
+              DISPLAY=:99 glxinfo 2>/dev/null | grep -i "opengl renderer" || log "glxinfo not available"
+              
+              if [ ! -f "$FACTORIO_BIN" ]; then
+                error "Factorio not found at $FACTORIO_BIN"
+                log_test_result "FAIL" "Factorio not installed"
+                exit 1
+              fi
+              FACTORIO_VERSION=$("$FACTORIO_BIN" --version 2>/dev/null | head -1 || echo "unknown")
+              log "✓ Factorio binary: $FACTORIO_VERSION"
+              
+              if [ ! -f "$SAVE_FILE" ]; then
+                error "Test save not found at $SAVE_FILE"
+                log_test_result "FAIL" "Save file missing"
+                exit 1
+              fi
+              SAVE_SIZE=$(du -h "$SAVE_FILE" | cut -f1)
+              log "✓ Save file: $SAVE_SIZE"
+              
+              if [ ! -d "/nas" ]; then
+                error "NAS not mounted at /nas"
+                log_test_result "FAIL" "NAS mount missing"
+                exit 1
+              fi
+              log "✓ NAS mounted"
+              
+              log "CPU: $(grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2 | xargs)"
+              log "Cores: $(nproc)"
+              log "Memory: $(free -h | grep Mem | awk '{print $2}')"
+              
+              log "Pre-flight checks passed"
+              
+              # =============================================================================
+              # STEP 2: CLEAR STALE STATE
+              # =============================================================================
+              log "=== STEP 2: Clear Stale State ==="
+              
+              if [ -f "$FACTORIO_DIR/.lock" ]; then
+                log "Removing stale lock file"
+                rm -f "$FACTORIO_DIR/.lock"
+              fi
+              
+              if [ -d "$VIEWER_DIR" ]; then
+                log "Clearing previous render: $VIEWER_DIR"
+                rm -rf "$VIEWER_DIR"
+              fi
+              mkdir -p "$VIEWER_DIR"
+              
+              if [ -d "$NAS_DEST" ]; then
+                log "Clearing previous NAS output: $NAS_DEST"
+                rm -rf "$NAS_DEST"
+              fi
+              mkdir -p "$NAS_DEST"
+              
+              log "State cleared"
+              
+              # =============================================================================
+              # STEP 3: RUN MAPSHOT RENDER
+              # =============================================================================
+              log "=== STEP 3: Run Mapshot Render ==="
+              log "Configuration:"
+              log "  Resolution: ${MAPSHOT_RESOLUTION}px (4× faster than 2048px)"
+              log "  Surface: ${MAPSHOT_SURFACE}"
+              log "  Area: ${MAPSHOT_AREA}"
+              log "  Timeout: ${MAPSHOT_INTERVAL}s ($(($MAPSHOT_INTERVAL / 60))m)"
+              log "  Output: $NAS_DEST"
+              log "  NOTE: Reduced resolution for acceptable CPU performance"
+              
+              RENDER_START=$(date +%s)
+              log "Starting render at $(date)"
+              
+              if timeout ${MAPSHOT_INTERVAL} xvfb-run -a mapshot render \
+                --logtostderr \
+                --factorio_binary "$FACTORIO_BIN" \
+                --factorio_datadir "$FACTORIO_DIR" \
+                --work_dir "$FACTORIO_DIR" \
+                --area "${MAPSHOT_AREA}" \
+                --resolution "${MAPSHOT_RESOLUTION}" \
+                --jpgquality "${MAPSHOT_JPEG_QUALITY}" \
+                --surface "${MAPSHOT_SURFACE}" \
+                --factorio_verbose \
+                -v 9 \
+                "$SAVE_FILE"; then
+                
+                RENDER_DURATION=$(($(date +%s) - RENDER_START))
+                log "✓ Render completed in ${RENDER_DURATION}s ($(($RENDER_DURATION / 60))m)"
+              else
+                RENDER_EXIT=$?
+                RENDER_DURATION=$(($(date +%s) - RENDER_START))
+                error "Render failed with exit code $RENDER_EXIT after ${RENDER_DURATION}s"
+                
+                if [ $RENDER_EXIT -eq 124 ]; then
+                  log_test_result "TIMEOUT" "Render exceeded ${MAPSHOT_INTERVAL}s timeout"
+                else
+                  log_test_result "FAIL" "Render crashed (exit $RENDER_EXIT)"
+                fi
+                exit $RENDER_EXIT
+              fi
+              
+              # =============================================================================
+              # STEP 4: VALIDATE OUTPUT
+              # =============================================================================
+              log "=== STEP 4: Validate Output ==="
+              
+              RENDER_DIR=$(ls -td "$VIEWER_DIR"/d-* 2>/dev/null | head -1)
+              if [ -z "$RENDER_DIR" ]; then
+                error "No render directory found in $VIEWER_DIR"
+                log "Contents:"
+                ls -la "$VIEWER_DIR" 2>/dev/null || echo "(empty)"
+                log_test_result "FAIL" "No render output generated"
+                exit 1
+              fi
+              
+              RENDER_NAME=$(basename "$RENDER_DIR")
+              log "✓ Render directory: $RENDER_NAME"
+              
+              if [ ! -f "$RENDER_DIR/mapshot.json" ]; then
+                error "mapshot.json missing from $RENDER_DIR"
+                log_test_result "FAIL" "Incomplete render (missing metadata)"
+                exit 1
+              fi
+              log "✓ Metadata file present"
+              
+              TILE_COUNT=$(find "$RENDER_DIR" -name "tile_*.jpg" 2>/dev/null | wc -l)
+              log "✓ Tiles generated: $TILE_COUNT"
+              
+              OUTPUT_SIZE=$(du -sh "$RENDER_DIR" | cut -f1)
+              log "✓ Output size: $OUTPUT_SIZE"
+              
+              log "Output validation passed"
+              
+              # =============================================================================
+              # STEP 5: COPY TO NAS
+              # =============================================================================
+              log "=== STEP 5: Copy to NAS ==="
+              
+              log "Copying render output to $NAS_DEST..."
+              cp -r "$VIEWER_DIR"/* "$NAS_DEST/" 2>/dev/null || {
+                error "Failed to copy to NAS"
+                log_test_result "FAIL" "NAS copy failed"
+                exit 1
+              }
+              
+              NAS_SIZE=$(du -sh "$NAS_DEST" | cut -f1)
+              log "✓ NAS copy complete: $NAS_SIZE"
+              
+              # =============================================================================
+              # STEP 6: FINAL SUMMARY
+              # =============================================================================
+              log "=== STEP 6: Final Summary ==="
+              
+              TOTAL_DURATION=$(($(date +%s) - TEST_START))
+              
+              log_test_result "SUCCESS" "Render completed successfully"
+              log "Tiles: $TILE_COUNT"
+              log "Output: $OUTPUT_SIZE"
+              log "NAS location: $NAS_DEST"
+              log "Render time: ${RENDER_DURATION}s ($(($RENDER_DURATION / 60))m)"
+              log "Total time: ${TOTAL_DURATION}s ($(($TOTAL_DURATION / 60))m)"
+              
+              cat > "$NAS_DEST/test-results.txt" <<EOF
+              TEST_NAME=$TEST_NAME
+              STATUS=SUCCESS
+              RENDER_DURATION=${RENDER_DURATION}
+              TOTAL_DURATION=${TOTAL_DURATION}
+              TILE_COUNT=$TILE_COUNT
+              OUTPUT_SIZE=$OUTPUT_SIZE
+              RESOLUTION=${MAPSHOT_RESOLUTION}
+              SURFACE=${MAPSHOT_SURFACE}
+              FACTORIO_VERSION=$FACTORIO_VERSION
+              CPU_MODEL=$(grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2 | xargs)
+              CPU_CORES=$(nproc)
+              RENDERER=llvmpipe
+              TIMESTAMP=$(date -Iseconds)
+              EOF
+              
+              log "Test results saved to $NAS_DEST/test-results.txt"
+              log "Test complete!"
+          
+          env:
+            - name: MAPSHOT_INTERVAL
+              value: "3600"  # 1 hour timeout (faster with 1024px)
+            - name: MAPSHOT_RESOLUTION
+              value: "1024"  # Reduced resolution
+            - name: MAPSHOT_AREA
+              value: "all"
+            - name: MAPSHOT_SURFACE
+              value: "nauvis"
+            - name: MAPSHOT_JPEG_QUALITY
+              value: "90"
+            - name: MAPSHOT_OUTPUT_SUFFIX
+              value: "cpu-llvmpipe-1024"
+            - name: FACTORIO_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: factorio-credentials
+                  key: username
+            - name: FACTORIO_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: factorio-credentials
+                  key: token
+          
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "1"
+            limits:
+              memory: "8Gi"  # Less RAM needed for 1024px
+              cpu: "2"
+          
+          volumeMounts:
+            - name: mapshot-data
+              mountPath: /mapshot
+            - name: nas-dest
+              mountPath: /nas
+              subPath: mapshot
+      
+      volumes:
+        - name: mapshot-data
+          persistentVolumeClaim:
+            claimName: mapshot-data
+        - name: nas-dest
+          hostPath:
+            path: /mnt/k3s-nfs
+            type: Directory

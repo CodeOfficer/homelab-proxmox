@@ -7,7 +7,7 @@
 .PHONY: deploy-7dtd 7dtd-logs 7dtd-shell 7dtd-update 7dtd-status
 .PHONY: deploy-factorio factorio-logs factorio-status factorio-rcon factorio-restore-import factorio-restore-latest
 .PHONY: deploy-monitoring monitoring-status grafana-password
-.PHONY: deploy-mapshot mapshot-render mapshot-status mapshot-logs
+.PHONY: deploy-mapshot mapshot-render mapshot-check-gpu mapshot-status mapshot-logs
 .PHONY: deploy-loki loki-status
 .PHONY: deploy-k8s-dashboard k8s-dashboard-token k8s-dashboard-status
 
@@ -724,10 +724,26 @@ deploy-mapshot: ## Deploy Mapshot for Factorio map rendering
 	@echo "$(BLUE)Deploying Mapshot...$(NC)"
 	@./applications/mapshot/deploy.sh
 
-mapshot-render: ## Trigger manual map render
-	@echo "$(BLUE)Triggering Mapshot render...$(NC)"
-	kubectl create job --from=cronjob/mapshot-render -n mapshot mapshot-manual-$$(date +%s)
-	@echo "$(GREEN)Render job created. View logs with: make mapshot-logs$(NC)"
+mapshot-render: ## Trigger manual GPU-accelerated map render
+	@echo "$(BLUE)Triggering GPU Mapshot render...$(NC)"
+	@echo "$(YELLOW)Note: Ensure Ollama is not heavily using GPU$(NC)"
+	@cat applications/mapshot/job-manual.yaml | \
+		sed 's/name: mapshot-manual/name: mapshot-manual-'$$(date +%s)'/' | \
+		kubectl apply -f -
+	@echo "$(GREEN)GPU render job created. View logs with: make mapshot-logs$(NC)"
+	@echo "$(GREEN)Expected time: 2-10 minutes$(NC)"
+
+mapshot-check-gpu: ## Check if GPU is available for mapshot
+	@echo "$(BLUE)GPU Availability Check$(NC)"
+	@echo ""
+	@echo "$(YELLOW)GPU Node:$(NC)"
+	@kubectl get nodes k3s-gpu-01 -o custom-columns=NAME:.metadata.name,GPU:.status.allocatable.nvidia\\.com/gpu,STATUS:.status.conditions[?\(@.type==\"Ready\"\)].status 2>/dev/null || echo "GPU node not found"
+	@echo ""
+	@echo "$(YELLOW)Ollama Status:$(NC)"
+	@kubectl get pods -n ollama -o wide 2>/dev/null || echo "Ollama not deployed"
+	@echo ""
+	@echo "$(YELLOW)Recent Mapshot Jobs:$(NC)"
+	@kubectl get jobs -n mapshot --sort-by=.metadata.creationTimestamp 2>/dev/null | tail -3 || true
 
 mapshot-status: ## Show Mapshot status
 	@echo "$(BLUE)Mapshot Status$(NC)"

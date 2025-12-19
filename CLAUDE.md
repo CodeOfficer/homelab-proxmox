@@ -236,7 +236,8 @@ Run `make help` for full list. Key targets:
 - [x] Factorio (`applications/factorio/`) - 10.20.11.202:34197
   - Save import: `kubectl cp save.zip factorio/<pod>:/factorio/save-importer/import/homelab.zip` then restart pod
 - [x] Factorio Mapshot (`applications/mapshot/`) - https://mapshot.codeofficer.com/mapshot/latest/
-  - Zoomable web map, 4-hour CronJob render, checksum-gated, auto-cleanup
+  - Zoomable web map, manual GPU rendering, 2-10 min render time
+  - Trigger: `make mapshot-render`
 - [x] Tailscale subnet router for remote friend access
 - [ ] Pod anti-affinity to spread game servers across nodes
 - [ ] Factorio Server Manager (FSM) - web UI for saves/mods/config
