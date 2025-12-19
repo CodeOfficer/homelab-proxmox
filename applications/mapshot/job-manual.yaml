@@ -353,10 +353,11 @@ spec:
                 fi
               fi
 
-              # Step 6: Clear old render output (force fresh render)
-              log "Clearing old render output..."
-              rm -rf "$VIEWER_DIR"/*
+              # Step 6: Clear ALL mapshot output (force fresh render, prevent caching)
+              log "Clearing ALL mapshot output to force fresh render..."
+              rm -rf "$SCRIPT_OUTPUT/mapshot"
               mkdir -p "$VIEWER_DIR"
+              log "Mapshot output cleared (cache bypassed)"
 
               # Step 7: Run mapshot render with CPU (no timeout)
               log "Running CPU mapshot render (software rendering)..."
