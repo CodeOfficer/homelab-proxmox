@@ -585,6 +585,36 @@ restore-all: ## Restore all apps from NFS backups (interactive)
 	@$(MAKE) restore-postgresql
 	@$(MAKE) restore-ollama
 
+# =============================================================================
+# Spotify Sync + MCP Server
+# =============================================================================
+
+deploy-spotify: ## Deploy Spotify sync + MCP server
+	cd applications/spotify && ./deploy.sh
+
+spotify-logs: ## View Spotify web UI logs
+	kubectl logs -n spotify -l app=spotify-web --tail=100 -f
+
+spotify-mcp-logs: ## View Spotify MCP server logs
+	kubectl logs -n spotify -l app=spotify-mcp --tail=100 -f
+
+spotify-backup: ## Manually trigger Spotify backup
+	kubectl create job --from=cronjob/spotify-backup -n spotify spotify-backup-manual-$(shell date +%s)
+
+spotify-restore: ## Restore Spotify database from latest backup
+	@echo "$(YELLOW)Restoring Spotify database...$(NC)"
+	@kubectl scale deployment/spotify-web deployment/spotify-mcp -n spotify --replicas=0
+	@sleep 5
+	@kubectl run spotify-restore -n spotify --rm -it --restart=Never \
+	  --image=alpine:latest \
+	  --overrides='{"spec":{"volumes":[{"name":"data","persistentVolumeClaim":{"claimName":"spotify-data"}},{"name":"backup","hostPath":{"path":"/mnt/k3s-nfs"}}],"containers":[{"name":"restore","image":"alpine:latest","command":["sh","-c","apk add sqlite && cp /backup/spotify/backups/latest.db /data/spotify.db && echo Done"],"volumeMounts":[{"name":"data","mountPath":"/data"},{"name":"backup","mountPath":"/backup"}]}]}}'
+	@kubectl scale deployment/spotify-web deployment/spotify-mcp -n spotify --replicas=1
+	@echo "$(GREEN)Restore complete!$(NC)"
+
+# =============================================================================
+# Deprecated Targets
+# =============================================================================
+
 deploy-all: deploy-infrastructure deploy-applications ## [DEPRECATED] Use deploy-full instead
 	@echo "$(GREEN)All applications deployed!$(NC)"
 
