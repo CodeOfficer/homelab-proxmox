@@ -183,6 +183,20 @@ export FACTORIO_USERNAME="your-factorio-username"
 export FACTORIO_TOKEN="your-factorio-api-token"
 
 # -----------------------------------------------------------------------------
+# Spotify API Configuration (for Spotify sync + MCP server)
+# -----------------------------------------------------------------------------
+# Create app at https://developer.spotify.com/dashboard
+# Redirect URI: https://spotify.codeofficer.com/auth/callback
+export SPOTIFY_CLIENT_ID="your-spotify-client-id-here"
+export SPOTIFY_CLIENT_SECRET="your-spotify-client-secret-here"
+
+# Database encryption key (generate: openssl rand -hex 32)
+export SPOTIFY_DB_ENCRYPTION_KEY="generate-with-openssl-rand-hex-32"
+
+# Optional: Manual refresh token (if skipping OAuth flow in web UI)
+# export SPOTIFY_REFRESH_TOKEN="your-refresh-token-here"
+
+# -----------------------------------------------------------------------------
 # Kubectl Configuration
 # -----------------------------------------------------------------------------
 # Path to kubeconfig for cluster access
