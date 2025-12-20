@@ -1,5 +1,7 @@
 import express from 'express';
 import path from 'path';
+import { initiateAuth, handleCallback, logout } from './controllers/spotifyAuth';
+import { showDashboard } from './controllers/dashboard';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,9 +23,23 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Root route
-app.get('/', (req, res) => {
-  res.json({ message: 'Spotify Web UI - Coming soon' });
+// OAuth routes
+app.get('/auth/spotify', initiateAuth);
+app.get('/auth/callback', handleCallback);
+app.get('/auth/logout', logout);
+
+// Dashboard
+app.get('/', showDashboard);
+
+// Sync trigger (stub for now)
+app.post('/sync/trigger', async (req, res) => {
+  try {
+    // TODO: Create Kubernetes Job to run sync
+    res.json({ status: 'Job created (stub - not implemented yet)' });
+  } catch (error) {
+    console.error('Error triggering sync:', error);
+    res.status(500).json({ error: 'Failed to trigger sync' });
+  }
 });
 
 // Start server only if not in test mode
