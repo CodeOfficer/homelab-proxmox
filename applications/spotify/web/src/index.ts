@@ -26,9 +26,11 @@ app.get('/', (req, res) => {
   res.json({ message: 'Spotify Web UI - Coming soon' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Spotify Web UI listening on port ${PORT}`);
-});
+// Start server only if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`Spotify Web UI listening on port ${PORT}`);
+  });
+}
 
 export default app;
