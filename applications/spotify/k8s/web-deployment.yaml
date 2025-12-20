@@ -1,0 +1,82 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spotify-web
+  namespace: spotify
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spotify-web
+  template:
+    metadata:
+      labels:
+        app: spotify-web
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: web
+          image: ghcr.io/codeofficer/spotify-web:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: DATABASE_PATH
+              value: /data/spotify.db
+            - name: SPOTIFY_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: spotify-credentials
+                  key: client-id
+            - name: SPOTIFY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: spotify-credentials
+                  key: client-secret
+            - name: SPOTIFY_DB_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: spotify-credentials
+                  key: encryption-key
+            - name: SPOTIFY_REDIRECT_URI
+              valueFrom:
+                secretKeyRef:
+                  name: spotify-credentials
+                  key: redirect-uri
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "200m"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: spotify-data
