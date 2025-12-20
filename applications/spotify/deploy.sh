@@ -6,8 +6,23 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$SCRIPT_DIR"
 
 NAMESPACE="spotify"
+K3S_NODES=("10.20.11.80" "10.20.11.81" "10.20.11.85")
 
-echo "Deploying Spotify sync + MCP server..."
+echo "Deploying Spotify Web UI..."
+
+# 0. Build and load Docker image into K3s nodes
+echo "Building Docker image..."
+docker build -t spotify-web:latest -f web/Dockerfile .
+
+echo "Loading image into K3s nodes..."
+docker save spotify-web:latest -o /tmp/spotify-web.tar
+for node in "${K3S_NODES[@]}"; do
+    echo "  -> $node"
+    scp -q /tmp/spotify-web.tar root@$node:/tmp/
+    ssh root@$node "k3s ctr images import /tmp/spotify-web.tar && rm /tmp/spotify-web.tar"
+done
+rm /tmp/spotify-web.tar
+echo "✓ Image loaded on all nodes"
 
 # 1. Create namespace
 echo "Creating namespace..."

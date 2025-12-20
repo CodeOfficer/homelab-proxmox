@@ -22,8 +22,8 @@ spec:
           effect: "NoSchedule"
       containers:
         - name: web
-          image: ghcr.io/codeofficer/spotify-web:latest
-          imagePullPolicy: Always
+          image: spotify-web:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 3000
               name: http
