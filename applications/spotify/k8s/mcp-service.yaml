@@ -1,0 +1,38 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spotify-mcp
+  namespace: spotify
+spec:
+  selector:
+    app: spotify-mcp
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spotify-mcp
+  namespace: spotify
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: default-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - spotify-mcp.codeofficer.com
+      secretName: spotify-mcp-tls
+  rules:
+    - host: spotify-mcp.codeofficer.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spotify-mcp
+                port:
+                  number: 8080
