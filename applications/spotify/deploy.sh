@@ -37,33 +37,33 @@ kubectl apply -f k8s/pvc.yaml
 echo "Deploying web UI..."
 kubectl apply -f k8s/web-deployment.yaml
 kubectl apply -f k8s/web-service.yaml
+kubectl apply -f k8s/web-ingress.yaml
 
-# 5. Deploy MCP server
-echo "Deploying MCP server..."
-kubectl apply -f k8s/mcp-deployment.yaml
-kubectl apply -f k8s/mcp-service.yaml
+# TODO: Deploy MCP server (not built yet)
+# echo "Deploying MCP server..."
+# kubectl apply -f k8s/mcp-deployment.yaml
+# kubectl apply -f k8s/mcp-service.yaml
+# kubectl apply -f k8s/mcp-ingress.yaml
 
-# 6. Deploy backup CronJob
-echo "Deploying backup CronJob..."
-kubectl apply -f k8s/backup-cronjob.yaml
+# TODO: Deploy backup CronJob (after sync job is built)
+# echo "Deploying backup CronJob..."
+# kubectl apply -f k8s/backup-cronjob.yaml
 
-# 7. Wait for rollout
+# 5. Wait for rollout
 echo "Waiting for deployments..."
 kubectl rollout status deployment/spotify-web -n "$NAMESPACE" --timeout=5m
-kubectl rollout status deployment/spotify-mcp -n "$NAMESPACE" --timeout=5m
 
 echo ""
 echo "================================================"
-echo "Spotify sync + MCP server deployed!"
+echo "Spotify Web UI deployed!"
 echo "================================================"
 echo ""
 echo "Web UI: https://spotify.codeofficer.com"
-echo "MCP Server: https://spotify-mcp.codeofficer.com"
 echo ""
 echo "Next steps:"
 echo "1. Visit https://spotify.codeofficer.com"
-echo "2. Click 'Connect with Spotify' to authorize"
-echo "3. Click 'Trigger Sync' to fetch playlists"
-echo "4. Configure Claude Desktop:"
-echo "   ~/Library/Application Support/Claude/claude_desktop_config.json"
+echo "2. Click 'Connect with Spotify' to authorize OAuth"
+echo "3. Dashboard will show connected status"
+echo ""
+echo "TODO: Build and deploy sync job + MCP server"
 echo ""
