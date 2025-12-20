@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spotify Sync</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <nav class="bg-green-600 text-white p-4 shadow-lg">
+    <div class="container mx-auto flex justify-between items-center">
+      <h1 class="text-2xl font-bold">🎵 Spotify Sync</h1>
+      <% if (typeof authenticated !== 'undefined' && authenticated) { %>
+        <a href="/auth/logout" class="bg-white text-green-600 px-4 py-2 rounded hover:bg-gray-100 transition">
+          Logout
+        </a>
+      <% } %>
+    </div>
+  </nav>
+
+  <main class="container mx-auto p-8">
+    <%- include('partials/' + view) %>
+  </main>
+
+  <footer class="text-center text-gray-500 text-sm p-4 mt-8">
+    <p>Spotify Sync + MCP Server | <a href="/health" class="text-blue-500 hover:underline">Health Check</a></p>
+  </footer>
+</body>
+</html>
