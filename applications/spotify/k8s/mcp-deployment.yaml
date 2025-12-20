@@ -1,0 +1,68 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spotify-mcp
+  namespace: spotify
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spotify-mcp
+  template:
+    metadata:
+      labels:
+        app: spotify-mcp
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: mcp
+          image: ghcr.io/codeofficer/spotify-mcp:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: DATABASE_PATH
+              value: /data/spotify.db
+            - name: SPOTIFY_DB_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: spotify-credentials
+                  key: encryption-key
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+              readOnly: true
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: spotify-data
