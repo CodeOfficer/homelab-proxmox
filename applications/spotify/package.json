@@ -1,0 +1,20 @@
+{
+  "name": "spotify-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Spotify Sync + MCP Server monorepo",
+  "scripts": {
+    "build": "pnpm -r build",
+    "clean": "pnpm -r clean",
+    "test": "pnpm -r test",
+    "dev:web": "pnpm --filter spotify-web dev",
+    "dev:mcp": "pnpm --filter spotify-mcp dev",
+    "dev:sync": "pnpm --filter spotify-sync dev"
+  },
+  "keywords": ["spotify", "mcp", "monorepo"],
+  "author": "homelab",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
