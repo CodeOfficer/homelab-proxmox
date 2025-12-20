@@ -12,7 +12,7 @@ echo "Deploying Spotify Web UI..."
 
 # 0. Build and load Docker image into K3s nodes
 echo "Building Docker image for linux/amd64..."
-docker build --platform linux/amd64 -t spotify-web:latest -f web/Dockerfile .
+docker build --no-cache --platform linux/amd64 -t spotify-web:latest -f web/Dockerfile .
 
 echo "Loading image into K3s nodes..."
 docker save spotify-web:latest -o /tmp/spotify-web.tar
