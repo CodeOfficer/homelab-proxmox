@@ -1,0 +1,24 @@
+{
+  "name": "@homelab/spotify-shared",
+  "version": "1.0.0",
+  "description": "Shared TypeScript library for Spotify sync + MCP server",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "test": "jest"
+  },
+  "keywords": ["spotify", "sqlite", "mcp", "homelab"],
+  "author": "homelab",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "@spotify/web-api-ts-sdk": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^20.17.10",
+    "typescript": "^5.7.2"
+  }
+}
