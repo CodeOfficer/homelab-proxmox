@@ -11,10 +11,17 @@
     "dev:mcp": "pnpm --filter spotify-mcp dev",
     "dev:sync": "pnpm --filter spotify-sync dev"
   },
-  "keywords": ["spotify", "mcp", "monorepo"],
+  "keywords": [
+    "spotify",
+    "mcp",
+    "monorepo"
+  ],
   "author": "homelab",
   "license": "MIT",
   "devDependencies": {
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@kubernetes/client-node": "^0.22.3"
   }
 }

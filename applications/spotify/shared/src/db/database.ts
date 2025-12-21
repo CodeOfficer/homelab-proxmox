@@ -78,6 +78,10 @@ export class SpotifyDatabase {
     };
   }
 
+  deleteCredentials() {
+    this.db.prepare('DELETE FROM spotify_credentials WHERE id = 1').run();
+  }
+
   // ============================================================================
   // Playlists
   // ============================================================================
@@ -172,10 +176,141 @@ export class SpotifyDatabase {
   }
 
   // ============================================================================
-  // Placeholder methods for future implementation
+  // Tracks
   // ============================================================================
 
-  // TODO: Implement track/artist/album upsert methods
+  upsertTrack(track: {
+    id: string;
+    name: string;
+    album_id: string | null;
+    duration_ms: number;
+    explicit: boolean;
+    popularity: number;
+    preview_url: string | null;
+  }) {
+    this.db.prepare(`
+      INSERT INTO tracks (id, name, album_id, duration_ms, explicit, popularity, preview_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        album_id = excluded.album_id,
+        duration_ms = excluded.duration_ms,
+        explicit = excluded.explicit,
+        popularity = excluded.popularity,
+        preview_url = excluded.preview_url,
+        synced_at = CURRENT_TIMESTAMP
+    `).run(
+      track.id,
+      track.name,
+      track.album_id,
+      track.duration_ms,
+      track.explicit ? 1 : 0,
+      track.popularity,
+      track.preview_url
+    );
+  }
+
+  // ============================================================================
+  // Albums
+  // ============================================================================
+
+  upsertAlbum(album: {
+    id: string;
+    name: string;
+    release_date: string | null;
+    album_type: string | null;
+    total_tracks: number | null;
+    image_url: string | null;
+  }) {
+    this.db.prepare(`
+      INSERT INTO albums (id, name, release_date, album_type, total_tracks, image_url)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        release_date = excluded.release_date,
+        album_type = excluded.album_type,
+        total_tracks = excluded.total_tracks,
+        image_url = excluded.image_url,
+        synced_at = CURRENT_TIMESTAMP
+    `).run(
+      album.id,
+      album.name,
+      album.release_date,
+      album.album_type,
+      album.total_tracks,
+      album.image_url
+    );
+  }
+
+  // ============================================================================
+  // Artists
+  // ============================================================================
+
+  upsertArtist(artist: {
+    id: string;
+    name: string;
+    genres: string[] | null;
+    popularity: number | null;
+    image_url: string | null;
+  }) {
+    this.db.prepare(`
+      INSERT INTO artists (id, name, genres, popularity, image_url)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        genres = excluded.genres,
+        popularity = excluded.popularity,
+        image_url = excluded.image_url,
+        synced_at = CURRENT_TIMESTAMP
+    `).run(
+      artist.id,
+      artist.name,
+      artist.genres ? JSON.stringify(artist.genres) : null,
+      artist.popularity,
+      artist.image_url
+    );
+  }
+
+  // ============================================================================
+  // Track-Artist Links
+  // ============================================================================
+
+  linkTrackArtist(trackId: string, artistId: string, position: number) {
+    this.db.prepare(`
+      INSERT INTO track_artists (track_id, artist_id, position)
+      VALUES (?, ?, ?)
+      ON CONFLICT(track_id, artist_id) DO UPDATE SET
+        position = excluded.position
+    `).run(trackId, artistId, position);
+  }
+
+  // ============================================================================
+  // Playlist-Track Links
+  // ============================================================================
+
+  addPlaylistTrack(
+    playlistId: string,
+    trackId: string,
+    position: number,
+    addedAt: string | null,
+    addedBy: string | null
+  ) {
+    this.db.prepare(`
+      INSERT INTO playlist_tracks (playlist_id, track_id, position, added_at, added_by)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(playlist_id, track_id, position) DO UPDATE SET
+        added_at = excluded.added_at,
+        added_by = excluded.added_by
+    `).run(playlistId, trackId, position, addedAt, addedBy);
+  }
+
+  clearPlaylistTracks(playlistId: string) {
+    this.db.prepare('DELETE FROM playlist_tracks WHERE playlist_id = ?').run(playlistId);
+  }
+
+  // ============================================================================
+  // Search methods for MCP tools (future)
+  // ============================================================================
+
   // TODO: Implement search methods for MCP tools
-  // TODO: Implement playlist track linking methods
 }

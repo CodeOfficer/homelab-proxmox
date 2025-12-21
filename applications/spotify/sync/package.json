@@ -1,0 +1,24 @@
+{
+  "name": "spotify-sync",
+  "version": "1.0.0",
+  "description": "Spotify playlist sync job that fetches data from Spotify API and writes to SQLite",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": ["spotify", "sync", "job"],
+  "author": "homelab",
+  "license": "MIT",
+  "dependencies": {
+    "@homelab/spotify-shared": "workspace:*",
+    "@spotify/web-api-ts-sdk": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}
