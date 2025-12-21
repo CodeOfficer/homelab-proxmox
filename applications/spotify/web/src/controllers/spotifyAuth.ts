@@ -110,8 +110,12 @@ export async function handleCallback(req: Request, res: Response) {
  */
 export async function logout(req: Request, res: Response) {
   try {
-    // For now, we'll keep credentials (no delete method yet)
-    // In production, you'd want to revoke the token with Spotify
+    const { SpotifyDatabase } = await import('@homelab/spotify-shared');
+    const db = new SpotifyDatabase(process.env.DATABASE_PATH || '/tmp/spotify.db');
+
+    db.deleteCredentials();
+    db.close();
+
     res.redirect('/?success=logged_out');
   } catch (error) {
     console.error('Error logging out:', error);
