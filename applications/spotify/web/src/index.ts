@@ -3,6 +3,8 @@ import path from 'path';
 import { initiateAuth, handleCallback, logout } from './controllers/spotifyAuth';
 import { showDashboard } from './controllers/dashboard';
 import { triggerSync } from './controllers/syncTrigger';
+import { testAudioFeaturesAccess } from './controllers/testAudioFeatures';
+import { getSyncProgress } from './controllers/syncProgress';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +26,9 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Test audio features API access
+app.get('/test-audio-features', testAudioFeaturesAccess);
+
 // OAuth routes
 app.get('/auth/spotify', initiateAuth);
 app.get('/auth/callback', handleCallback);
@@ -32,8 +37,9 @@ app.get('/auth/logout', logout);
 // Dashboard
 app.get('/', showDashboard);
 
-// Sync trigger
+// Sync trigger and progress
 app.post('/sync/trigger', triggerSync);
+app.get('/api/sync/progress', getSyncProgress);
 
 // Start server only if not in test mode
 if (process.env.NODE_ENV !== 'test') {
