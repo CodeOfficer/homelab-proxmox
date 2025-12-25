@@ -3,17 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spotify Sync - Dashboard</title>
+  <title>Spotify Sync PRO - Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
   <nav class="bg-green-600 text-white p-4 shadow-lg">
     <div class="container mx-auto flex justify-between items-center">
-      <h1 class="text-2xl font-bold">🎵 Spotify Sync</h1>
+      <h1 class="text-2xl font-bold">🎵 Spotify Sync PRO</h1>
       <% if (authenticated) { %>
-        <a href="/auth/logout" class="bg-white text-green-600 px-4 py-2 rounded hover:bg-gray-100 transition">
-          Logout
-        </a>
+        <div class="flex gap-4 items-center">
+          <a href="/search" class="hover:underline">Search</a>
+          <a href="/playlists" class="hover:underline">All Playlists</a>
+          <a href="/auth/logout" class="bg-white text-green-600 px-4 py-2 rounded hover:bg-gray-100 transition">
+            Logout
+          </a>
+        </div>
       <% } %>
     </div>
   </nav>
@@ -32,103 +36,151 @@
           </svg>
         </div>
         <h2 class="text-3xl font-bold text-gray-800 mb-4">Connect Your Spotify Account</h2>
-        <p class="text-gray-600 mb-8">Sync your playlists and tracks to query them offline via Claude Desktop.</p>
+        <p class="text-gray-600 mb-8">Sync your playlists, tracks, and audio features to build a powerful music library.</p>
         <a href="/auth/spotify" class="inline-block bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-green-700 transition shadow-lg">
           Connect with Spotify
         </a>
       </div>
     <% } else { %>
       <!-- Authenticated -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <!-- Sync Control -->
-        <div class="lg:col-span-3">
-          <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Sync Control</h2>
-            <button
-              onclick="triggerSync()"
-              class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow"
-            >
-              🔄 Trigger Sync
-            </button>
-            <p class="text-gray-600 text-sm mt-2">Manually sync your Spotify playlists and tracks.</p>
-          </div>
-        </div>
 
-        <!-- Playlists -->
-        <div class="lg:col-span-2">
-          <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">
-              Playlists
-              <span class="text-sm font-normal text-gray-500">(<%= playlists.length %>)</span>
-            </h2>
-            <% if (playlists.length === 0) { %>
-              <p class="text-gray-500 italic">No playlists synced yet. Click "Trigger Sync" to fetch your playlists.</p>
-            <% } else { %>
-              <ul class="divide-y divide-gray-200">
-                <% playlists.slice(0, 10).forEach(function(playlist) { %>
-                  <li class="py-3">
-                    <div class="flex justify-between items-center">
-                      <div>
-                        <h3 class="font-semibold text-gray-800"><%= playlist.name %></h3>
-                        <% if (playlist.description) { %>
-                          <p class="text-sm text-gray-500"><%= playlist.description %></p>
-                        <% } %>
-                      </div>
-                      <span class="text-sm text-gray-500"><%= playlist.track_count || 0 %> tracks</span>
-                    </div>
-                  </li>
-                <% }); %>
-              </ul>
-              <% if (playlists.length > 10) { %>
-                <p class="text-sm text-gray-500 mt-4 text-center">
-                  Showing 10 of <%= playlists.length %> playlists
-                </p>
-              <% } %>
-            <% } %>
+      <!-- Sync Progress Card (hidden by default, shows when sync is running) -->
+      <div id="sync-progress-card" class="hidden bg-blue-50 border-2 border-blue-400 rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-bold text-blue-900 mb-4">⏳ Sync in Progress</h2>
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span id="progress-label" class="text-blue-800">Syncing data...</span>
+              <span id="progress-percent" class="text-blue-900 font-semibold">0%</span>
+            </div>
+            <div class="w-full bg-gray-300 rounded-full h-4">
+              <div id="progress-bar" class="bg-blue-600 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
           </div>
+          <div class="text-sm text-gray-700 flex justify-between">
+            <div>
+              <p>Elapsed: <span id="elapsed-time" class="font-semibold">0s</span></p>
+              <p>ETA: <span id="eta-time" class="font-semibold">Calculating...</span></p>
+            </div>
+            <div id="timeout-warning" class="hidden text-red-600 text-xs">
+              ⚠ Sync running >1hr (may be stuck)
+            </div>
+          </div>
+          <div id="steps-detail" class="text-xs space-y-1 text-gray-600 border-t border-blue-200 pt-3"></div>
         </div>
+      </div>
 
-        <!-- Recent Syncs -->
-        <div class="lg:col-span-1">
-          <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Recent Syncs</h2>
-            <% if (recentSyncs.length === 0) { %>
-              <p class="text-gray-500 italic text-sm">No sync history yet.</p>
-            <% } else { %>
-              <ul class="space-y-3">
-                <% recentSyncs.forEach(function(sync) { %>
-                  <li class="text-sm">
-                    <div class="flex items-center justify-between mb-1">
-                      <span class="<%= sync.status === 'success' ? 'text-green-600' : sync.status === 'failed' ? 'text-red-600' : 'text-yellow-600' %> font-semibold">
-                        <%= sync.status === 'success' ? '✓' : sync.status === 'failed' ? '✗' : '⋯' %>
-                        <%= sync.status %>
-                      </span>
-                      <span class="text-gray-500 text-xs"><%= new Date(sync.started_at).toLocaleString() %></span>
-                    </div>
-                    <% if (sync.items_synced) { %>
-                      <p class="text-gray-600"><%= sync.items_synced %> items synced</p>
-                    <% } %>
-                  </li>
-                <% }); %>
-              </ul>
-            <% } %>
+      <!-- Sync Control -->
+      <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Sync Control</h2>
+        <button
+          id="trigger-sync-btn"
+          onclick="triggerSync()"
+          class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow disabled:bg-gray-400 disabled:cursor-not-allowed"
+        >
+          🔄 Trigger Full Sync
+        </button>
+        <p class="text-gray-600 text-sm mt-2">
+          Sync playlists, tracks, artists, genres, and audio features (tempo, energy, mood).
+        </p>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Search Your Library</h2>
+        <form action="/search" method="GET" class="flex gap-2">
+          <input
+            type="text"
+            name="q"
+            placeholder="Search tracks, artists, playlists..."
+            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <select name="filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">All</option>
+            <option value="tracks">Tracks</option>
+            <option value="artists">Artists</option>
+            <option value="playlists">Playlists</option>
+            <option value="genre">Genre</option>
+          </select>
+          <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition">
+            Search
+          </button>
+        </form>
+      </div>
+
+      <!-- Playlists Grid (clickable) -->
+      <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">
+          Your Playlists
+          <span class="text-sm font-normal text-gray-500">(<%= playlists.length %>)</span>
+        </h2>
+        <% if (playlists.length === 0) { %>
+          <p class="text-gray-500 italic">No playlists synced yet. Trigger a sync to fetch your library.</p>
+        <% } else { %>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <% playlists.slice(0, 12).forEach(function(playlist) { %>
+              <a href="/playlist/<%= playlist.id %>" class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:shadow-md transition cursor-pointer">
+                <% if (playlist.image_url) { %>
+                  <img src="<%= playlist.image_url %>" alt="<%= playlist.name %>" class="w-full h-32 object-cover rounded mb-2">
+                <% } else { %>
+                  <div class="w-full h-32 bg-gray-300 rounded mb-2 flex items-center justify-center text-gray-500 text-3xl">
+                    🎵
+                  </div>
+                <% } %>
+                <h3 class="font-semibold text-gray-800 truncate" title="<%= playlist.name %>"><%= playlist.name %></h3>
+                <p class="text-sm text-gray-500"><%= playlist.track_count || 0 %> tracks</p>
+              </a>
+            <% }); %>
           </div>
-        </div>
+          <% if (playlists.length > 12) { %>
+            <p class="text-sm text-gray-500 mt-4 text-center">
+              <a href="/playlists" class="text-blue-600 hover:underline">View all <%= playlists.length %> playlists →</a>
+            </p>
+          <% } %>
+        <% } %>
+      </div>
+
+      <!-- Recent Syncs -->
+      <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Recent Syncs</h2>
+        <% if (recentSyncs.length === 0) { %>
+          <p class="text-gray-500 italic text-sm">No sync history yet.</p>
+        <% } else { %>
+          <ul class="space-y-3">
+            <% recentSyncs.slice(0, 5).forEach(function(sync) { %>
+              <li class="text-sm border-b border-gray-100 pb-2">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="<%= sync.status === 'success' ? 'text-green-600' : sync.status === 'failed' ? 'text-red-600' : 'text-yellow-600' %> font-semibold">
+                    <%= sync.status === 'success' ? '✓' : sync.status === 'failed' ? '✗' : '⋯' %>
+                    <%= sync.status %>
+                  </span>
+                  <span class="text-gray-500 text-xs"><%= new Date(sync.started_at).toLocaleString() %></span>
+                </div>
+                <% if (sync.items_synced) { %>
+                  <p class="text-gray-600"><%= sync.items_synced %> items synced</p>
+                <% } %>
+                <% if (sync.error) { %>
+                  <p class="text-red-600 text-xs mt-1"><%= sync.error %></p>
+                <% } %>
+              </li>
+            <% }); %>
+          </ul>
+        <% } %>
       </div>
 
       <!-- MCP Server Info -->
       <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
         <h2 class="text-lg font-bold text-blue-900 mb-2">🤖 MCP Server Ready</h2>
-        <p class="text-blue-800 mb-2">Your playlists are available via Claude Desktop!</p>
+        <p class="text-blue-800 mb-2">Your music library is available via Claude Desktop!</p>
         <p class="text-sm text-blue-700">
-          Configure Claude Desktop to use: <code class="bg-blue-100 px-2 py-1 rounded">https://spotify-mcp.codeofficer.com/sse</code>
+          Configure Claude Desktop to use: <code class="bg-blue-100 px-2 py-1 rounded font-mono text-xs">https://spotify-mcp.codeofficer.com/sse</code>
         </p>
       </div>
     <% } %>
   </main>
 
   <footer class="text-center text-gray-500 text-sm p-4 mt-8">
-    <p>Spotify Sync + MCP Server | <a href="/health" class="text-blue-500 hover:underline">Health Check</a></p>
+    <p>Spotify Sync PRO | <a href="/health" class="text-blue-500 hover:underline">Health</a> | <a href="/test-audio-features" class="text-blue-500 hover:underline">Test Audio Features</a></p>
   </footer>
 
   <script>
@@ -177,8 +229,7 @@
           'token_exchange_failed': 'Failed to exchange token with Spotify',
           'callback_failed': 'Authentication callback failed'
         };
-        showToast(messages[error] || error, 'error');
-        // Clean URL
+        showToast('❌ ' + (messages[error] || error), 'error');
         window.history.replaceState({}, '', window.location.pathname);
       }
 
@@ -187,48 +238,108 @@
           'authenticated': 'Successfully connected to Spotify!',
           'logged_out': 'Logged out successfully'
         };
-        showToast(messages[success] || success, 'success');
-        // Clean URL
+        showToast('✓ ' + (messages[success] || success), 'success');
         window.history.replaceState({}, '', window.location.pathname);
       }
     })();
 
+    // Progress polling (runs every 2 seconds when sync is active)
+    let progressInterval = null;
+
+    async function pollProgress() {
+      try {
+        const response = await fetch('/api/sync/progress');
+        const data = await response.json();
+
+        if (data.running) {
+          // Show progress card
+          document.getElementById('sync-progress-card').classList.remove('hidden');
+          document.getElementById('trigger-sync-btn').disabled = true;
+
+          // Update progress bar
+          document.getElementById('progress-percent').textContent = `${data.progress_percent}%`;
+          document.getElementById('progress-bar').style.width = `${data.progress_percent}%`;
+          document.getElementById('elapsed-time').textContent = `${data.elapsed_seconds}s`;
+
+          // Update ETA
+          if (data.eta_seconds) {
+            const minutes = Math.floor(data.eta_seconds / 60);
+            const seconds = data.eta_seconds % 60;
+            document.getElementById('eta-time').textContent = minutes > 0
+              ? `${minutes}m ${seconds}s`
+              : `${seconds}s`;
+          } else {
+            document.getElementById('eta-time').textContent = 'Calculating...';
+          }
+
+          // Show timeout warning if >1 hour
+          if (data.timeout_warning) {
+            document.getElementById('timeout-warning').classList.remove('hidden');
+          }
+
+          // Update step details
+          let stepsHtml = '';
+          if (data.steps && data.steps.length > 0) {
+            data.steps.forEach(step => {
+              const status = step.completed ? '✓' : '⋯';
+              const color = step.completed ? 'text-green-600' : 'text-blue-600';
+              stepsHtml += `<p class="${color}">${status} <span class="capitalize">${step.step}</span>: ${step.processed_items}/${step.total_items} (${step.progress_percent}%)</p>`;
+            });
+          }
+          document.getElementById('steps-detail').innerHTML = stepsHtml;
+
+        } else {
+          // Sync complete or not running
+          const wasRunning = !document.getElementById('sync-progress-card').classList.contains('hidden');
+
+          if (wasRunning) {
+            // Sync just finished
+            showToast('✓ Sync complete!', 'success');
+            setTimeout(() => location.reload(), 1500);
+          }
+
+          document.getElementById('sync-progress-card').classList.add('hidden');
+          document.getElementById('trigger-sync-btn').disabled = false;
+
+          if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+          }
+        }
+      } catch (error) {
+        console.error('Error polling progress:', error);
+      }
+    }
+
+    // Start polling on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      pollProgress(); // Check immediately
+      progressInterval = setInterval(pollProgress, 2000); // Then every 2s
+    });
+
     async function triggerSync() {
-      const button = event.target;
+      const button = document.getElementById('trigger-sync-btn');
       button.disabled = true;
-      button.textContent = '⏳ Syncing...';
+      button.textContent = '⏳ Starting...';
 
       try {
         const response = await fetch('/sync/trigger', { method: 'POST' });
         const data = await response.json();
 
         if (response.ok) {
-          showToast('Sync job created! Page will refresh to show progress.', 'success');
-          setTimeout(() => location.reload(), 1500);
+          showToast('✓ Sync started! Watch progress above.', 'success');
+          // Progress polling will detect it
         } else {
-          showToast('Failed to trigger sync: ' + (data.error || 'Unknown error'), 'error');
+          showToast('❌ Failed to start sync: ' + (data.error || 'Unknown error'), 'error');
           button.disabled = false;
-          button.textContent = '🔄 Trigger Sync';
+          button.textContent = '🔄 Trigger Full Sync';
         }
       } catch (error) {
-        showToast('Network error: ' + error.message, 'error');
+        showToast('❌ Network error: ' + error.message, 'error');
         button.disabled = false;
-        button.textContent = '🔄 Trigger Sync';
+        button.textContent = '🔄 Trigger Full Sync';
       }
     }
-
-    // Auto-refresh if there's a running sync
-    (function() {
-      <% if (authenticated && recentSyncs.length > 0) { %>
-        const latestSync = <%- JSON.stringify(recentSyncs[0]) %>;
-        if (latestSync.status === 'running') {
-          console.log('Sync in progress... will auto-refresh in 5 seconds');
-          setTimeout(() => {
-            location.reload();
-          }, 5000);
-        }
-      <% } %>
-    })();
   </script>
 </body>
 </html>
