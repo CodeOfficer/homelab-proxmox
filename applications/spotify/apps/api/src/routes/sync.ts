@@ -12,7 +12,7 @@ export function registerSyncRoutes(app: FastifyInstance) {
     const status = await getSyncStatus();
     return {
       isRunning: status.isRunning,
-      progress: status.currentProgress,
+      progress: status.currentProgress ?? null,
     };
   });
 

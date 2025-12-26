@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import Database, { type Database as SqliteDatabase } from 'better-sqlite3';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from './schema.js';
@@ -15,6 +17,12 @@ export function getDatabase(): DB {
   if (db) return db;
 
   const dbPath = process.env.SPOTIFY_DB_PATH || './.local/spotify.db';
+
+  // Ensure directory exists
+  const dbDir = dirname(dbPath);
+  if (!existsSync(dbDir)) {
+    mkdirSync(dbDir, { recursive: true });
+  }
 
   sqlite = new Database(dbPath);
 

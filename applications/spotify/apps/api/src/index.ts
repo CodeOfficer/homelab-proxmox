@@ -1,22 +1,20 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import { initializeDatabase, closeDatabase } from '@spotify/shared';
 
-// Create Fastify instance
-const app = Fastify({
-  logger: {
-    level: process.env.LOG_LEVEL || 'info',
-  },
-});
+export interface BuildAppOptions {
+  logger?: boolean;
+}
 
-// Configuration
-const PORT = Number(process.env.API_PORT) || 3001;
-const HOST = process.env.API_HOST || '127.0.0.1';
-const isDev = process.env.NODE_ENV !== 'production';
+// Build app with all routes registered (used for testing)
+export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
+  const app = Fastify({
+    logger: options.logger ?? false,
+  });
 
-// Register plugins
-async function registerPlugins() {
+  const isDev = process.env.NODE_ENV !== 'production';
+
   // CORS for development
   if (isDev) {
     await app.register(cors, {
@@ -30,17 +28,14 @@ async function registerPlugins() {
     secret: process.env.COOKIE_SECRET || 'spotify-sync-dev-secret-change-in-prod',
     parseOptions: {},
   });
-}
 
-// Health check
-app.get('/health', async () => ({
-  status: 'ok',
-  timestamp: new Date().toISOString(),
-}));
+  // Health check
+  app.get('/health', async () => ({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  }));
 
-// Register API routes
-async function registerRoutes() {
-  // Import and register route modules
+  // Register route modules
   const { registerStatsRoutes } = await import('./routes/stats.js');
   const { registerPlaylistRoutes } = await import('./routes/playlists.js');
   const { registerTrackRoutes } = await import('./routes/tracks.js');
@@ -60,31 +55,35 @@ async function registerRoutes() {
   registerSearchRoutes(app);
   registerSyncRoutes(app);
   registerAuthRoutes(app);
+
+  return app;
 }
 
-// Graceful shutdown
-async function shutdown() {
-  app.log.info('Shutting down...');
-  await app.close();
-  closeDatabase();
-  process.exit(0);
-}
-
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
-
-// Start server
+// Start server (entry point)
 async function start() {
+  const PORT = Number(process.env.API_PORT) || 3001;
+  const HOST = process.env.API_HOST || '127.0.0.1';
+
+  // Initialize database
+  console.log('Initializing database...');
+  initializeDatabase();
+
+  const app = await buildApp({
+    logger: true,
+  });
+
+  // Graceful shutdown
+  async function shutdown() {
+    app.log.info('Shutting down...');
+    await app.close();
+    closeDatabase();
+    process.exit(0);
+  }
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+
   try {
-    // Initialize database
-    app.log.info('Initializing database...');
-    initializeDatabase();
-
-    // Register plugins and routes
-    await registerPlugins();
-    await registerRoutes();
-
-    // Start listening
     await app.listen({ port: PORT, host: HOST });
     app.log.info(`API server running at http://${HOST}:${PORT}`);
   } catch (err) {
@@ -93,6 +92,8 @@ async function start() {
   }
 }
 
-start();
-
-export { app };
+// Only start when run directly (not imported)
+const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+if (isMainModule) {
+  start();
+}
