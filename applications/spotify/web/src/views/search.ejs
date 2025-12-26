@@ -375,17 +375,27 @@
       if (!searchQuery) return;
       const raw = sessionStorage.getItem('searchCursor');
       if (!raw) return;
-      sessionStorage.removeItem('searchCursor');
+      let state;
       try {
-        const state = JSON.parse(raw);
-        if (state.value !== searchQuery.value) return;
-        searchQuery.focus();
+        state = JSON.parse(raw);
+      } catch {
+        sessionStorage.removeItem('searchCursor');
+        return;
+      }
+
+      const apply = () => {
+        if (state.value !== searchQuery.value) {
+          sessionStorage.removeItem('searchCursor');
+          return;
+        }
+        searchQuery.focus({ preventScroll: true });
         if (typeof state.start === 'number' && typeof state.end === 'number') {
           searchQuery.setSelectionRange(state.start, state.end);
         }
-      } catch {
-        // Ignore invalid session storage
-      }
+        sessionStorage.removeItem('searchCursor');
+      };
+
+      requestAnimationFrame(() => setTimeout(apply, 0));
     }
 
     function scheduleSubmit() {
