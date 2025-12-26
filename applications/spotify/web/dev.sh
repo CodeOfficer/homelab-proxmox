@@ -34,5 +34,5 @@ echo "Port: $PORT"
 echo "Redirect URI: $SPOTIFY_REDIRECT_URI"
 echo ""
 
-# Use tsx for TypeScript execution with watch mode
-npx tsx watch src/index.ts
+# Use ts-node for local dev to avoid tsx IPC issues
+pnpm ts-node src/index.ts

@@ -8,6 +8,9 @@
     "clean": "pnpm -r clean",
     "test": "pnpm -r test",
     "dev:web": "pnpm --filter spotify-web dev",
+    "dev:local": "bash ./scripts/dev-local.sh",
+    "dev:cert": "bash ./scripts/dev-cert.sh",
+    "dev:sync:local": "bash ./scripts/dev-sync-local.sh",
     "dev:mcp": "pnpm --filter spotify-mcp dev",
     "dev:sync": "pnpm --filter spotify-sync dev"
   },

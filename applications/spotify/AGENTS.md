@@ -13,6 +13,10 @@ This project uses a lightweight, app-scoped plan. Treat this file as the entry p
 - Add a short "History" entry in `applications/spotify/PLAN.md` linking to the archive.
 - Plans are not archived automatically; do it explicitly when the plan changes.
 
+## Documentation rule (required)
+
+- Only add or update guidance/notes in `applications/spotify/AGENTS.md` or `applications/spotify/PLAN.md`. Do not edit other docs for this kind of content.
+
 ## Working conventions
 
 - Run Spotify app commands from `applications/spotify` unless stated otherwise.

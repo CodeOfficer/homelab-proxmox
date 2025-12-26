@@ -6,6 +6,11 @@ export interface Artist {
   genres: string | null;  // JSON array
   popularity: number | null;
   image_url: string | null;
+  external_url: string | null;
+  href: string | null;
+  uri: string | null;
+  followers_total: number | null;
+  images_json: string | null;
   synced_at: string;
 }
 
@@ -16,6 +21,13 @@ export interface Album {
   album_type: string | null;  // album, single, compilation
   total_tracks: number | null;
   image_url: string | null;
+  external_url: string | null;
+  href: string | null;
+  uri: string | null;
+  release_date_precision: string | null;
+  images_json: string | null;
+  available_markets_json: string | null;
+  restrictions_reason: string | null;
   synced_at: string;
 }
 
@@ -27,6 +39,18 @@ export interface Track {
   explicit: boolean | null;
   popularity: number | null;
   preview_url: string | null;
+  external_url: string | null;
+  href: string | null;
+  uri: string | null;
+  disc_number: number | null;
+  track_number: number | null;
+  is_local: boolean | null;
+  is_playable: boolean | null;
+  isrc: string | null;
+  external_ids_json: string | null;
+  available_markets_json: string | null;
+  restrictions_reason: string | null;
+  linked_from_json: string | null;
   synced_at: string;
 }
 
@@ -46,6 +70,15 @@ export interface Playlist {
   collaborative: boolean | null;
   snapshot_id: string | null;
   image_url: string | null;
+  external_url: string | null;
+  href: string | null;
+  uri: string | null;
+  primary_color: string | null;
+  tracks_total: number | null;
+  owner_uri: string | null;
+  owner_external_url: string | null;
+  owner_type: string | null;
+  images_json: string | null;
   synced_at: string;
 }
 
@@ -55,6 +88,12 @@ export interface PlaylistTrack {
   position: number;
   added_at: string | null;
   added_by: string | null;
+  added_by_type: string | null;
+  added_by_uri: string | null;
+  added_by_href: string | null;
+  added_by_external_url: string | null;
+  is_local: boolean | null;
+  video_thumbnail_url: string | null;
 }
 
 export interface SpotifyCredentials {
@@ -75,6 +114,7 @@ export interface SyncLog {
   items_synced: number | null;
   items_updated: number | null;
   items_added: number | null;
+  duration_seconds: number | null;
 }
 
 export interface SchemaVersion {

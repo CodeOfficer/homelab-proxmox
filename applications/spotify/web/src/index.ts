@@ -1,5 +1,7 @@
 import express from 'express';
 import path from 'path';
+import https from 'https';
+import { readFileSync } from 'fs';
 import { getDatabase, closeDatabase } from '@homelab/spotify-shared';
 import { initiateAuth, handleCallback, logout } from './controllers/spotifyAuth';
 import { showDashboard } from './controllers/dashboard';
@@ -14,6 +16,7 @@ import { showSearchResults } from './controllers/search';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '127.0.0.1';
 
 // Global error handlers - catch unhandled errors to prevent silent crashes
 process.on('unhandledRejection', (reason, promise) => {
@@ -96,9 +99,20 @@ app.get('/search', showSearchResults);
 
 // Start server only if not in test mode
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`Spotify Web UI listening on port ${PORT}`);
-  });
+  const httpsKeyPath = process.env.HTTPS_KEY_PATH;
+  const httpsCertPath = process.env.HTTPS_CERT_PATH;
+
+  if (httpsKeyPath && httpsCertPath) {
+    const key = readFileSync(httpsKeyPath);
+    const cert = readFileSync(httpsCertPath);
+    https.createServer({ key, cert }, app).listen(Number(PORT), HOST, () => {
+      console.log(`Spotify Web UI listening on https://${HOST}:${PORT}`);
+    });
+  } else {
+    app.listen(Number(PORT), HOST, () => {
+      console.log(`Spotify Web UI listening on http://${HOST}:${PORT}`);
+    });
+  }
 }
 
 export default app;

@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS audio_features (
   tempo REAL,                  -- BPM: Beats per minute
   time_signature INTEGER,      -- 3-7: Beats per measure
   duration_ms INTEGER,         -- Redundant with tracks.duration_ms but useful for validation
+  analysis_url TEXT,
+  track_href TEXT,
+  uri TEXT,
   synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

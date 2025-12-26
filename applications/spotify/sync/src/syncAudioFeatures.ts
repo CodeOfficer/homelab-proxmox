@@ -1,10 +1,24 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { SpotifyDatabase } from '@homelab/spotify-shared';
+import { appendFileSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 
 const BATCH_SIZE = 100; // Spotify max for /audio-features endpoint
 const RATE_LIMIT_DELAY = 100; // 10 req/s = safe margin under 300/30s
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const dumpPath = process.env.SPOTIFY_SYNC_DUMP_PATH;
+
+function dumpResponse(type: string, payload: unknown) {
+  if (!dumpPath) return;
+  try {
+    mkdirSync(dirname(dumpPath), { recursive: true });
+    const line = JSON.stringify({ type, timestamp: new Date().toISOString(), payload });
+    appendFileSync(dumpPath, `${line}\n`);
+  } catch (error) {
+    console.warn('Failed to write sync dump:', error);
+  }
+}
 
 /**
  * Sync audio features for tracks (tempo, energy, danceability, etc.)
@@ -57,16 +71,17 @@ export async function syncAudioFeatures(
       // Batch API call: GET /audio-features?ids=id1,id2,...
       // Returns { audio_features: [...] } with array of feature objects
       const response = await spotifyApi.tracks.audioFeatures(batch);
+      dumpResponse('audio_features.batch', { ids: batch, audio_features: response });
 
       // Check if response is valid
-      if (!response || !response.audio_features) {
+      if (!response || response.length === 0) {
         console.warn(`  Empty response for batch ${i}-${i + batch.length}`);
         failed += batch.length;
         db.updateSyncProgress(syncLogId, 'audio_features', processed, failed);
         continue;
       }
 
-      for (const features of response.audio_features) {
+      for (const features of response) {
         if (features) {
           db.upsertAudioFeatures({
             track_id: features.id,
@@ -82,7 +97,10 @@ export async function syncAudioFeatures(
             valence: features.valence,
             tempo: features.tempo,
             time_signature: features.time_signature,
-            duration_ms: features.duration_ms
+            duration_ms: features.duration_ms,
+            analysis_url: (features as any).analysis_url || null,
+            track_href: (features as any).track_href || null,
+            uri: (features as any).uri || null
           });
           processed++;
         } else {

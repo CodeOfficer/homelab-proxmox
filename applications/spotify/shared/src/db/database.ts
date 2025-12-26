@@ -66,6 +66,22 @@ export class SpotifyDatabase {
         throw e;
       }
     }
+
+    // Migration 003: Expanded metadata fields
+    if (!currentVersion || currentVersion < 3) {
+      console.log('Running migration 003: Expanded metadata fields...');
+      const migration3Path = join(__dirname, 'migrations', '003_metadata_expansion.sql');
+
+      try {
+        const migration3 = readFileSync(migration3Path, 'utf8');
+        this.db.exec(migration3);
+        this.db.prepare('INSERT INTO _schema_version (version) VALUES (3)').run();
+        console.log('✓ Migration 003 complete');
+      } catch (e: any) {
+        console.error('✗ Migration 003 failed:', e.message);
+        throw e;
+      }
+    }
   }
 
   /**
@@ -123,15 +139,36 @@ export class SpotifyDatabase {
     collaborative?: boolean | null;
     snapshot_id?: string | null;
     image_url?: string | null;
+    external_url?: string | null;
+    href?: string | null;
+    uri?: string | null;
+    primary_color?: string | null;
+    tracks_total?: number | null;
+    owner_uri?: string | null;
+    owner_external_url?: string | null;
+    owner_type?: string | null;
+    images_json?: string | null;
   }) {
     this.db.prepare(`
-      INSERT INTO playlists (id, name, description, owner_id, owner_name, public, collaborative, snapshot_id, image_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO playlists (
+        id, name, description, owner_id, owner_name, public, collaborative, snapshot_id, image_url,
+        external_url, href, uri, primary_color, tracks_total, owner_uri, owner_external_url, owner_type, images_json
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         description = excluded.description,
         snapshot_id = excluded.snapshot_id,
         image_url = excluded.image_url,
+        external_url = excluded.external_url,
+        href = excluded.href,
+        uri = excluded.uri,
+        primary_color = excluded.primary_color,
+        tracks_total = excluded.tracks_total,
+        owner_uri = excluded.owner_uri,
+        owner_external_url = excluded.owner_external_url,
+        owner_type = excluded.owner_type,
+        images_json = excluded.images_json,
         synced_at = CURRENT_TIMESTAMP
     `).run(
       playlist.id,
@@ -142,7 +179,16 @@ export class SpotifyDatabase {
       playlist.public ? 1 : 0,
       playlist.collaborative ? 1 : 0,
       playlist.snapshot_id || null,
-      playlist.image_url || null
+      playlist.image_url || null,
+      playlist.external_url || null,
+      playlist.href || null,
+      playlist.uri || null,
+      playlist.primary_color || null,
+      playlist.tracks_total ?? null,
+      playlist.owner_uri || null,
+      playlist.owner_external_url || null,
+      playlist.owner_type || null,
+      playlist.images_json || null
     );
   }
 
@@ -189,7 +235,8 @@ export class SpotifyDatabase {
           items_synced = ?,
           items_added = ?,
           items_updated = ?,
-          error = ?
+          error = ?,
+          duration_seconds = CAST((julianday(CURRENT_TIMESTAMP) - julianday(started_at)) * 86400 AS INTEGER)
       WHERE id = ?
     `).run(status, itemsSynced, itemsAdded, itemsUpdated, error, id);
   }
@@ -214,10 +261,26 @@ export class SpotifyDatabase {
     explicit: boolean;
     popularity: number;
     preview_url: string | null;
+    external_url?: string | null;
+    href?: string | null;
+    uri?: string | null;
+    disc_number?: number | null;
+    track_number?: number | null;
+    is_local?: boolean | null;
+    is_playable?: boolean | null;
+    isrc?: string | null;
+    external_ids_json?: string | null;
+    available_markets_json?: string | null;
+    restrictions_reason?: string | null;
+    linked_from_json?: string | null;
   }) {
     this.db.prepare(`
-      INSERT INTO tracks (id, name, album_id, duration_ms, explicit, popularity, preview_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tracks (
+        id, name, album_id, duration_ms, explicit, popularity, preview_url,
+        external_url, href, uri, disc_number, track_number, is_local, is_playable,
+        isrc, external_ids_json, available_markets_json, restrictions_reason, linked_from_json
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         album_id = excluded.album_id,
@@ -225,6 +288,18 @@ export class SpotifyDatabase {
         explicit = excluded.explicit,
         popularity = excluded.popularity,
         preview_url = excluded.preview_url,
+        external_url = excluded.external_url,
+        href = excluded.href,
+        uri = excluded.uri,
+        disc_number = excluded.disc_number,
+        track_number = excluded.track_number,
+        is_local = excluded.is_local,
+        is_playable = excluded.is_playable,
+        isrc = excluded.isrc,
+        external_ids_json = excluded.external_ids_json,
+        available_markets_json = excluded.available_markets_json,
+        restrictions_reason = excluded.restrictions_reason,
+        linked_from_json = excluded.linked_from_json,
         synced_at = CURRENT_TIMESTAMP
     `).run(
       track.id,
@@ -233,7 +308,19 @@ export class SpotifyDatabase {
       track.duration_ms,
       track.explicit ? 1 : 0,
       track.popularity,
-      track.preview_url
+      track.preview_url,
+      track.external_url || null,
+      track.href || null,
+      track.uri || null,
+      track.disc_number ?? null,
+      track.track_number ?? null,
+      track.is_local === null || track.is_local === undefined ? null : (track.is_local ? 1 : 0),
+      track.is_playable === null || track.is_playable === undefined ? null : (track.is_playable ? 1 : 0),
+      track.isrc || null,
+      track.external_ids_json || null,
+      track.available_markets_json || null,
+      track.restrictions_reason || null,
+      track.linked_from_json || null
     );
   }
 
@@ -248,16 +335,34 @@ export class SpotifyDatabase {
     album_type: string | null;
     total_tracks: number | null;
     image_url: string | null;
+    external_url?: string | null;
+    href?: string | null;
+    uri?: string | null;
+    release_date_precision?: string | null;
+    images_json?: string | null;
+    available_markets_json?: string | null;
+    restrictions_reason?: string | null;
   }) {
     this.db.prepare(`
-      INSERT INTO albums (id, name, release_date, album_type, total_tracks, image_url)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO albums (
+        id, name, release_date, album_type, total_tracks, image_url,
+        external_url, href, uri, release_date_precision, images_json,
+        available_markets_json, restrictions_reason
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         release_date = excluded.release_date,
         album_type = excluded.album_type,
         total_tracks = excluded.total_tracks,
         image_url = excluded.image_url,
+        external_url = excluded.external_url,
+        href = excluded.href,
+        uri = excluded.uri,
+        release_date_precision = excluded.release_date_precision,
+        images_json = excluded.images_json,
+        available_markets_json = excluded.available_markets_json,
+        restrictions_reason = excluded.restrictions_reason,
         synced_at = CURRENT_TIMESTAMP
     `).run(
       album.id,
@@ -265,7 +370,14 @@ export class SpotifyDatabase {
       album.release_date,
       album.album_type,
       album.total_tracks,
-      album.image_url
+      album.image_url,
+      album.external_url || null,
+      album.href || null,
+      album.uri || null,
+      album.release_date_precision || null,
+      album.images_json || null,
+      album.available_markets_json || null,
+      album.restrictions_reason || null
     );
   }
 
@@ -279,22 +391,40 @@ export class SpotifyDatabase {
     genres: string[] | null;
     popularity: number | null;
     image_url: string | null;
+    external_url?: string | null;
+    href?: string | null;
+    uri?: string | null;
+    followers_total?: number | null;
+    images_json?: string | null;
   }) {
     this.db.prepare(`
-      INSERT INTO artists (id, name, genres, popularity, image_url)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO artists (
+        id, name, genres, popularity, image_url,
+        external_url, href, uri, followers_total, images_json
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         genres = excluded.genres,
         popularity = excluded.popularity,
         image_url = excluded.image_url,
+        external_url = excluded.external_url,
+        href = excluded.href,
+        uri = excluded.uri,
+        followers_total = excluded.followers_total,
+        images_json = excluded.images_json,
         synced_at = CURRENT_TIMESTAMP
     `).run(
       artist.id,
       artist.name,
       artist.genres ? JSON.stringify(artist.genres) : null,
       artist.popularity,
-      artist.image_url
+      artist.image_url,
+      artist.external_url || null,
+      artist.href || null,
+      artist.uri || null,
+      artist.followers_total ?? null,
+      artist.images_json || null
     );
   }
 
@@ -320,15 +450,43 @@ export class SpotifyDatabase {
     trackId: string,
     position: number,
     addedAt: string | null,
-    addedBy: string | null
+    addedBy: string | null,
+    addedByType: string | null,
+    addedByUri: string | null,
+    addedByHref: string | null,
+    addedByExternalUrl: string | null,
+    isLocal: boolean | null,
+    videoThumbnailUrl: string | null
   ) {
     this.db.prepare(`
-      INSERT INTO playlist_tracks (playlist_id, track_id, position, added_at, added_by)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO playlist_tracks (
+        playlist_id, track_id, position, added_at, added_by,
+        added_by_type, added_by_uri, added_by_href, added_by_external_url,
+        is_local, video_thumbnail_url
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(playlist_id, track_id, position) DO UPDATE SET
         added_at = excluded.added_at,
-        added_by = excluded.added_by
-    `).run(playlistId, trackId, position, addedAt, addedBy);
+        added_by = excluded.added_by,
+        added_by_type = excluded.added_by_type,
+        added_by_uri = excluded.added_by_uri,
+        added_by_href = excluded.added_by_href,
+        added_by_external_url = excluded.added_by_external_url,
+        is_local = excluded.is_local,
+        video_thumbnail_url = excluded.video_thumbnail_url
+    `).run(
+      playlistId,
+      trackId,
+      position,
+      addedAt,
+      addedBy,
+      addedByType,
+      addedByUri,
+      addedByHref,
+      addedByExternalUrl,
+      isLocal ? 1 : 0,
+      videoThumbnailUrl
+    );
   }
 
   clearPlaylistTracks(playlistId: string) {
@@ -354,14 +512,18 @@ export class SpotifyDatabase {
     tempo: number;
     time_signature: number;
     duration_ms: number;
+    analysis_url?: string | null;
+    track_href?: string | null;
+    uri?: string | null;
   }) {
     this.db.prepare(`
       INSERT INTO audio_features (
         track_id, danceability, energy, key, loudness, mode,
         speechiness, acousticness, instrumentalness, liveness,
-        valence, tempo, time_signature, duration_ms
+        valence, tempo, time_signature, duration_ms,
+        analysis_url, track_href, uri
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(track_id) DO UPDATE SET
         danceability = excluded.danceability,
         energy = excluded.energy,
@@ -376,13 +538,17 @@ export class SpotifyDatabase {
         tempo = excluded.tempo,
         time_signature = excluded.time_signature,
         duration_ms = excluded.duration_ms,
+        analysis_url = excluded.analysis_url,
+        track_href = excluded.track_href,
+        uri = excluded.uri,
         synced_at = CURRENT_TIMESTAMP
     `).run(
       features.track_id, features.danceability, features.energy,
       features.key, features.loudness, features.mode,
       features.speechiness, features.acousticness, features.instrumentalness,
       features.liveness, features.valence, features.tempo,
-      features.time_signature, features.duration_ms
+      features.time_signature, features.duration_ms,
+      features.analysis_url || null, features.track_href || null, features.uri || null
     );
   }
 

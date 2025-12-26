@@ -8,6 +8,11 @@ CREATE TABLE IF NOT EXISTS artists (
   genres TEXT,                   -- JSON array: ["rock", "indie"]
   popularity INTEGER,
   image_url TEXT,
+  external_url TEXT,
+  href TEXT,
+  uri TEXT,
+  followers_total INTEGER,
+  images_json TEXT,              -- JSON array of images
   synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -18,6 +23,13 @@ CREATE TABLE IF NOT EXISTS albums (
   album_type TEXT,               -- album, single, compilation
   total_tracks INTEGER,
   image_url TEXT,
+  external_url TEXT,
+  href TEXT,
+  uri TEXT,
+  release_date_precision TEXT,
+  images_json TEXT,              -- JSON array of images
+  available_markets_json TEXT,   -- JSON array
+  restrictions_reason TEXT,
   synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -29,6 +41,18 @@ CREATE TABLE IF NOT EXISTS tracks (
   explicit BOOLEAN,
   popularity INTEGER,
   preview_url TEXT,
+  external_url TEXT,
+  href TEXT,
+  uri TEXT,
+  disc_number INTEGER,
+  track_number INTEGER,
+  is_local BOOLEAN,
+  is_playable BOOLEAN,
+  isrc TEXT,
+  external_ids_json TEXT,        -- JSON object
+  available_markets_json TEXT,   -- JSON array
+  restrictions_reason TEXT,
+  linked_from_json TEXT,         -- JSON object
   synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -49,6 +73,15 @@ CREATE TABLE IF NOT EXISTS playlists (
   collaborative BOOLEAN,
   snapshot_id TEXT,              -- Spotify version identifier
   image_url TEXT,
+  external_url TEXT,
+  href TEXT,
+  uri TEXT,
+  primary_color TEXT,
+  tracks_total INTEGER,
+  owner_uri TEXT,
+  owner_external_url TEXT,
+  owner_type TEXT,
+  images_json TEXT,              -- JSON array of images
   synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -58,6 +91,12 @@ CREATE TABLE IF NOT EXISTS playlist_tracks (
   position INTEGER,              -- Order in playlist
   added_at TIMESTAMP,
   added_by TEXT,                 -- User ID
+  added_by_type TEXT,
+  added_by_uri TEXT,
+  added_by_href TEXT,
+  added_by_external_url TEXT,
+  is_local BOOLEAN,
+  video_thumbnail_url TEXT,
   PRIMARY KEY (playlist_id, track_id, position)
 );
 
@@ -80,7 +119,8 @@ CREATE TABLE IF NOT EXISTS sync_log (
   error TEXT,
   items_synced INTEGER,
   items_updated INTEGER,
-  items_added INTEGER
+  items_added INTEGER,
+  duration_seconds INTEGER
 );
 
 -- Schema versioning

@@ -1,7 +1,21 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { SpotifyDatabase } from '@homelab/spotify-shared';
+import { appendFileSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const dumpPath = process.env.SPOTIFY_SYNC_DUMP_PATH;
+
+function dumpResponse(type: string, payload: unknown) {
+  if (!dumpPath) return;
+  try {
+    mkdirSync(dirname(dumpPath), { recursive: true });
+    const line = JSON.stringify({ type, timestamp: new Date().toISOString(), payload });
+    appendFileSync(dumpPath, `${line}\n`);
+  } catch (error) {
+    console.warn('Failed to write sync dump:', error);
+  }
+}
 
 export async function syncPlaylists(db: SpotifyDatabase) {
   const credentials = db.getCredentials();
@@ -40,17 +54,13 @@ export async function syncPlaylists(db: SpotifyDatabase) {
 
     while (hasMore) {
       const response = await spotifyApi.currentUser.playlists.playlists(limit, offset);
+      dumpResponse('playlists.page', response);
 
       for (const playlist of response.items) {
         totalPlaylists++;
 
-        // Check if playlist changed (snapshot_id)
+        // Always fetch playlist items to keep local DB and dumps complete
         const existing = db.getPlaylist(playlist.id);
-
-        if (existing?.snapshot_id === playlist.snapshot_id) {
-          console.log(`  Skipping unchanged playlist: ${playlist.name}`);
-          continue;
-        }
 
         const isNew = !existing;
         console.log(`  ${isNew ? 'Adding' : 'Updating'} playlist: ${playlist.name}`);
@@ -65,7 +75,16 @@ export async function syncPlaylists(db: SpotifyDatabase) {
           public: playlist.public || false,
           collaborative: playlist.collaborative || false,
           snapshot_id: playlist.snapshot_id,
-          image_url: playlist.images?.[0]?.url || null
+          image_url: playlist.images?.[0]?.url || null,
+          external_url: playlist.external_urls?.spotify || null,
+          href: playlist.href || null,
+          uri: playlist.uri || null,
+          primary_color: playlist.primary_color || null,
+          tracks_total: playlist.tracks?.total ?? null,
+          owner_uri: playlist.owner?.uri || null,
+          owner_external_url: playlist.owner?.external_urls?.spotify || null,
+          owner_type: playlist.owner?.type || null,
+          images_json: playlist.images ? JSON.stringify(playlist.images) : null
         });
 
         if (isNew) {
@@ -94,25 +113,37 @@ export async function syncPlaylists(db: SpotifyDatabase) {
             trackLimit,
             trackOffset
           );
+          dumpResponse('playlists.items.page', { playlist_id: playlist.id, offset: trackOffset, items: tracks });
 
           for (const item of tracks.items) {
-            // Skip local files and null tracks
-            if (!item.track || item.track.type !== 'track') {
+            // Skip local files, null tracks, and non-track items
+            if (!item.track || item.track.type !== 'track' || (item as any).is_local || (item.track as any).is_local) {
               console.log(`    Skipping non-track item in ${playlist.name}`);
               continue;
             }
 
             const track = item.track;
+            if (!track.id) {
+              console.log(`    Skipping track with missing ID in ${playlist.name}`);
+              continue;
+            }
 
             // Upsert album FIRST (foreign key dependency)
-            if (track.album) {
+            if (track.album?.id) {
               db.upsertAlbum({
                 id: track.album.id,
                 name: track.album.name,
                 release_date: track.album.release_date || null,
                 album_type: track.album.album_type || null,
                 total_tracks: track.album.total_tracks || null,
-                image_url: track.album.images?.[0]?.url || null
+                image_url: track.album.images?.[0]?.url || null,
+                external_url: track.album.external_urls?.spotify || null,
+                href: track.album.href || null,
+                uri: track.album.uri || null,
+                release_date_precision: track.album.release_date_precision || null,
+                images_json: track.album.images ? JSON.stringify(track.album.images) : null,
+                available_markets_json: track.album.available_markets ? JSON.stringify(track.album.available_markets) : null,
+                restrictions_reason: (track.album as any).restrictions?.reason || null
               });
             }
 
@@ -120,13 +151,21 @@ export async function syncPlaylists(db: SpotifyDatabase) {
             if (track.artists) {
               for (let i = 0; i < track.artists.length; i++) {
                 const artist = track.artists[i];
+                if (!artist.id) {
+                  continue;
+                }
 
                 db.upsertArtist({
                   id: artist.id,
                   name: artist.name,
                   genres: null, // Artist details not available in playlist tracks
                   popularity: null,
-                  image_url: null
+                  image_url: null,
+                  external_url: artist.external_urls?.spotify || null,
+                  href: artist.href || null,
+                  uri: artist.uri || null,
+                  followers_total: null,
+                  images_json: null
                 });
               }
             }
@@ -139,13 +178,28 @@ export async function syncPlaylists(db: SpotifyDatabase) {
               duration_ms: track.duration_ms,
               explicit: track.explicit || false,
               popularity: track.popularity || 0,
-              preview_url: track.preview_url || null
+              preview_url: track.preview_url || null,
+              external_url: track.external_urls?.spotify || null,
+              href: track.href || null,
+              uri: track.uri || null,
+              disc_number: track.disc_number ?? null,
+              track_number: track.track_number ?? null,
+              is_local: track.is_local || false,
+              is_playable: (track as any).is_playable ?? null,
+              isrc: (track.external_ids as any)?.isrc || null,
+              external_ids_json: track.external_ids ? JSON.stringify(track.external_ids) : null,
+              available_markets_json: track.available_markets ? JSON.stringify(track.available_markets) : null,
+              restrictions_reason: (track.restrictions as any)?.reason || null,
+              linked_from_json: (track as any).linked_from ? JSON.stringify((track as any).linked_from) : null
             });
 
             // Link track to artists LAST
             if (track.artists) {
               for (let i = 0; i < track.artists.length; i++) {
                 const artist = track.artists[i];
+                if (!artist.id) {
+                  continue;
+                }
                 db.linkTrackArtist(track.id, artist.id, i);
               }
             }
@@ -156,7 +210,13 @@ export async function syncPlaylists(db: SpotifyDatabase) {
               track.id,
               trackPosition++,
               item.added_at || null,
-              item.added_by?.id || null
+              item.added_by?.id || null,
+              item.added_by?.type || null,
+              item.added_by?.uri || null,
+              item.added_by?.href || null,
+              item.added_by?.external_urls?.spotify || null,
+              (item as any).is_local || (track as any).is_local || false,
+              (item as any).video_thumbnail?.url || null
             );
           }
 

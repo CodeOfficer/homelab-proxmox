@@ -1,10 +1,24 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { SpotifyDatabase } from '@homelab/spotify-shared';
+import { appendFileSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 
 const BATCH_SIZE = 50; // Spotify max for /artists endpoint
 const RATE_LIMIT_DELAY = 100; // 10 req/s = safe margin under 300/30s
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const dumpPath = process.env.SPOTIFY_SYNC_DUMP_PATH;
+
+function dumpResponse(type: string, payload: unknown) {
+  if (!dumpPath) return;
+  try {
+    mkdirSync(dirname(dumpPath), { recursive: true });
+    const line = JSON.stringify({ type, timestamp: new Date().toISOString(), payload });
+    appendFileSync(dumpPath, `${line}\n`);
+  } catch (error) {
+    console.warn('Failed to write sync dump:', error);
+  }
+}
 
 /**
  * Enrich artist data with full details (genres, popularity, images)
@@ -46,15 +60,21 @@ export async function syncArtistDetails(
       // Batch API call: GET /artists?ids=id1,id2,...
       // Returns array of artist objects with full details
       const response = await spotifyApi.artists.get(batch);
+      dumpResponse('artists.batch', { ids: batch, artists: response });
 
-      for (const artist of response.artists) {
+      for (const artist of response) {
         if (artist) {
           db.upsertArtist({
             id: artist.id,
             name: artist.name,
             genres: artist.genres || [],
             popularity: artist.popularity || 0,
-            image_url: artist.images?.[0]?.url || null
+            image_url: artist.images?.[0]?.url || null,
+            external_url: artist.external_urls?.spotify || null,
+            href: artist.href || null,
+            uri: artist.uri || null,
+            followers_total: artist.followers?.total ?? null,
+            images_json: artist.images ? JSON.stringify(artist.images) : null
           });
           processed++;
         } else {
