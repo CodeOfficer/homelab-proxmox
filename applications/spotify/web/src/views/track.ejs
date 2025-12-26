@@ -72,7 +72,7 @@
                 <%= track.album_name %>
               <% } %>
               <% if (track.album_external_url) { %>
-                <a href="<%= track.album_external_url %>" target="_blank" rel="noopener" class="ml-2 text-xs text-green-700 hover:text-green-800">Open in Spotify ↗</a>
+                <a href="<%= track.album_external_url %>" target="_blank" rel="noopener" class="ml-2 text-xs text-green-700 hover:text-green-800">↗</a>
               <% } %>
               <% if (track.album_release_date) { %>
                 <span class="text-sm text-gray-500">· <%= track.album_release_date %></span>
@@ -137,7 +137,7 @@
           <div class="mt-4">
             <% if (track.external_url) { %>
               <a href="<%= track.external_url %>" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-green-700 hover:text-green-800 font-semibold">
-                Open in Spotify ↗
+                ↗
               </a>
               <span class="text-gray-300 mx-2">•</span>
             <% } %>

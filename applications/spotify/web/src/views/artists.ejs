@@ -115,7 +115,7 @@
                 </div>
               </a>
               <% if (artist.external_url) { %>
-                <a href="<%= artist.external_url %>" target="_blank" rel="noopener" class="text-xs text-green-700 mt-3 inline-block">Open in Spotify ↗</a>
+                <a href="<%= artist.external_url %>" target="_blank" rel="noopener" class="text-xs text-green-700 mt-3 inline-block">↗</a>
               <% } %>
             </div>
           <% }); %>
@@ -202,7 +202,7 @@
       const popularity = artist.popularity !== null && artist.popularity !== undefined
         ? `<div class="mt-2"><div class="w-full bg-gray-200 rounded-full h-1"><div class="bg-green-600 h-1 rounded-full" style="width: ${artist.popularity}%"></div></div></div>`
         : '';
-      const external = artist.external_url ? `<a href="${artist.external_url}" target="_blank" rel="noopener" class="text-xs text-green-700 mt-3 inline-block">Open in Spotify ↗</a>` : '';
+      const external = artist.external_url ? `<a href="${artist.external_url}" target="_blank" rel="noopener" class="text-xs text-green-700 mt-3 inline-block">↗</a>` : '';
       return `
         <div class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:shadow-md transition">
           <a href="/artist/${artist.id}" class="flex items-center gap-4">

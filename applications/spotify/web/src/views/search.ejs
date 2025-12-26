@@ -284,7 +284,7 @@
                     </div>
                   </a>
                   <% if (artist.external_url) { %>
-                    <a href="<%= artist.external_url %>" target="_blank" rel="noopener" class="text-xs text-green-700 mt-3 inline-block">Open in Spotify ↗</a>
+                    <a href="<%= artist.external_url %>" target="_blank" rel="noopener" class="text-xs text-green-700 mt-3 inline-block">↗</a>
                   <% } %>
                 </div>
               <% }); %>
@@ -321,7 +321,7 @@
                     <p class="text-sm text-gray-500"><%= playlist.track_count || 0 %> tracks</p>
                   </a>
                   <% if (playlist.external_url) { %>
-                    <a href="<%= playlist.external_url %>" target="_blank" rel="noopener" class="text-xs text-green-700 mt-1 inline-block">Open in Spotify ↗</a>
+                    <a href="<%= playlist.external_url %>" target="_blank" rel="noopener" class="text-xs text-green-700 mt-1 inline-block">↗</a>
                   <% } %>
                 </div>
               <% }); %>
