@@ -157,7 +157,13 @@
                     <%= track.artist_name || 'Unknown Artist' %>
                   </td>
                   <td class="py-3 px-4 text-sm text-gray-600 hidden lg:table-cell">
-                    <%= track.album_name || 'Unknown Album' %>
+                    <% if (track.album_id) { %>
+                      <a href="/album/<%= track.album_id %>" class="text-blue-600 hover:underline">
+                        <%= track.album_name || 'Unknown Album' %>
+                      </a>
+                    <% } else { %>
+                      <%= track.album_name || 'Unknown Album' %>
+                    <% } %>
                   </td>
                   <% if (tracks.some(t => t.tempo)) { %>
                     <td class="py-3 px-4 text-sm text-gray-600 hidden lg:table-cell text-center">

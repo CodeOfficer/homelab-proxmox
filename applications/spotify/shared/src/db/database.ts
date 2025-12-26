@@ -733,10 +733,11 @@ export class SpotifyDatabase {
     const pattern = `%"${genre.toLowerCase()}"%`;
 
     return this.db.prepare(`
-      SELECT DISTINCT t.*, a.name as artist_name
+      SELECT DISTINCT t.*, a.name as artist_name, al.name as album_name
       FROM tracks t
       JOIN track_artists ta ON t.id = ta.track_id
       JOIN artists a ON ta.artist_id = a.id
+      LEFT JOIN albums al ON t.album_id = al.id
       WHERE LOWER(a.genres) LIKE ?
       LIMIT ?
     `).all(pattern, limit);
@@ -747,11 +748,12 @@ export class SpotifyDatabase {
    */
   searchByTempo(minBpm: number, maxBpm: number, limit: number = 50) {
     return this.db.prepare(`
-      SELECT t.*, af.tempo, a.name as artist_name
+      SELECT t.*, af.tempo, a.name as artist_name, al.name as album_name
       FROM tracks t
       JOIN audio_features af ON t.id = af.track_id
       JOIN track_artists ta ON t.id = ta.track_id AND ta.position = 0
       JOIN artists a ON ta.artist_id = a.id
+      LEFT JOIN albums al ON t.album_id = al.id
       WHERE af.tempo BETWEEN ? AND ?
       ORDER BY af.tempo
       LIMIT ?
@@ -774,11 +776,12 @@ export class SpotifyDatabase {
     }
 
     const sql = `
-      SELECT t.*, af.${feature}, a.name as artist_name
+      SELECT t.*, af.${feature}, a.name as artist_name, al.name as album_name
       FROM tracks t
       JOIN audio_features af ON t.id = af.track_id
       JOIN track_artists ta ON t.id = ta.track_id AND ta.position = 0
       JOIN artists a ON ta.artist_id = a.id
+      LEFT JOIN albums al ON t.album_id = al.id
       WHERE af.${feature} BETWEEN ? AND ?
       ORDER BY af.${feature} DESC
       LIMIT ?
@@ -792,10 +795,11 @@ export class SpotifyDatabase {
    */
   searchByPopularity(minPop: number, maxPop: number, limit: number = 50) {
     return this.db.prepare(`
-      SELECT t.*, a.name as artist_name
+      SELECT t.*, a.name as artist_name, al.name as album_name
       FROM tracks t
       JOIN track_artists ta ON t.id = ta.track_id AND ta.position = 0
       JOIN artists a ON ta.artist_id = a.id
+      LEFT JOIN albums al ON t.album_id = al.id
       WHERE t.popularity BETWEEN ? AND ?
       ORDER BY t.popularity DESC
       LIMIT ?
@@ -807,10 +811,11 @@ export class SpotifyDatabase {
    */
   searchByDuration(minMs: number, maxMs: number, limit: number = 50) {
     return this.db.prepare(`
-      SELECT t.*, a.name as artist_name
+      SELECT t.*, a.name as artist_name, al.name as album_name
       FROM tracks t
       JOIN track_artists ta ON t.id = ta.track_id AND ta.position = 0
       JOIN artists a ON ta.artist_id = a.id
+      LEFT JOIN albums al ON t.album_id = al.id
       WHERE t.duration_ms BETWEEN ? AND ?
       ORDER BY t.duration_ms
       LIMIT ?
@@ -822,10 +827,11 @@ export class SpotifyDatabase {
    */
   searchExplicitTracks(explicit: boolean, limit: number = 50) {
     return this.db.prepare(`
-      SELECT t.*, a.name as artist_name
+      SELECT t.*, a.name as artist_name, al.name as album_name
       FROM tracks t
       JOIN track_artists ta ON t.id = ta.track_id AND ta.position = 0
       JOIN artists a ON ta.artist_id = a.id
+      LEFT JOIN albums al ON t.album_id = al.id
       WHERE t.explicit = ?
       LIMIT ?
     `).all(explicit ? 1 : 0, limit);
@@ -866,6 +872,42 @@ export class SpotifyDatabase {
     `).get(trackId);
 
     return { ...track, artists, audio_features: audioFeatures };
+  }
+
+  /**
+   * Get album details with tracks and artists
+   */
+  getAlbumDetails(albumId: string, limit: number = 200, offset: number = 0) {
+    const album = this.db.prepare(`
+      SELECT * FROM albums WHERE id = ?
+    `).get(albumId);
+
+    if (!album) return null;
+
+    const tracks = this.db.prepare(`
+      SELECT t.*, a.name as artist_name
+      FROM tracks t
+      LEFT JOIN track_artists ta ON t.id = ta.track_id AND ta.position = 0
+      LEFT JOIN artists a ON ta.artist_id = a.id
+      WHERE t.album_id = ?
+      ORDER BY t.disc_number, t.track_number, LOWER(t.name)
+      LIMIT ? OFFSET ?
+    `).all(albumId, limit, offset);
+
+    const totalTracks = this.db.prepare(`
+      SELECT COUNT(*) FROM tracks WHERE album_id = ?
+    `).pluck().get(albumId) as number;
+
+    const artists = this.db.prepare(`
+      SELECT DISTINCT a.*
+      FROM artists a
+      JOIN track_artists ta ON a.id = ta.artist_id
+      JOIN tracks t ON t.id = ta.track_id
+      WHERE t.album_id = ?
+      ORDER BY LOWER(a.name)
+    `).all(albumId);
+
+    return { album, tracks, totalTracks, artists };
   }
 
   /**

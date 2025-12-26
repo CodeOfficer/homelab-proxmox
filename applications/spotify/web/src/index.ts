@@ -15,6 +15,7 @@ import { showAllGenres } from './controllers/allGenres';
 import { showPlaylistDetail } from './controllers/playlistDetail';
 import { showArtistDetail } from './controllers/artistDetail';
 import { showTrackDetail } from './controllers/trackDetail';
+import { showAlbumDetail } from './controllers/albumDetail';
 import { showSearchResults } from './controllers/search';
 
 const app = express();
@@ -101,6 +102,7 @@ app.get('/genres', showAllGenres);
 app.get('/playlist/:id', showPlaylistDetail);
 app.get('/artist/:id', showArtistDetail);
 app.get('/track/:id', showTrackDetail);
+app.get('/album/:id', showAlbumDetail);
 app.get('/search', showSearchResults);
 
 // Live search APIs

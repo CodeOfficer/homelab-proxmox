@@ -66,10 +66,13 @@
           <% if (track.album_name) { %>
             <p class="text-gray-600 mb-4">
               <span class="font-semibold">Album:</span>
-              <% if (track.album_external_url) { %>
-                <a href="<%= track.album_external_url %>" target="_blank" rel="noopener" class="text-blue-600 hover:underline"><%= track.album_name %></a>
+              <% if (track.album_id) { %>
+                <a href="/album/<%= track.album_id %>" class="text-blue-600 hover:underline"><%= track.album_name %></a>
               <% } else { %>
                 <%= track.album_name %>
+              <% } %>
+              <% if (track.album_external_url) { %>
+                <a href="<%= track.album_external_url %>" target="_blank" rel="noopener" class="ml-2 text-xs text-green-700 hover:text-green-800">Open in Spotify ↗</a>
               <% } %>
               <% if (track.album_release_date) { %>
                 <span class="text-sm text-gray-500">· <%= track.album_release_date %></span>
