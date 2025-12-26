@@ -910,6 +910,103 @@ export class SpotifyDatabase {
   }
 
   /**
+   * Get all tracks with pagination
+   */
+  getAllTracks(limit: number = 50, offset: number = 0) {
+    return this.db.prepare(`
+      SELECT t.*, a.name as artist_name, al.name as album_name
+      FROM tracks t
+      LEFT JOIN track_artists ta ON t.id = ta.track_id AND ta.position = 0
+      LEFT JOIN artists a ON ta.artist_id = a.id
+      LEFT JOIN albums al ON t.album_id = al.id
+      ORDER BY LOWER(t.name)
+      LIMIT ? OFFSET ?
+    `).all(limit, offset);
+  }
+
+  /**
+   * Get total track count
+   */
+  getTrackCount(): number {
+    return this.db.prepare('SELECT COUNT(*) FROM tracks').pluck().get() as number;
+  }
+
+  /**
+   * Get all artists with track counts
+   */
+  getAllArtists(limit: number = 50, offset: number = 0) {
+    return this.db.prepare(`
+      SELECT a.*, COUNT(ta.track_id) as track_count
+      FROM artists a
+      LEFT JOIN track_artists ta ON a.id = ta.artist_id
+      GROUP BY a.id
+      ORDER BY LOWER(a.name)
+      LIMIT ? OFFSET ?
+    `).all(limit, offset);
+  }
+
+  /**
+   * Get total artist count
+   */
+  getArtistCount(): number {
+    return this.db.prepare('SELECT COUNT(*) FROM artists').pluck().get() as number;
+  }
+
+  /**
+   * Get all genres with counts
+   */
+  getAllGenres(limit: number = 200, offset: number = 0): { genre: string; count: number }[] {
+    const artists = this.db.prepare(`
+      SELECT genres FROM artists WHERE genres IS NOT NULL
+    `).all() as { genres: string }[];
+
+    const genreCounts: Record<string, number> = {};
+
+    for (const artist of artists) {
+      try {
+        const genres = JSON.parse(artist.genres);
+        if (Array.isArray(genres)) {
+          for (const genre of genres) {
+            genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+          }
+        }
+      } catch {
+        // Skip invalid JSON
+      }
+    }
+
+    return Object.entries(genreCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(offset, offset + limit)
+      .map(([genre, count]) => ({ genre, count }));
+  }
+
+  /**
+   * Get total genre count (unique genres)
+   */
+  getGenreCount(): number {
+    const artists = this.db.prepare(`
+      SELECT genres FROM artists WHERE genres IS NOT NULL
+    `).all() as { genres: string }[];
+
+    const genres = new Set<string>();
+    for (const artist of artists) {
+      try {
+        const parsed = JSON.parse(artist.genres);
+        if (Array.isArray(parsed)) {
+          for (const genre of parsed) {
+            genres.add(genre);
+          }
+        }
+      } catch {
+        // Skip invalid JSON
+      }
+    }
+
+    return genres.size;
+  }
+
+  /**
    * Get total playlist count
    */
   getPlaylistCount(): number {

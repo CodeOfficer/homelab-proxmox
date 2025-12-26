@@ -8,13 +8,16 @@
 </head>
 <body class="bg-gray-100 min-h-screen">
   <nav class="bg-green-600 text-white p-4 shadow-lg">
-    <div class="container mx-auto flex justify-between items-center">
+    <div class="container mx-auto flex flex-wrap items-center justify-between gap-4">
       <h1 class="text-2xl font-bold">🎵 Spotify Sync PRO</h1>
       <% if (authenticated) { %>
-        <div class="flex gap-4 items-center">
+        <div class="flex flex-wrap items-center gap-4 text-sm">
           <a href="/search" class="hover:underline">Search</a>
-          <a href="/playlists" class="hover:underline">All Playlists</a>
-          <a href="/auth/logout" class="bg-white text-green-600 px-4 py-2 rounded hover:bg-gray-100 transition">
+          <a href="/playlists" class="hover:underline">Playlists</a>
+          <a href="/tracks" class="hover:underline">Tracks</a>
+          <a href="/artists" class="hover:underline">Artists</a>
+          <a href="/genres" class="hover:underline">Genres</a>
+          <a href="/auth/logout" class="bg-white text-green-600 px-3 py-1.5 rounded hover:bg-gray-100 transition">
             Logout
           </a>
         </div>
@@ -93,7 +96,10 @@
           <!-- Top Genres -->
           <% if (topGenres.length > 0) { %>
             <div class="bg-white rounded-lg shadow p-6">
-              <h3 class="text-lg font-bold text-gray-800 mb-3">Top Genres</h3>
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-bold text-gray-800">Top Genres</h3>
+                <a href="/genres" class="text-sm text-blue-600 hover:underline">View all</a>
+              </div>
               <div class="flex flex-wrap gap-2">
                 <% topGenres.forEach(function(g, i) { %>
                   <%

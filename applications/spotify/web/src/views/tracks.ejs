@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= artist.name %> - Spotify Sync PRO</title>
+  <title>All Tracks - Spotify Sync PRO</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -13,8 +13,8 @@
       <div class="flex flex-wrap items-center gap-4 text-sm">
         <a href="/search" class="hover:underline">Search</a>
         <a href="/playlists" class="hover:underline">Playlists</a>
-        <a href="/tracks" class="hover:underline">Tracks</a>
-        <a href="/artists" class="hover:underline font-semibold">Artists</a>
+        <a href="/tracks" class="hover:underline font-semibold">Tracks</a>
+        <a href="/artists" class="hover:underline">Artists</a>
         <a href="/genres" class="hover:underline">Genres</a>
         <a href="/auth/logout" class="bg-white text-green-600 px-3 py-1.5 rounded hover:bg-gray-100 transition">
           Logout
@@ -24,90 +24,31 @@
   </nav>
 
   <main class="container mx-auto p-8">
-    <!-- Artist Header -->
     <div class="bg-white rounded-lg shadow p-6 mb-6">
-      <div class="flex flex-col md:flex-row gap-6 items-center md:items-start">
-        <!-- Artist Image -->
-        <div class="flex-shrink-0">
-          <% if (artist.image_url) { %>
-            <img src="<%= artist.image_url %>" alt="<%= artist.name %>" class="w-48 h-48 object-cover rounded-full shadow-md">
-          <% } else { %>
-            <div class="w-48 h-48 bg-gray-300 rounded-full flex items-center justify-center text-gray-500 text-6xl">
-              🎤
-            </div>
-          <% } %>
+      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-800">
+            All Tracks
+            <span class="text-lg font-normal text-gray-500">(<%= totalCount %> total)</span>
+          </h1>
+          <p class="text-gray-600 mt-2">Browse every track in your library</p>
         </div>
-
-        <!-- Artist Info -->
-        <div class="flex-1 text-center md:text-left">
-          <h1 class="text-4xl font-bold text-gray-800 mb-4"><%= artist.name %></h1>
-
-          <!-- Genres -->
-          <% if (artist.genres && artist.genres.length > 0) { %>
-            <div class="mb-4">
-              <h3 class="text-sm font-semibold text-gray-600 mb-2">GENRES</h3>
-              <div class="flex flex-wrap gap-2 justify-center md:justify-start">
-                <% artist.genres.forEach(function(genre) { %>
-                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                    <%= genre %>
-                  </span>
-                <% }); %>
-              </div>
-            </div>
-          <% } else { %>
-            <p class="text-gray-500 mb-4 italic">Genre information not available</p>
-          <% } %>
-
-          <!-- Stats Card -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <!-- Popularity -->
-            <% if (artist.popularity !== null && artist.popularity !== undefined) { %>
-              <div class="bg-gray-50 p-4 rounded-lg">
-                <h4 class="text-sm font-semibold text-gray-600 mb-2">POPULARITY</h4>
-                <div class="flex items-center gap-2">
-                  <div class="flex-1 bg-gray-200 rounded-full h-3">
-                    <div class="bg-green-600 h-3 rounded-full" style="width: <%= artist.popularity %>%"></div>
-                  </div>
-                  <span class="text-sm font-bold text-gray-800"><%= artist.popularity %>%</span>
-                </div>
-              </div>
-            <% } %>
-
-            <!-- Track Count -->
-            <div class="bg-gray-50 p-4 rounded-lg">
-              <h4 class="text-sm font-semibold text-gray-600 mb-2">TRACKS IN LIBRARY</h4>
-              <p class="text-2xl font-bold text-gray-800"><%= totalTracks %></p>
-            </div>
-
-            <% if (artist.followers_total !== null && artist.followers_total !== undefined) { %>
-              <div class="bg-gray-50 p-4 rounded-lg">
-                <h4 class="text-sm font-semibold text-gray-600 mb-2">FOLLOWERS</h4>
-                <p class="text-2xl font-bold text-gray-800"><%= artist.followers_total.toLocaleString() %></p>
-              </div>
-            <% } %>
+        <div class="flex flex-wrap gap-3 text-sm">
+          <div class="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg">
+            <span class="font-semibold"><%= stats.totalArtists.toLocaleString() %></span> artists
           </div>
-
-          <div class="mt-4">
-            <% if (artist.external_url) { %>
-              <a href="<%= artist.external_url %>" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-green-700 hover:text-green-800 font-semibold">
-                Open in Spotify ↗
-              </a>
-              <span class="text-gray-300 mx-2">•</span>
-            <% } %>
-            <button onclick="history.back()" class="text-blue-600 hover:underline">← Back</button>
+          <div class="bg-green-50 text-green-700 px-3 py-2 rounded-lg">
+            <span class="font-semibold"><%= stats.totalPlaylists.toLocaleString() %></span> playlists
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Tracks Section -->
     <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-bold text-gray-800 mb-4">Tracks</h2>
-
       <% if (tracks.length === 0) { %>
         <div class="text-center py-12">
           <div class="text-6xl mb-4">🎵</div>
-          <p class="text-gray-600">No tracks found in your library for this artist</p>
+          <p class="text-gray-600">No tracks found</p>
         </div>
       <% } else { %>
         <div class="overflow-x-auto">
@@ -115,10 +56,8 @@
             <thead>
               <tr class="border-b-2 border-gray-200 text-left">
                 <th class="py-3 px-4 text-sm font-semibold text-gray-700">Title</th>
-                <th class="py-3 px-4 text-sm font-semibold text-gray-700 hidden md:table-cell">Album</th>
-                <% if (tracks.some(t => t.tempo)) { %>
-                  <th class="py-3 px-4 text-sm font-semibold text-gray-700 hidden lg:table-cell text-center">Tempo</th>
-                <% } %>
+                <th class="py-3 px-4 text-sm font-semibold text-gray-700 hidden md:table-cell">Artist</th>
+                <th class="py-3 px-4 text-sm font-semibold text-gray-700 hidden lg:table-cell">Album</th>
                 <th class="py-3 px-4 text-sm font-semibold text-gray-700 hidden lg:table-cell text-center">Popularity</th>
                 <th class="py-3 px-4 text-sm font-semibold text-gray-700 text-right">Duration</th>
               </tr>
@@ -135,18 +74,19 @@
                     <a href="/track/<%= track.id %>" class="text-blue-600 hover:underline font-medium">
                       <%= track.name %>
                     </a>
+                    <% if (track.external_url) { %>
+                      <a href="<%= track.external_url %>" target="_blank" rel="noopener" class="ml-2 text-green-700 hover:text-green-800 text-xs">↗</a>
+                    <% } %>
                     <% if (track.explicit) { %>
                       <span class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">E</span>
                     <% } %>
                   </td>
                   <td class="py-3 px-4 text-sm text-gray-600 hidden md:table-cell">
+                    <%= track.artist_name || 'Unknown Artist' %>
+                  </td>
+                  <td class="py-3 px-4 text-sm text-gray-600 hidden lg:table-cell">
                     <%= track.album_name || 'Unknown Album' %>
                   </td>
-                  <% if (tracks.some(t => t.tempo)) { %>
-                    <td class="py-3 px-4 text-sm text-gray-600 hidden lg:table-cell text-center">
-                      <%= track.tempo ? Math.round(track.tempo) + ' BPM' : '-' %>
-                    </td>
-                  <% } %>
                   <td class="py-3 px-4 hidden lg:table-cell text-center">
                     <% if (track.popularity !== null && track.popularity !== undefined) { %>
                       <div class="flex items-center gap-2 justify-center">
@@ -166,11 +106,10 @@
           </table>
         </div>
 
-        <!-- Pagination -->
         <% if (totalPages > 1) { %>
           <div class="flex justify-center gap-2 mt-6">
             <% if (page > 1) { %>
-              <a href="/artist/<%= artist.id %>?page=<%= page - 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+              <a href="/tracks?page=<%= page - 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
                 ← Previous
               </a>
             <% } %>
@@ -183,7 +122,7 @@
 
             <% for (let i = startPage; i <= endPage; i++) { %>
               <a
-                href="/artist/<%= artist.id %>?page=<%= i %>"
+                href="/tracks?page=<%= i %>"
                 class="px-4 py-2 <%= i === page ? 'bg-blue-600 text-white' : 'bg-gray-200' %> rounded hover:bg-gray-300 transition"
               >
                 <%= i %>
@@ -193,7 +132,7 @@
             <% if (endPage < totalPages) { %>
               <span class="px-4 py-2 text-gray-500">...</span>
               <a
-                href="/artist/<%= artist.id %>?page=<%= totalPages %>"
+                href="/tracks?page=<%= totalPages %>"
                 class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
               >
                 <%= totalPages %>
@@ -201,14 +140,14 @@
             <% } %>
 
             <% if (page < totalPages) { %>
-              <a href="/artist/<%= artist.id %>?page=<%= page + 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+              <a href="/tracks?page=<%= page + 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
                 Next →
               </a>
             <% } %>
           </div>
 
           <p class="text-center text-sm text-gray-500 mt-4">
-            Page <%= page %> of <%= totalPages %> · Showing <%= tracks.length %> of <%= totalTracks %> tracks
+            Page <%= page %> of <%= totalPages %> · Showing <%= tracks.length %> of <%= totalCount %> tracks
           </p>
         <% } %>
       <% } %>

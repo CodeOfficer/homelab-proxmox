@@ -9,6 +9,9 @@ import { triggerSync } from './controllers/syncTrigger';
 import { testAudioFeaturesAccess } from './controllers/testAudioFeatures';
 import { getSyncProgress } from './controllers/syncProgress';
 import { showAllPlaylists } from './controllers/allPlaylists';
+import { showAllTracks } from './controllers/allTracks';
+import { showAllArtists } from './controllers/allArtists';
+import { showAllGenres } from './controllers/allGenres';
 import { showPlaylistDetail } from './controllers/playlistDetail';
 import { showArtistDetail } from './controllers/artistDetail';
 import { showTrackDetail } from './controllers/trackDetail';
@@ -92,6 +95,9 @@ app.get('/api/sync/progress', getSyncProgress);
 
 // Drill-down pages
 app.get('/playlists', showAllPlaylists);
+app.get('/tracks', showAllTracks);
+app.get('/artists', showAllArtists);
+app.get('/genres', showAllGenres);
 app.get('/playlist/:id', showPlaylistDetail);
 app.get('/artist/:id', showArtistDetail);
 app.get('/track/:id', showTrackDetail);
