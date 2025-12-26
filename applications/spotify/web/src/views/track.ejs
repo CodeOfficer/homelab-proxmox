@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= track.name %> - Spotify Sync PRO</title>
+  <title><%= track.name || 'Unknown Track' %> - Spotify Sync PRO</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <% if (audioFeatures) { %>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -49,13 +49,16 @@
 
         <!-- Track Info -->
         <div class="flex-1">
-          <h1 class="text-4xl font-bold text-gray-800 mb-2"><%= track.name %></h1>
+          <h1 class="text-4xl font-bold text-gray-800 mb-2"><%= track.name || 'Unknown Track' %></h1>
 
           <!-- Artists -->
           <% if (artists && artists.length > 0) { %>
             <p class="text-xl text-gray-600 mb-4">
               <% artists.forEach(function(artist, index) { %>
-                <a href="/artist/<%= artist.id %>" class="text-blue-600 hover:underline"><%= artist.name %></a><% if (index < artists.length - 1) { %>, <% } %>
+                <%
+                  const artistLabel = artist.name || 'Unknown Artist';
+                %>
+                <a href="/artist/<%= artist.id %>" class="text-blue-600 hover:underline"><%= artistLabel %></a><% if (index < artists.length - 1) { %>, <% } %>
               <% }); %>
             </p>
           <% } else { %>
@@ -63,18 +66,21 @@
           <% } %>
 
           <!-- Album Info -->
-          <% if (track.album_name) { %>
+          <% if (track.album_name || track.album_id) { %>
             <p class="text-gray-600 mb-4">
               <span class="font-semibold">Album:</span>
+              <%
+                const albumLabel = track.album_name || 'Unknown Album';
+              %>
               <% if (track.album_id) { %>
-                <a href="/album/<%= track.album_id %>" class="text-blue-600 hover:underline"><%= track.album_name %></a>
+                <a href="/album/<%= track.album_id %>" class="text-blue-600 hover:underline"><%= albumLabel %></a>
               <% } else { %>
-                <%= track.album_name %>
+                <%= albumLabel %>
               <% } %>
               <% if (track.album_external_url) { %>
                 <a href="<%= track.album_external_url %>" target="_blank" rel="noopener" class="ml-2 text-xs text-green-700 hover:text-green-800">↗</a>
               <% } %>
-              <% if (track.album_release_date) { %>
+              <% if (track.album_release_date && track.album_release_date !== '0000') { %>
                 <span class="text-sm text-gray-500">· <%= track.album_release_date %></span>
               <% } %>
             </p>

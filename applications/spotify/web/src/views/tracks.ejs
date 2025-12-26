@@ -85,7 +85,7 @@
                 <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
                   <td class="py-3 px-4">
                     <a href="/track/<%= track.id %>" class="text-blue-600 hover:underline font-medium">
-                      <%= track.name %>
+                      <%= track.name || 'Unknown Track' %>
                     </a>
                     <% if (track.external_url) { %>
                       <a href="<%= track.external_url %>" target="_blank" rel="noopener" class="ml-2 text-green-700 hover:text-green-800 text-xs">↗</a>
@@ -201,10 +201,11 @@
              <span class="text-xs text-gray-600">${track.popularity}%</span>
            </div>`
         : `<span class="text-gray-400">-</span>`;
+      const title = track.name && String(track.name).trim().length > 0 ? track.name : 'Unknown Track';
       return `
         <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
           <td class="py-3 px-4">
-            <a href="/track/${track.id}" class="text-blue-600 hover:underline font-medium">${track.name}</a>
+            <a href="/track/${track.id}" class="text-blue-600 hover:underline font-medium">${title}</a>
             ${external}
             ${explicit}
           </td>

@@ -137,7 +137,7 @@
                   <td class="py-3 px-4 text-sm text-gray-600"><%= trackNumber %></td>
                   <td class="py-3 px-4">
                     <a href="/track/<%= track.id %>" class="text-blue-600 hover:underline font-medium">
-                      <%= track.name %>
+                      <%= track.name || 'Unknown Track' %>
                     </a>
                     <% if (track.track_number) { %>
                       <span class="ml-2 text-xs text-gray-500">#<%= track.track_number %></span>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= album.name %> - Spotify Sync PRO</title>
+  <title><%= album.name || 'Unknown Album' %> - Spotify Sync PRO</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -44,11 +44,14 @@
         </div>
 
         <div class="flex-1">
-          <h1 class="text-3xl font-bold text-gray-800 mb-2"><%= album.name %></h1>
+          <h1 class="text-3xl font-bold text-gray-800 mb-2"><%= album.name || 'Unknown Album' %></h1>
           <% if (artists && artists.length > 0) { %>
             <p class="text-gray-600 mb-4">
               <% artists.forEach(function(artist, index) { %>
-                <a href="/artist/<%= artist.id %>" class="text-blue-600 hover:underline"><%= artist.name %></a><% if (index < artists.length - 1) { %>, <% } %>
+                <%
+                  const artistLabel = artist.name || 'Unknown Artist';
+                %>
+                <a href="/artist/<%= artist.id %>" class="text-blue-600 hover:underline"><%= artistLabel %></a><% if (index < artists.length - 1) { %>, <% } %>
               <% }); %>
             </p>
           <% } %>
@@ -57,7 +60,7 @@
             <% if (album.album_type) { %>
               <div><span class="font-semibold">Type:</span> <%= album.album_type %></div>
             <% } %>
-            <% if (album.release_date) { %>
+            <% if (album.release_date && album.release_date !== '0000') { %>
               <div><span class="font-semibold">Release:</span> <%= album.release_date %></div>
             <% } %>
             <div><span class="font-semibold">Tracks:</span> <%= totalTracks %></div>
@@ -107,7 +110,7 @@
                   </td>
                   <td class="py-3 px-4">
                     <a href="/track/<%= track.id %>" class="text-blue-600 hover:underline font-medium">
-                      <%= track.name %>
+                      <%= track.name || 'Unknown Track' %>
                     </a>
                     <% if (track.explicit) { %>
                       <span class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">E</span>

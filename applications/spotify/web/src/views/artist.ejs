@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= artist.name %> - Spotify Sync PRO</title>
+  <title><%= artist.name || 'Unknown Artist' %> - Spotify Sync PRO</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -46,7 +46,7 @@
 
         <!-- Artist Info -->
         <div class="flex-1 text-center md:text-left">
-          <h1 class="text-4xl font-bold text-gray-800 mb-4"><%= artist.name %></h1>
+          <h1 class="text-4xl font-bold text-gray-800 mb-4"><%= artist.name || 'Unknown Artist' %></h1>
 
           <!-- Genres -->
           <% if (artist.genres && artist.genres.length > 0) { %>
@@ -138,7 +138,7 @@
                 <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
                   <td class="py-3 px-4">
                     <a href="/track/<%= track.id %>" class="text-blue-600 hover:underline font-medium">
-                      <%= track.name %>
+                      <%= track.name || 'Unknown Track' %>
                     </a>
                     <% if (track.explicit) { %>
                       <span class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">E</span>
