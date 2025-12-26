@@ -51,21 +51,27 @@ spec:
                 secretKeyRef:
                   name: spotify-credentials
                   key: redirect-uri
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 30
+            failureThreshold: 30
           livenessProbe:
             httpGet:
               path: /health
               port: 3000
-            initialDelaySeconds: 30
             periodSeconds: 30
-            timeoutSeconds: 5
+            timeoutSeconds: 30
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: 3000
-            initialDelaySeconds: 10
             periodSeconds: 10
-            timeoutSeconds: 5
+            timeoutSeconds: 30
             failureThreshold: 3
           resources:
             requests:

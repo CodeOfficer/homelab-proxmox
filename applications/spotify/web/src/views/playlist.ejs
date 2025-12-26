@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= playlist.name %> - Spotify Sync PRO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <nav class="bg-green-600 text-white p-4 shadow-lg">
+    <div class="container mx-auto flex justify-between items-center">
+      <a href="/" class="text-2xl font-bold hover:underline">🎵 Spotify Sync PRO</a>
+      <div class="flex gap-4 items-center">
+        <a href="/search" class="hover:underline">Search</a>
+        <a href="/playlists" class="hover:underline">All Playlists</a>
+        <a href="/auth/logout" class="bg-white text-green-600 px-4 py-2 rounded hover:bg-gray-100 transition">
+          Logout
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mx-auto p-8">
+    <!-- Playlist Header -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <div class="flex flex-col md:flex-row gap-6">
+        <!-- Playlist Image -->
+        <div class="flex-shrink-0">
+          <% if (playlist.image_url) { %>
+            <img src="<%= playlist.image_url %>" alt="<%= playlist.name %>" class="w-48 h-48 object-cover rounded-lg shadow-md">
+          <% } else { %>
+            <div class="w-48 h-48 bg-gray-300 rounded-lg flex items-center justify-center text-gray-500 text-6xl">
+              🎵
+            </div>
+          <% } %>
+        </div>
+
+        <!-- Playlist Info -->
+        <div class="flex-1">
+          <h1 class="text-3xl font-bold text-gray-800 mb-2"><%= playlist.name %></h1>
+
+          <% if (playlist.description) { %>
+            <p class="text-gray-600 mb-4"><%= playlist.description %></p>
+          <% } %>
+
+          <div class="flex flex-wrap gap-4 text-sm text-gray-600">
+            <% if (playlist.owner_name) { %>
+              <div class="flex items-center gap-1">
+                <span class="font-semibold">Owner:</span>
+                <span><%= playlist.owner_name %></span>
+              </div>
+            <% } %>
+
+            <div class="flex items-center gap-1">
+              <span class="font-semibold">Tracks:</span>
+              <span><%= totalTracks %></span>
+            </div>
+
+            <% if (playlist.public !== undefined) { %>
+              <div class="flex items-center gap-1">
+                <span class="font-semibold">Visibility:</span>
+                <span class="<%= playlist.public ? 'text-green-600' : 'text-gray-500' %>">
+                  <%= playlist.public ? 'Public' : 'Private' %>
+                </span>
+              </div>
+            <% } %>
+          </div>
+
+          <div class="mt-4">
+            <a href="/" class="text-blue-600 hover:underline">← Back to Dashboard</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tracks Table -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">Tracks</h2>
+
+      <% if (tracks.length === 0) { %>
+        <div class="text-center py-12">
+          <div class="text-6xl mb-4">🎵</div>
+          <p class="text-gray-600">This playlist is empty</p>
+        </div>
+      <% } else { %>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b-2 border-gray-200 text-left">
+                <th class="py-3 px-4 text-sm font-semibold text-gray-700">#</th>
+                <th class="py-3 px-4 text-sm font-semibold text-gray-700">Title</th>
+                <th class="py-3 px-4 text-sm font-semibold text-gray-700 hidden md:table-cell">Artist</th>
+                <th class="py-3 px-4 text-sm font-semibold text-gray-700 hidden lg:table-cell">Album</th>
+                <% if (tracks.some(t => t.tempo)) { %>
+                  <th class="py-3 px-4 text-sm font-semibold text-gray-700 hidden lg:table-cell text-center">Tempo</th>
+                <% } %>
+                <th class="py-3 px-4 text-sm font-semibold text-gray-700 text-right">Duration</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% tracks.forEach(function(track, index) { %>
+                <%
+                  const trackNumber = (page - 1) * 50 + index + 1;
+                  const minutes = Math.floor(track.duration_ms / 60000);
+                  const seconds = Math.floor((track.duration_ms % 60000) / 1000);
+                  const duration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                %>
+                <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
+                  <td class="py-3 px-4 text-sm text-gray-600"><%= trackNumber %></td>
+                  <td class="py-3 px-4">
+                    <a href="/track/<%= track.id %>" class="text-blue-600 hover:underline font-medium">
+                      <%= track.name %>
+                    </a>
+                    <% if (track.explicit) { %>
+                      <span class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">E</span>
+                    <% } %>
+                  </td>
+                  <td class="py-3 px-4 text-sm text-gray-600 hidden md:table-cell">
+                    <%= track.artist_name || 'Unknown Artist' %>
+                  </td>
+                  <td class="py-3 px-4 text-sm text-gray-600 hidden lg:table-cell">
+                    <%= track.album_name || 'Unknown Album' %>
+                  </td>
+                  <% if (tracks.some(t => t.tempo)) { %>
+                    <td class="py-3 px-4 text-sm text-gray-600 hidden lg:table-cell text-center">
+                      <%= track.tempo ? Math.round(track.tempo) + ' BPM' : '-' %>
+                    </td>
+                  <% } %>
+                  <td class="py-3 px-4 text-sm text-gray-600 text-right"><%= duration %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <% if (totalPages > 1) { %>
+          <div class="flex justify-center gap-2 mt-6">
+            <% if (page > 1) { %>
+              <a href="/playlist/<%= playlist.id %>?page=<%= page - 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+                ← Previous
+              </a>
+            <% } %>
+
+            <%
+              const maxPageButtons = 10;
+              const startPage = Math.max(1, page - Math.floor(maxPageButtons / 2));
+              const endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+            %>
+
+            <% for (let i = startPage; i <= endPage; i++) { %>
+              <a
+                href="/playlist/<%= playlist.id %>?page=<%= i %>"
+                class="px-4 py-2 <%= i === page ? 'bg-blue-600 text-white' : 'bg-gray-200' %> rounded hover:bg-gray-300 transition"
+              >
+                <%= i %>
+              </a>
+            <% } %>
+
+            <% if (endPage < totalPages) { %>
+              <span class="px-4 py-2 text-gray-500">...</span>
+              <a
+                href="/playlist/<%= playlist.id %>?page=<%= totalPages %>"
+                class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+              >
+                <%= totalPages %>
+              </a>
+            <% } %>
+
+            <% if (page < totalPages) { %>
+              <a href="/playlist/<%= playlist.id %>?page=<%= page + 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+                Next →
+              </a>
+            <% } %>
+          </div>
+
+          <p class="text-center text-sm text-gray-500 mt-4">
+            Page <%= page %> of <%= totalPages %> · Showing <%= tracks.length %> of <%= totalTracks %> tracks
+          </p>
+        <% } %>
+      <% } %>
+    </div>
+  </main>
+
+  <footer class="text-center text-gray-500 text-sm p-4 mt-8">
+    <p>Spotify Sync PRO | <a href="/" class="text-blue-500 hover:underline">Dashboard</a></p>
+  </footer>
+</body>
+</html>

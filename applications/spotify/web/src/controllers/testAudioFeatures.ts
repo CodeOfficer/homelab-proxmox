@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { SpotifyDatabase } from '@homelab/spotify-shared';
+import { getDatabase } from '@homelab/spotify-shared';
 
 /**
  * Test if audio features API is accessible
@@ -12,9 +12,8 @@ import { SpotifyDatabase } from '@homelab/spotify-shared';
  */
 export async function testAudioFeaturesAccess(req: Request, res: Response) {
   try {
-    const db = new SpotifyDatabase(process.env.DATABASE_PATH!);
+    const db = getDatabase();
     const credentials = db.getCredentials();
-    db.close();
 
     if (!credentials || !credentials.access_token) {
       return res.status(401).json({

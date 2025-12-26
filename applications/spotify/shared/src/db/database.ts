@@ -726,4 +726,69 @@ export class SpotifyDatabase {
   getPlaylistCount(): number {
     return this.db.prepare('SELECT COUNT(*) FROM playlists').pluck().get() as number;
   }
+
+  /**
+   * Get total track count in a playlist
+   */
+  getPlaylistTrackCount(playlistId: string): number {
+    const result = this.db.prepare(`
+      SELECT COUNT(*) as count
+      FROM playlist_tracks
+      WHERE playlist_id = ?
+    `).get(playlistId) as any;
+    return result?.count || 0;
+  }
+
+  // ============================================================================
+  // Artist Details
+  // ============================================================================
+
+  /**
+   * Get artist details by ID
+   */
+  getArtistDetails(artistId: string) {
+    const artist = this.db.prepare(`
+      SELECT * FROM artists WHERE id = ?
+    `).get(artistId) as any;
+
+    if (!artist) return null;
+
+    // Parse genres JSON
+    if (artist.genres) {
+      artist.genres = JSON.parse(artist.genres);
+    }
+
+    return artist;
+  }
+
+  /**
+   * Get artist tracks with pagination
+   */
+  getArtistTracks(artistId: string, limit: number = 50, offset: number = 0) {
+    return this.db.prepare(`
+      SELECT t.*, ta.position,
+             al.name as album_name,
+             al.image_url as album_image,
+             af.tempo, af.energy, af.danceability
+      FROM track_artists ta
+      JOIN tracks t ON ta.track_id = t.id
+      LEFT JOIN albums al ON t.album_id = al.id
+      LEFT JOIN audio_features af ON t.id = af.track_id
+      WHERE ta.artist_id = ?
+      ORDER BY t.popularity DESC
+      LIMIT ? OFFSET ?
+    `).all(artistId, limit, offset);
+  }
+
+  /**
+   * Get total track count for an artist
+   */
+  getArtistTrackCount(artistId: string): number {
+    const result = this.db.prepare(`
+      SELECT COUNT(*) as count
+      FROM track_artists
+      WHERE artist_id = ?
+    `).get(artistId) as any;
+    return result?.count || 0;
+  }
 }

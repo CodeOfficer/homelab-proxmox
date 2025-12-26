@@ -84,8 +84,8 @@ export async function handleCallback(req: Request, res: Response) {
     const tokens = await tokenResponse.json() as SpotifyTokenResponse;
 
     // Store tokens in database
-    const { SpotifyDatabase } = await import('@homelab/spotify-shared');
-    const db = new SpotifyDatabase(process.env.DATABASE_PATH || '/tmp/spotify.db');
+    const { getDatabase } = await import('@homelab/spotify-shared');
+    const db = getDatabase();
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
     db.saveCredentials(
@@ -94,8 +94,6 @@ export async function handleCallback(req: Request, res: Response) {
       expiresAt,
       tokens.scope
     );
-
-    db.close();
 
     // Redirect to dashboard
     res.redirect('/?success=authenticated');
@@ -110,11 +108,10 @@ export async function handleCallback(req: Request, res: Response) {
  */
 export async function logout(req: Request, res: Response) {
   try {
-    const { SpotifyDatabase } = await import('@homelab/spotify-shared');
-    const db = new SpotifyDatabase(process.env.DATABASE_PATH || '/tmp/spotify.db');
+    const { getDatabase } = await import('@homelab/spotify-shared');
+    const db = getDatabase();
 
     db.deleteCredentials();
-    db.close();
 
     res.redirect('/?success=logged_out');
   } catch (error) {

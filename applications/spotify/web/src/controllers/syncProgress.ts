@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { SpotifyDatabase } from '@homelab/spotify-shared';
+import { getDatabase } from '@homelab/spotify-shared';
 
 /**
  * Get current sync progress (polling endpoint for dashboard)
@@ -15,11 +15,10 @@ import { SpotifyDatabase } from '@homelab/spotify-shared';
  */
 export async function getSyncProgress(req: Request, res: Response) {
   try {
-    const db = new SpotifyDatabase(process.env.DATABASE_PATH!);
+    const db = getDatabase();
 
     // Get latest running sync with progress steps
     const latestSync = db.getLatestRunningSyncWithProgress();
-    db.close();
 
     if (!latestSync) {
       return res.json({

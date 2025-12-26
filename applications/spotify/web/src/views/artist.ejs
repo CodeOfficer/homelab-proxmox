@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= artist.name %> - Spotify Sync PRO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <nav class="bg-green-600 text-white p-4 shadow-lg">
+    <div class="container mx-auto flex justify-between items-center">
+      <a href="/" class="text-2xl font-bold hover:underline">🎵 Spotify Sync PRO</a>
+      <div class="flex gap-4 items-center">
+        <a href="/search" class="hover:underline">Search</a>
+        <a href="/playlists" class="hover:underline">All Playlists</a>
+        <a href="/auth/logout" class="bg-white text-green-600 px-4 py-2 rounded hover:bg-gray-100 transition">
+          Logout
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mx-auto p-8">
+    <!-- Artist Header -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <div class="flex flex-col md:flex-row gap-6 items-center md:items-start">
+        <!-- Artist Image -->
+        <div class="flex-shrink-0">
+          <% if (artist.image_url) { %>
+            <img src="<%= artist.image_url %>" alt="<%= artist.name %>" class="w-48 h-48 object-cover rounded-full shadow-md">
+          <% } else { %>
+            <div class="w-48 h-48 bg-gray-300 rounded-full flex items-center justify-center text-gray-500 text-6xl">
+              🎤
+            </div>
+          <% } %>
+        </div>
+
+        <!-- Artist Info -->
+        <div class="flex-1 text-center md:text-left">
+          <h1 class="text-4xl font-bold text-gray-800 mb-4"><%= artist.name %></h1>
+
+          <!-- Genres -->
+          <% if (artist.genres && artist.genres.length > 0) { %>
+            <div class="mb-4">
+              <h3 class="text-sm font-semibold text-gray-600 mb-2">GENRES</h3>
+              <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                <% artist.genres.forEach(function(genre) { %>
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                    <%= genre %>
+                  </span>
+                <% }); %>
+              </div>
+            </div>
+          <% } else { %>
+            <p class="text-gray-500 mb-4 italic">Genre information not available</p>
+          <% } %>
+
+          <!-- Stats Card -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <!-- Popularity -->
+            <% if (artist.popularity !== null && artist.popularity !== undefined) { %>
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="text-sm font-semibold text-gray-600 mb-2">POPULARITY</h4>
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 bg-gray-200 rounded-full h-3">
+                    <div class="bg-green-600 h-3 rounded-full" style="width: <%= artist.popularity %>%"></div>
+                  </div>
+                  <span class="text-sm font-bold text-gray-800"><%= artist.popularity %>%</span>
+                </div>
+              </div>
+            <% } %>
+
+            <!-- Track Count -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h4 class="text-sm font-semibold text-gray-600 mb-2">TRACKS IN LIBRARY</h4>
+              <p class="text-2xl font-bold text-gray-800"><%= totalTracks %></p>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <button onclick="history.back()" class="text-blue-600 hover:underline">← Back</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tracks Section -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">Tracks</h2>
+
+      <% if (tracks.length === 0) { %>
+        <div class="text-center py-12">
+          <div class="text-6xl mb-4">🎵</div>
+          <p class="text-gray-600">No tracks found in your library for this artist</p>
+        </div>
+      <% } else { %>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b-2 border-gray-200 text-left">
+                <th class="py-3 px-4 text-sm font-semibold text-gray-700">Title</th>
+                <th class="py-3 px-4 text-sm font-semibold text-gray-700 hidden md:table-cell">Album</th>
+                <% if (tracks.some(t => t.tempo)) { %>
+                  <th class="py-3 px-4 text-sm font-semibold text-gray-700 hidden lg:table-cell text-center">Tempo</th>
+                <% } %>
+                <th class="py-3 px-4 text-sm font-semibold text-gray-700 hidden lg:table-cell text-center">Popularity</th>
+                <th class="py-3 px-4 text-sm font-semibold text-gray-700 text-right">Duration</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% tracks.forEach(function(track) { %>
+                <%
+                  const minutes = Math.floor(track.duration_ms / 60000);
+                  const seconds = Math.floor((track.duration_ms % 60000) / 1000);
+                  const duration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                %>
+                <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
+                  <td class="py-3 px-4">
+                    <a href="/track/<%= track.id %>" class="text-blue-600 hover:underline font-medium">
+                      <%= track.name %>
+                    </a>
+                    <% if (track.explicit) { %>
+                      <span class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">E</span>
+                    <% } %>
+                  </td>
+                  <td class="py-3 px-4 text-sm text-gray-600 hidden md:table-cell">
+                    <%= track.album_name || 'Unknown Album' %>
+                  </td>
+                  <% if (tracks.some(t => t.tempo)) { %>
+                    <td class="py-3 px-4 text-sm text-gray-600 hidden lg:table-cell text-center">
+                      <%= track.tempo ? Math.round(track.tempo) + ' BPM' : '-' %>
+                    </td>
+                  <% } %>
+                  <td class="py-3 px-4 hidden lg:table-cell text-center">
+                    <% if (track.popularity !== null && track.popularity !== undefined) { %>
+                      <div class="flex items-center gap-2 justify-center">
+                        <div class="w-16 bg-gray-200 rounded-full h-2">
+                          <div class="bg-green-600 h-2 rounded-full" style="width: <%= track.popularity %>%"></div>
+                        </div>
+                        <span class="text-xs text-gray-600"><%= track.popularity %>%</span>
+                      </div>
+                    <% } else { %>
+                      <span class="text-gray-400">-</span>
+                    <% } %>
+                  </td>
+                  <td class="py-3 px-4 text-sm text-gray-600 text-right"><%= duration %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <% if (totalPages > 1) { %>
+          <div class="flex justify-center gap-2 mt-6">
+            <% if (page > 1) { %>
+              <a href="/artist/<%= artist.id %>?page=<%= page - 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+                ← Previous
+              </a>
+            <% } %>
+
+            <%
+              const maxPageButtons = 10;
+              const startPage = Math.max(1, page - Math.floor(maxPageButtons / 2));
+              const endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+            %>
+
+            <% for (let i = startPage; i <= endPage; i++) { %>
+              <a
+                href="/artist/<%= artist.id %>?page=<%= i %>"
+                class="px-4 py-2 <%= i === page ? 'bg-blue-600 text-white' : 'bg-gray-200' %> rounded hover:bg-gray-300 transition"
+              >
+                <%= i %>
+              </a>
+            <% } %>
+
+            <% if (endPage < totalPages) { %>
+              <span class="px-4 py-2 text-gray-500">...</span>
+              <a
+                href="/artist/<%= artist.id %>?page=<%= totalPages %>"
+                class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+              >
+                <%= totalPages %>
+              </a>
+            <% } %>
+
+            <% if (page < totalPages) { %>
+              <a href="/artist/<%= artist.id %>?page=<%= page + 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+                Next →
+              </a>
+            <% } %>
+          </div>
+
+          <p class="text-center text-sm text-gray-500 mt-4">
+            Page <%= page %> of <%= totalPages %> · Showing <%= tracks.length %> of <%= totalTracks %> tracks
+          </p>
+        <% } %>
+      <% } %>
+    </div>
+  </main>
+
+  <footer class="text-center text-gray-500 text-sm p-4 mt-8">
+    <p>Spotify Sync PRO | <a href="/" class="text-blue-500 hover:underline">Dashboard</a></p>
+  </footer>
+</body>
+</html>

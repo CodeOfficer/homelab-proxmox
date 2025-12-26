@@ -36,6 +36,7 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/shared/package.json ./shared/
 COPY --from=builder /app/shared/dist ./shared/dist
 COPY --from=builder /app/shared/src/db/schema.sql ./shared/dist/db/schema.sql
+COPY --from=builder /app/shared/src/db/migrations ./shared/dist/db/migrations
 COPY --from=builder /app/shared/node_modules ./shared/node_modules
 
 # Copy web app

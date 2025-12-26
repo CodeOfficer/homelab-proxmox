@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Playlists - Spotify Sync PRO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <nav class="bg-green-600 text-white p-4 shadow-lg">
+    <div class="container mx-auto flex justify-between items-center">
+      <a href="/" class="text-2xl font-bold hover:underline">🎵 Spotify Sync PRO</a>
+      <div class="flex gap-4 items-center">
+        <a href="/search" class="hover:underline">Search</a>
+        <a href="/playlists" class="hover:underline font-bold">All Playlists</a>
+        <a href="/auth/logout" class="bg-white text-green-600 px-4 py-2 rounded hover:bg-gray-100 transition">
+          Logout
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mx-auto p-8">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <h1 class="text-3xl font-bold text-gray-800">
+        All Playlists
+        <span class="text-lg font-normal text-gray-500">(<%= totalCount %> total)</span>
+      </h1>
+      <p class="text-gray-600 mt-2">Browse all your Spotify playlists</p>
+    </div>
+
+    <!-- Playlists Grid -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <% if (playlists.length === 0) { %>
+        <div class="text-center py-12">
+          <div class="text-6xl mb-4">🎵</div>
+          <h2 class="text-2xl font-bold text-gray-800 mb-2">No Playlists Found</h2>
+          <p class="text-gray-600 mb-4">Trigger a sync from the dashboard to fetch your library.</p>
+          <a href="/" class="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition">
+            Go to Dashboard
+          </a>
+        </div>
+      <% } else { %>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <% playlists.forEach(function(playlist) { %>
+            <a href="/playlist/<%= playlist.id %>" class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:shadow-md transition cursor-pointer">
+              <% if (playlist.image_url) { %>
+                <img src="<%= playlist.image_url %>" alt="<%= playlist.name %>" class="w-full h-32 object-cover rounded mb-2">
+              <% } else { %>
+                <div class="w-full h-32 bg-gray-300 rounded mb-2 flex items-center justify-center text-gray-500 text-3xl">
+                  🎵
+                </div>
+              <% } %>
+              <h3 class="font-semibold text-gray-800 truncate" title="<%= playlist.name %>"><%= playlist.name %></h3>
+              <p class="text-sm text-gray-500"><%= playlist.track_count || 0 %> tracks</p>
+            </a>
+          <% }); %>
+        </div>
+
+        <!-- Pagination -->
+        <% if (totalPages > 1) { %>
+          <div class="flex justify-center gap-2 mt-6">
+            <% if (page > 1) { %>
+              <a href="/playlists?page=<%= page - 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+                ← Previous
+              </a>
+            <% } %>
+
+            <%
+              const maxPageButtons = 10;
+              const startPage = Math.max(1, page - Math.floor(maxPageButtons / 2));
+              const endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+            %>
+
+            <% for (let i = startPage; i <= endPage; i++) { %>
+              <a
+                href="/playlists?page=<%= i %>"
+                class="px-4 py-2 <%= i === page ? 'bg-blue-600 text-white' : 'bg-gray-200' %> rounded hover:bg-gray-300 transition"
+              >
+                <%= i %>
+              </a>
+            <% } %>
+
+            <% if (endPage < totalPages) { %>
+              <span class="px-4 py-2 text-gray-500">...</span>
+              <a
+                href="/playlists?page=<%= totalPages %>"
+                class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+              >
+                <%= totalPages %>
+              </a>
+            <% } %>
+
+            <% if (page < totalPages) { %>
+              <a href="/playlists?page=<%= page + 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+                Next →
+              </a>
+            <% } %>
+          </div>
+
+          <p class="text-center text-sm text-gray-500 mt-4">
+            Page <%= page %> of <%= totalPages %>
+          </p>
+        <% } %>
+      <% } %>
+    </div>
+  </main>
+
+  <footer class="text-center text-gray-500 text-sm p-4 mt-8">
+    <p>Spotify Sync PRO | <a href="/" class="text-blue-500 hover:underline">Dashboard</a></p>
+  </footer>
+</body>
+</html>
