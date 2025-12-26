@@ -361,10 +361,38 @@
       return searchQuery.value.trim().length > 0;
     }
 
+    function saveCursorState() {
+      if (!searchQuery) return;
+      const state = {
+        value: searchQuery.value,
+        start: searchQuery.selectionStart,
+        end: searchQuery.selectionEnd
+      };
+      sessionStorage.setItem('searchCursor', JSON.stringify(state));
+    }
+
+    function restoreCursorState() {
+      if (!searchQuery) return;
+      const raw = sessionStorage.getItem('searchCursor');
+      if (!raw) return;
+      sessionStorage.removeItem('searchCursor');
+      try {
+        const state = JSON.parse(raw);
+        if (state.value !== searchQuery.value) return;
+        searchQuery.focus();
+        if (typeof state.start === 'number' && typeof state.end === 'number') {
+          searchQuery.setSelectionRange(state.start, state.end);
+        }
+      } catch {
+        // Ignore invalid session storage
+      }
+    }
+
     function scheduleSubmit() {
       if (!searchForm) return;
       clearTimeout(searchTimer);
       if (!shouldAutoSubmit()) return;
+      saveCursorState();
       searchTimer = setTimeout(() => searchForm.submit(), 400);
     }
 
@@ -387,6 +415,7 @@
     }
 
     updateAdvancedVisibility();
+    restoreCursorState();
   </script>
 </body>
 </html>
