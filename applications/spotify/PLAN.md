@@ -39,8 +39,9 @@ Phase 4: Operational hardening
 - Local OAuth requires HTTPS if Spotify rejects `http://localhost`.
 - Create dev certs once with `pnpm dev:cert` (uses `mkcert`) and run `pnpm dev:local` (requires certs).
 - Default local redirect is `https://127.0.0.1:3000/auth/callback`.
-- Local sync (writes to the same `/tmp/spotify-dev.db`): run `pnpm dev:sync:local` in another terminal.
+- Local sync (writes to the same `/tmp/spotify-dev.db`): run `pnpm dev:sync` in another terminal.
 - Local sync defaults to writing a unique JSONL dump at `/tmp/spotify-sync-YYYYMMDD-HHMMSS.jsonl` (override with `SPOTIFY_SYNC_DUMP_PATH`).
+- `pnpm dev:sync` replays the most recent dump (default: last 24h) or runs a full sync if none is found.
 - Schema expanded to store full Spotify metadata from playlist, track, album, artist, and audio feature responses.
 - Sync logs now store `duration_seconds`.
 - Sync always fetches playlist items (no snapshot-based skipping) to keep local DB and dumps complete.

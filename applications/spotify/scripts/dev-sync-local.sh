@@ -7,6 +7,10 @@ cd "$SCRIPT_DIR/.."
 export DATABASE_PATH="${DATABASE_PATH:-/tmp/spotify-dev.db}"
 export SPOTIFY_SYNC_DUMP_PATH="${SPOTIFY_SYNC_DUMP_PATH:-/tmp/spotify-sync-$(date +%Y%m%d-%H%M%S).jsonl}"
 
+if [[ "${SPOTIFY_SYNC_FORCE:-}" == "1" ]]; then
+  echo "Forcing full sync (SPOTIFY_SYNC_FORCE=1)"
+fi
+
 missing=()
 if [[ -z "${SPOTIFY_CLIENT_ID:-}" ]]; then
   missing+=("SPOTIFY_CLIENT_ID")
@@ -22,6 +26,12 @@ if (( ${#missing[@]} > 0 )); then
   echo "Error: Missing env vars: ${missing[*]}"
   echo "Set them in your shell or via direnv at the repo root."
   exit 1
+fi
+
+# Ensure shared package is built so types stay in sync
+if [ ! -d "./shared/dist" ]; then
+  echo "Building shared package first..."
+  pnpm --filter spotify-shared build
 fi
 
 echo "Running Spotify sync locally..."

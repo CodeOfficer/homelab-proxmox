@@ -493,6 +493,23 @@ export class SpotifyDatabase {
     this.db.prepare('DELETE FROM playlist_tracks WHERE playlist_id = ?').run(playlistId);
   }
 
+  /**
+   * Clear all library data (keeps credentials and schema metadata).
+   */
+  clearLibraryData() {
+    this.db.exec(`
+      DELETE FROM playlist_tracks;
+      DELETE FROM track_artists;
+      DELETE FROM audio_features;
+      DELETE FROM tracks;
+      DELETE FROM albums;
+      DELETE FROM artists;
+      DELETE FROM playlists;
+      DELETE FROM sync_progress;
+      DELETE FROM sync_log;
+    `);
+  }
+
   // ============================================================================
   // Audio Features
   // ============================================================================

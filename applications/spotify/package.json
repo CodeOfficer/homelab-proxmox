@@ -10,9 +10,10 @@
     "dev:web": "pnpm --filter spotify-web dev",
     "dev:local": "bash ./scripts/dev-local.sh",
     "dev:cert": "bash ./scripts/dev-cert.sh",
-    "dev:sync:local": "bash ./scripts/dev-sync-local.sh",
+    "dev:sync": "bash ./scripts/dev-sync.sh",
+    "dev:sync:force": "SPOTIFY_SYNC_FORCE=1 bash ./scripts/dev-sync-local.sh",
     "dev:mcp": "pnpm --filter spotify-mcp dev",
-    "dev:sync": "pnpm --filter spotify-sync dev"
+    "dev:sync:worker": "pnpm --filter spotify-sync dev"
   },
   "keywords": [
     "spotify",

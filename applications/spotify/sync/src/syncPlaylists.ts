@@ -63,12 +63,15 @@ export async function syncPlaylists(db: SpotifyDatabase) {
         const existing = db.getPlaylist(playlist.id);
 
         const isNew = !existing;
-        console.log(`  ${isNew ? 'Adding' : 'Updating'} playlist: ${playlist.name}`);
+        const playlistName = playlist.name && playlist.name.trim().length > 0
+          ? playlist.name
+          : 'Untitled playlist';
+        console.log(`  ${isNew ? 'Adding' : 'Updating'} playlist: ${playlistName}`);
 
         // Upsert playlist metadata
         db.upsertPlaylist({
           id: playlist.id,
-          name: playlist.name,
+          name: playlistName,
           description: playlist.description || null,
           owner_id: playlist.owner.id,
           owner_name: playlist.owner.display_name || null,
