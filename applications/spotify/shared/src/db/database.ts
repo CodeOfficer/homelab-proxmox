@@ -1085,7 +1085,7 @@ export class SpotifyDatabase {
     }
 
     return Object.entries(genreCounts)
-      .sort((a, b) => a[0].localeCompare(b[0]))
+      .sort((a, b) => b[1] - a[1])
       .slice(offset, offset + limit)
       .map(([genre, count]) => ({ genre, count }));
   }
