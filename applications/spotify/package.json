@@ -1,0 +1,27 @@
+{
+  "name": "spotify-sync-pro",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@10.26.0",
+  "scripts": {
+    "dev": "concurrently -k -n api,ui -c cyan,magenta \"pnpm --filter @spotify/api dev\" \"pnpm --filter @spotify/ui dev\"",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @spotify/ui test:e2e",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "concurrently": "9.2.1",
+    "typescript": "5.9.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
+  }
+}

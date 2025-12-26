@@ -1,0 +1,30 @@
+{
+  "name": "@spotify/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@fastify/cookie": "11.0.2",
+    "@fastify/cors": "11.2.0",
+    "@fastify/static": "9.0.0",
+    "@spotify/shared": "workspace:*",
+    "@spotify/web-api-ts-sdk": "1.2.0",
+    "fastify": "5.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.29",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vitest": "4.0.16"
+  }
+}
