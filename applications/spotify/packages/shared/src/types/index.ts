@@ -51,10 +51,10 @@ export type NewSyncProgress = InferInsertModel<typeof syncProgress>;
 // =============================================================================
 
 export interface TrackWithDetails extends Track {
-  primaryArtistName?: string;
-  primaryArtistId?: string;
-  albumName?: string;
-  albumImageUrl?: string;
+  primaryArtistName?: string | null;
+  primaryArtistId?: string | null;
+  albumName?: string | null;
+  albumImageUrl?: string | null;
   artists?: Artist[];
   audioFeatures?: AudioFeatures | null;
 }
