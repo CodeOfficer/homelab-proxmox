@@ -29,7 +29,7 @@
         <div>
           <h1 class="text-3xl font-bold text-gray-800">
             All Tracks
-            <span class="text-lg font-normal text-gray-500">(<%= totalCount %> total)</span>
+            <span class="text-lg font-normal text-gray-500">(<span id="total-count"><%= totalCount %></span> total)</span>
           </h1>
           <p class="text-gray-600 mt-2">Browse every track in your library</p>
         </div>
@@ -42,6 +42,19 @@
           </div>
         </div>
       </div>
+      <form action="/tracks" method="GET" class="mt-4 flex flex-wrap gap-2">
+        <input
+          id="track-search"
+          type="text"
+          name="q"
+          value="<%= query || '' %>"
+          placeholder="Search tracks, artists, albums..."
+          class="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+          Search
+        </button>
+      </form>
     </div>
 
     <div class="bg-white rounded-lg shadow p-6">
@@ -62,7 +75,7 @@
                 <th class="py-3 px-4 text-sm font-semibold text-gray-700 text-right">Duration</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="track-table-body">
               <% tracks.forEach(function(track) { %>
                 <%
                   const minutes = Math.floor(track.duration_ms / 60000);
@@ -107,9 +120,9 @@
         </div>
 
         <% if (totalPages > 1) { %>
-          <div class="flex justify-center gap-2 mt-6">
+          <div id="track-pagination" class="flex justify-center gap-2 mt-6">
             <% if (page > 1) { %>
-              <a href="/tracks?page=<%= page - 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+              <a href="/tracks?page=<%= page - 1 %><% if (query) { %>&q=<%= encodeURIComponent(query) %><% } %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
                 ← Previous
               </a>
             <% } %>
@@ -122,7 +135,7 @@
 
             <% for (let i = startPage; i <= endPage; i++) { %>
               <a
-                href="/tracks?page=<%= i %>"
+                href="/tracks?page=<%= i %><% if (query) { %>&q=<%= encodeURIComponent(query) %><% } %>"
                 class="px-4 py-2 <%= i === page ? 'bg-blue-600 text-white' : 'bg-gray-200' %> rounded hover:bg-gray-300 transition"
               >
                 <%= i %>
@@ -132,7 +145,7 @@
             <% if (endPage < totalPages) { %>
               <span class="px-4 py-2 text-gray-500">...</span>
               <a
-                href="/tracks?page=<%= totalPages %>"
+                href="/tracks?page=<%= totalPages %><% if (query) { %>&q=<%= encodeURIComponent(query) %><% } %>"
                 class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
               >
                 <%= totalPages %>
@@ -140,13 +153,13 @@
             <% } %>
 
             <% if (page < totalPages) { %>
-              <a href="/tracks?page=<%= page + 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+              <a href="/tracks?page=<%= page + 1 %><% if (query) { %>&q=<%= encodeURIComponent(query) %><% } %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
                 Next →
               </a>
             <% } %>
           </div>
 
-          <p class="text-center text-sm text-gray-500 mt-4">
+          <p id="track-page-label" class="text-center text-sm text-gray-500 mt-4">
             Page <%= page %> of <%= totalPages %> · Showing <%= tracks.length %> of <%= totalCount %> tracks
           </p>
         <% } %>
@@ -157,5 +170,93 @@
   <footer class="text-center text-gray-500 text-sm p-4 mt-8">
     <p>Spotify Sync PRO | <a href="/" class="text-blue-500 hover:underline">Dashboard</a></p>
   </footer>
+
+  <script>
+    const trackSearch = document.getElementById('track-search');
+    const trackTableBody = document.getElementById('track-table-body');
+    const trackPagination = document.getElementById('track-pagination');
+    const trackPageLabel = document.getElementById('track-page-label');
+    const trackTotalEl = document.getElementById('total-count');
+    let trackTimer = null;
+
+    function renderTrackRow(track) {
+      const minutes = Math.floor(track.duration_ms / 60000);
+      const seconds = Math.floor((track.duration_ms % 60000) / 1000);
+      const duration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      const external = track.external_url
+        ? `<a href="${track.external_url}" target="_blank" rel="noopener" class="ml-2 text-green-700 hover:text-green-800 text-xs">↗</a>`
+        : '';
+      const explicit = track.explicit ? `<span class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">E</span>` : '';
+      const popularity = track.popularity !== null && track.popularity !== undefined
+        ? `<div class="flex items-center gap-2 justify-center">
+             <div class="w-16 bg-gray-200 rounded-full h-2">
+               <div class="bg-green-600 h-2 rounded-full" style="width: ${track.popularity}%"></div>
+             </div>
+             <span class="text-xs text-gray-600">${track.popularity}%</span>
+           </div>`
+        : `<span class="text-gray-400">-</span>`;
+      return `
+        <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
+          <td class="py-3 px-4">
+            <a href="/track/${track.id}" class="text-blue-600 hover:underline font-medium">${track.name}</a>
+            ${external}
+            ${explicit}
+          </td>
+          <td class="py-3 px-4 text-sm text-gray-600 hidden md:table-cell">${track.artist_name || 'Unknown Artist'}</td>
+          <td class="py-3 px-4 text-sm text-gray-600 hidden lg:table-cell">${track.album_name || 'Unknown Album'}</td>
+          <td class="py-3 px-4 hidden lg:table-cell text-center">${popularity}</td>
+          <td class="py-3 px-4 text-sm text-gray-600 text-right">${duration}</td>
+        </tr>
+      `;
+    }
+
+    async function loadTracks(query, page = 1) {
+      const response = await fetch(`/api/tracks?q=${encodeURIComponent(query)}&page=${page}`);
+      const data = await response.json();
+      if (trackTotalEl) trackTotalEl.textContent = data.totalCount;
+      if (trackTableBody) {
+        trackTableBody.innerHTML = data.items.map(renderTrackRow).join('');
+      }
+      if (!trackPagination || !trackPageLabel) return;
+      if (data.totalPages > 1) {
+        const links = [];
+        if (data.page > 1) {
+          links.push(`<a href="#" data-page="${data.page - 1}" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">← Previous</a>`);
+        }
+        const maxButtons = 10;
+        const startPage = Math.max(1, data.page - Math.floor(maxButtons / 2));
+        const endPage = Math.min(data.totalPages, startPage + maxButtons - 1);
+        for (let i = startPage; i <= endPage; i++) {
+          const cls = i === data.page ? 'bg-blue-600 text-white' : 'bg-gray-200';
+          links.push(`<a href="#" data-page="${i}" class="px-4 py-2 ${cls} rounded hover:bg-gray-300 transition">${i}</a>`);
+        }
+        if (endPage < data.totalPages) {
+          links.push(`<span class="px-4 py-2 text-gray-500">...</span>`);
+          links.push(`<a href="#" data-page="${data.totalPages}" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">${data.totalPages}</a>`);
+        }
+        if (data.page < data.totalPages) {
+          links.push(`<a href="#" data-page="${data.page + 1}" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">Next →</a>`);
+        }
+        trackPagination.innerHTML = links.join('');
+        trackPageLabel.textContent = `Page ${data.page} of ${data.totalPages} · Showing ${data.items.length} of ${data.totalCount} tracks`;
+        trackPagination.querySelectorAll('a[data-page]').forEach((link) => {
+          link.addEventListener('click', (event) => {
+            event.preventDefault();
+            loadTracks(trackSearch.value, Number(link.dataset.page));
+          });
+        });
+      } else {
+        trackPagination.innerHTML = '';
+        trackPageLabel.textContent = '';
+      }
+    }
+
+    if (trackSearch) {
+      trackSearch.addEventListener('input', () => {
+        clearTimeout(trackTimer);
+        trackTimer = setTimeout(() => loadTracks(trackSearch.value, 1), 300);
+      });
+    }
+  </script>
 </body>
 </html>

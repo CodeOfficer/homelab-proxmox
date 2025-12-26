@@ -29,7 +29,7 @@
         <div>
           <h1 class="text-3xl font-bold text-gray-800">
             All Genres
-            <span class="text-lg font-normal text-gray-500">(<%= totalCount %> total)</span>
+            <span class="text-lg font-normal text-gray-500">(<span id="total-count"><%= totalCount %></span> total)</span>
           </h1>
           <p class="text-gray-600 mt-2">Explore your library by genre</p>
         </div>
@@ -42,6 +42,19 @@
           </div>
         </div>
       </div>
+      <form action="/genres" method="GET" class="mt-4 flex flex-wrap gap-2">
+        <input
+          id="genre-search"
+          type="text"
+          name="q"
+          value="<%= query || '' %>"
+          placeholder="Search genres..."
+          class="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+          Search
+        </button>
+      </form>
     </div>
 
     <div class="bg-white rounded-lg shadow p-6">
@@ -51,7 +64,7 @@
           <p class="text-gray-600">No genres found</p>
         </div>
       <% } else { %>
-        <div class="flex flex-wrap gap-2">
+        <div id="genre-list" class="flex flex-wrap gap-2">
           <% genres.forEach(function(g) { %>
             <a
               href="/search?q=<%= encodeURIComponent(g.genre) %>&filter=genre"
@@ -64,9 +77,9 @@
         </div>
 
         <% if (totalPages > 1) { %>
-          <div class="flex justify-center gap-2 mt-6">
+          <div id="genre-pagination" class="flex justify-center gap-2 mt-6">
             <% if (page > 1) { %>
-              <a href="/genres?page=<%= page - 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+              <a href="/genres?page=<%= page - 1 %><% if (query) { %>&q=<%= encodeURIComponent(query) %><% } %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
                 ← Previous
               </a>
             <% } %>
@@ -79,7 +92,7 @@
 
             <% for (let i = startPage; i <= endPage; i++) { %>
               <a
-                href="/genres?page=<%= i %>"
+                href="/genres?page=<%= i %><% if (query) { %>&q=<%= encodeURIComponent(query) %><% } %>"
                 class="px-4 py-2 <%= i === page ? 'bg-blue-600 text-white' : 'bg-gray-200' %> rounded hover:bg-gray-300 transition"
               >
                 <%= i %>
@@ -89,7 +102,7 @@
             <% if (endPage < totalPages) { %>
               <span class="px-4 py-2 text-gray-500">...</span>
               <a
-                href="/genres?page=<%= totalPages %>"
+                href="/genres?page=<%= totalPages %><% if (query) { %>&q=<%= encodeURIComponent(query) %><% } %>"
                 class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
               >
                 <%= totalPages %>
@@ -97,13 +110,13 @@
             <% } %>
 
             <% if (page < totalPages) { %>
-              <a href="/genres?page=<%= page + 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+              <a href="/genres?page=<%= page + 1 %><% if (query) { %>&q=<%= encodeURIComponent(query) %><% } %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
                 Next →
               </a>
             <% } %>
           </div>
 
-          <p class="text-center text-sm text-gray-500 mt-4">
+          <p id="genre-page-label" class="text-center text-sm text-gray-500 mt-4">
             Page <%= page %> of <%= totalPages %> · Showing <%= genres.length %> of <%= totalCount %> genres
           </p>
         <% } %>
@@ -114,5 +127,73 @@
   <footer class="text-center text-gray-500 text-sm p-4 mt-8">
     <p>Spotify Sync PRO | <a href="/" class="text-blue-500 hover:underline">Dashboard</a></p>
   </footer>
+
+  <script>
+    const genreSearch = document.getElementById('genre-search');
+    const genreList = document.getElementById('genre-list');
+    const genrePagination = document.getElementById('genre-pagination');
+    const genrePageLabel = document.getElementById('genre-page-label');
+    const genreTotal = document.getElementById('total-count');
+    let genreTimer = null;
+
+    function renderGenreChip(genre) {
+      return `
+        <a href="/search?q=${encodeURIComponent(genre.genre)}&filter=genre"
+           class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded-full text-sm font-medium transition"
+           title="${genre.count} artists">
+          ${genre.genre} (${genre.count})
+        </a>
+      `;
+    }
+
+    async function loadGenres(query, page = 1) {
+      const response = await fetch(`/api/genres?q=${encodeURIComponent(query)}&page=${page}`);
+      const data = await response.json();
+      if (genreTotal) genreTotal.textContent = data.totalCount;
+      if (genreList) {
+        genreList.innerHTML = data.items.map(renderGenreChip).join('');
+      }
+      if (!genrePagination || !genrePageLabel) return;
+
+      if (data.totalPages > 1) {
+        const links = [];
+        if (data.page > 1) {
+          links.push(`<a href="#" data-page="${data.page - 1}" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">← Previous</a>`);
+        }
+        const maxButtons = 10;
+        const startPage = Math.max(1, data.page - Math.floor(maxButtons / 2));
+        const endPage = Math.min(data.totalPages, startPage + maxButtons - 1);
+        for (let i = startPage; i <= endPage; i++) {
+          const cls = i === data.page ? 'bg-blue-600 text-white' : 'bg-gray-200';
+          links.push(`<a href="#" data-page="${i}" class="px-4 py-2 ${cls} rounded hover:bg-gray-300 transition">${i}</a>`);
+        }
+        if (endPage < data.totalPages) {
+          links.push(`<span class="px-4 py-2 text-gray-500">...</span>`);
+          links.push(`<a href="#" data-page="${data.totalPages}" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">${data.totalPages}</a>`);
+        }
+        if (data.page < data.totalPages) {
+          links.push(`<a href="#" data-page="${data.page + 1}" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">Next →</a>`);
+        }
+        genrePagination.innerHTML = links.join('');
+        genrePageLabel.textContent = `Page ${data.page} of ${data.totalPages} · Showing ${data.items.length} of ${data.totalCount} genres`;
+        genrePagination.querySelectorAll('a[data-page]').forEach((link) => {
+          link.addEventListener('click', (event) => {
+            event.preventDefault();
+            loadGenres(genreSearch.value, Number(link.dataset.page));
+          });
+        });
+      } else {
+        genrePagination.innerHTML = '';
+        genrePageLabel.textContent = '';
+      }
+    }
+
+    if (genreSearch) {
+      genreSearch.addEventListener('input', () => {
+        clearTimeout(genreTimer);
+        genreTimer = setTimeout(() => loadGenres(genreSearch.value, 1), 300);
+      });
+    }
+  </script>
 </body>
 </html>

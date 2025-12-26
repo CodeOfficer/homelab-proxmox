@@ -202,7 +202,7 @@ export class SpotifyDatabase {
       FROM playlists p
       LEFT JOIN playlist_tracks pt ON p.id = pt.playlist_id
       GROUP BY p.id
-      ORDER BY p.synced_at DESC
+      ORDER BY LOWER(p.name)
       LIMIT ?
     `).all(limit) as Playlist[];
   }
@@ -904,9 +904,42 @@ export class SpotifyDatabase {
       FROM playlists p
       LEFT JOIN playlist_tracks pt ON p.id = pt.playlist_id
       GROUP BY p.id
-      ORDER BY p.synced_at DESC
+      ORDER BY LOWER(p.name)
       LIMIT ? OFFSET ?
     `).all(limit, offset);
+  }
+
+  /**
+   * Get playlists with optional name filter
+   */
+  getPlaylistsPage(query: string | null, limit: number = 50, offset: number = 0) {
+    if (query && query.trim().length > 0) {
+      const pattern = `%${query.toLowerCase()}%`;
+      return this.db.prepare(`
+        SELECT p.*, COUNT(pt.track_id) as track_count
+        FROM playlists p
+        LEFT JOIN playlist_tracks pt ON p.id = pt.playlist_id
+        WHERE LOWER(p.name) LIKE ?
+        GROUP BY p.id
+        ORDER BY LOWER(p.name)
+        LIMIT ? OFFSET ?
+      `).all(pattern, limit, offset);
+    }
+
+    return this.getAllPlaylists(limit, offset);
+  }
+
+  /**
+   * Get playlist count with optional name filter
+   */
+  getPlaylistCountFiltered(query: string | null): number {
+    if (query && query.trim().length > 0) {
+      const pattern = `%${query.toLowerCase()}%`;
+      return this.db.prepare(`
+        SELECT COUNT(*) FROM playlists WHERE LOWER(name) LIKE ?
+      `).pluck().get(pattern) as number;
+    }
+    return this.getPlaylistCount();
   }
 
   /**
@@ -922,6 +955,49 @@ export class SpotifyDatabase {
       ORDER BY LOWER(t.name)
       LIMIT ? OFFSET ?
     `).all(limit, offset);
+  }
+
+  /**
+   * Get tracks with optional name/artist/album filter
+   */
+  getTracksPage(query: string | null, limit: number = 50, offset: number = 0) {
+    if (query && query.trim().length > 0) {
+      const pattern = `%${query.toLowerCase()}%`;
+      return this.db.prepare(`
+        SELECT t.*, a.name as artist_name, al.name as album_name
+        FROM tracks t
+        LEFT JOIN track_artists ta ON t.id = ta.track_id AND ta.position = 0
+        LEFT JOIN artists a ON ta.artist_id = a.id
+        LEFT JOIN albums al ON t.album_id = al.id
+        WHERE LOWER(t.name) LIKE ?
+           OR LOWER(a.name) LIKE ?
+           OR LOWER(al.name) LIKE ?
+        ORDER BY LOWER(t.name)
+        LIMIT ? OFFSET ?
+      `).all(pattern, pattern, pattern, limit, offset);
+    }
+
+    return this.getAllTracks(limit, offset);
+  }
+
+  /**
+   * Get track count with optional filter
+   */
+  getTrackCountFiltered(query: string | null): number {
+    if (query && query.trim().length > 0) {
+      const pattern = `%${query.toLowerCase()}%`;
+      return this.db.prepare(`
+        SELECT COUNT(*)
+        FROM tracks t
+        LEFT JOIN track_artists ta ON t.id = ta.track_id AND ta.position = 0
+        LEFT JOIN artists a ON ta.artist_id = a.id
+        LEFT JOIN albums al ON t.album_id = al.id
+        WHERE LOWER(t.name) LIKE ?
+           OR LOWER(a.name) LIKE ?
+           OR LOWER(al.name) LIKE ?
+      `).pluck().get(pattern, pattern, pattern) as number;
+    }
+    return this.getTrackCount();
   }
 
   /**
@@ -943,6 +1019,39 @@ export class SpotifyDatabase {
       ORDER BY LOWER(a.name)
       LIMIT ? OFFSET ?
     `).all(limit, offset);
+  }
+
+  /**
+   * Get artists with optional name filter
+   */
+  getArtistsPage(query: string | null, limit: number = 50, offset: number = 0) {
+    if (query && query.trim().length > 0) {
+      const pattern = `%${query.toLowerCase()}%`;
+      return this.db.prepare(`
+        SELECT a.*, COUNT(ta.track_id) as track_count
+        FROM artists a
+        LEFT JOIN track_artists ta ON a.id = ta.artist_id
+        WHERE LOWER(a.name) LIKE ?
+        GROUP BY a.id
+        ORDER BY LOWER(a.name)
+        LIMIT ? OFFSET ?
+      `).all(pattern, limit, offset);
+    }
+
+    return this.getAllArtists(limit, offset);
+  }
+
+  /**
+   * Get artist count with optional filter
+   */
+  getArtistCountFiltered(query: string | null): number {
+    if (query && query.trim().length > 0) {
+      const pattern = `%${query.toLowerCase()}%`;
+      return this.db.prepare(`
+        SELECT COUNT(*) FROM artists WHERE LOWER(name) LIKE ?
+      `).pluck().get(pattern) as number;
+    }
+    return this.getArtistCount();
   }
 
   /**
@@ -976,7 +1085,7 @@ export class SpotifyDatabase {
     }
 
     return Object.entries(genreCounts)
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => a[0].localeCompare(b[0]))
       .slice(offset, offset + limit)
       .map(([genre, count]) => ({ genre, count }));
   }
@@ -1004,6 +1113,25 @@ export class SpotifyDatabase {
     }
 
     return genres.size;
+  }
+
+  /**
+   * Get genres with optional filter
+   */
+  getGenresPage(query: string | null, limit: number = 200, offset: number = 0): { genre: string; count: number }[] {
+    const genres = this.getAllGenres(100000, 0);
+    const filtered = query && query.trim().length > 0
+      ? genres.filter((g) => g.genre.toLowerCase().includes(query.toLowerCase()))
+      : genres;
+    return filtered.slice(offset, offset + limit);
+  }
+
+  getGenreCountFiltered(query: string | null): number {
+    const genres = this.getAllGenres(100000, 0);
+    if (query && query.trim().length > 0) {
+      return genres.filter((g) => g.genre.toLowerCase().includes(query.toLowerCase())).length;
+    }
+    return genres.length;
   }
 
   /**

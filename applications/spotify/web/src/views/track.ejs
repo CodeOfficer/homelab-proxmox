@@ -35,8 +35,14 @@
           <% if (track.album_image) { %>
             <img src="<%= track.album_image %>" alt="<%= track.name %>" class="w-64 h-64 object-cover rounded-lg shadow-lg">
           <% } else { %>
-            <div class="w-64 h-64 bg-gray-300 rounded-lg flex items-center justify-center text-gray-500 text-6xl">
-              🎵
+            <%
+              const palette = ['bg-emerald-200 text-emerald-900','bg-amber-200 text-amber-900','bg-sky-200 text-sky-900','bg-rose-200 text-rose-900','bg-indigo-200 text-indigo-900','bg-lime-200 text-lime-900'];
+              const base = track.album_name || track.name || 'Track';
+              const initials = base.split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase();
+              const color = palette[(base.charCodeAt(0) || 0) % palette.length];
+            %>
+            <div class="w-64 h-64 rounded-lg flex items-center justify-center text-6xl font-semibold <%= color %>">
+              <%= initials || 'TR' %>
             </div>
           <% } %>
         </div>
@@ -266,8 +272,14 @@
               <% if (artist.image_url) { %>
                 <img src="<%= artist.image_url %>" alt="<%= artist.name %>" class="w-full h-32 object-cover rounded-full mb-3 mx-auto">
               <% } else { %>
-                <div class="w-32 h-32 bg-gray-300 rounded-full mb-3 flex items-center justify-center text-gray-500 text-3xl mx-auto">
-                  🎤
+                <%
+                  const palette = ['bg-emerald-200 text-emerald-900','bg-amber-200 text-amber-900','bg-sky-200 text-sky-900','bg-rose-200 text-rose-900','bg-indigo-200 text-indigo-900','bg-lime-200 text-lime-900'];
+                  const base = artist.name || 'Artist';
+                  const initials = base.split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase();
+                  const color = palette[(base.charCodeAt(0) || 0) % palette.length];
+                %>
+                <div class="w-32 h-32 rounded-full mb-3 flex items-center justify-center text-3xl font-semibold <%= color %> mx-auto">
+                  <%= initials || 'AR' %>
                 </div>
               <% } %>
               <h3 class="font-semibold text-gray-800 text-center text-lg"><%= artist.name %></h3>

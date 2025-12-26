@@ -7,12 +7,13 @@ import { getDatabase } from '@homelab/spotify-shared';
 export async function showAllTracks(req: Request, res: Response) {
   try {
     const page = parseInt(req.query.page as string) || 1;
+    const query = (req.query.q as string) || '';
     const limit = 50;
     const offset = (page - 1) * limit;
 
     const db = getDatabase();
-    const tracks = db.getAllTracks(limit, offset);
-    const totalCount = db.getTrackCount();
+    const tracks = db.getTracksPage(query, limit, offset);
+    const totalCount = db.getTrackCountFiltered(query);
     const totalPages = Math.ceil(totalCount / limit);
     const stats = db.getLibraryStats();
 
@@ -21,7 +22,8 @@ export async function showAllTracks(req: Request, res: Response) {
       page,
       totalPages,
       totalCount,
-      stats
+      stats,
+      query
     });
   } catch (error) {
     console.error('Error loading all tracks:', error);

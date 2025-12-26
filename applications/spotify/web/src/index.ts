@@ -103,6 +103,71 @@ app.get('/artist/:id', showArtistDetail);
 app.get('/track/:id', showTrackDetail);
 app.get('/search', showSearchResults);
 
+// Live search APIs
+app.get('/api/playlists', (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const query = (req.query.q as string) || '';
+    const limit = 50;
+    const offset = (page - 1) * limit;
+    const db = getDatabase();
+    const items = db.getPlaylistsPage(query, limit, offset);
+    const totalCount = db.getPlaylistCountFiltered(query);
+    const totalPages = Math.ceil(totalCount / limit);
+    res.json({ items, page, totalPages, totalCount, query });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load playlists' });
+  }
+});
+
+app.get('/api/tracks', (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const query = (req.query.q as string) || '';
+    const limit = 50;
+    const offset = (page - 1) * limit;
+    const db = getDatabase();
+    const items = db.getTracksPage(query, limit, offset);
+    const totalCount = db.getTrackCountFiltered(query);
+    const totalPages = Math.ceil(totalCount / limit);
+    res.json({ items, page, totalPages, totalCount, query });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load tracks' });
+  }
+});
+
+app.get('/api/artists', (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const query = (req.query.q as string) || '';
+    const limit = 48;
+    const offset = (page - 1) * limit;
+    const db = getDatabase();
+    const items = db.getArtistsPage(query, limit, offset);
+    const totalCount = db.getArtistCountFiltered(query);
+    const totalPages = Math.ceil(totalCount / limit);
+    res.json({ items, page, totalPages, totalCount, query });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load artists' });
+  }
+});
+
+app.get('/api/genres', (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const query = (req.query.q as string) || '';
+    const limit = 100;
+    const offset = (page - 1) * limit;
+    const db = getDatabase();
+    const items = db.getGenresPage(query, limit, offset);
+    const totalCount = db.getGenreCountFiltered(query);
+    const totalPages = Math.ceil(totalCount / limit);
+    res.json({ items, page, totalPages, totalCount, query });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load genres' });
+  }
+});
+
 // Start server only if not in test mode
 if (process.env.NODE_ENV !== 'test') {
   const httpsKeyPath = process.env.HTTPS_KEY_PATH;

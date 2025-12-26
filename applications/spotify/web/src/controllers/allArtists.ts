@@ -7,12 +7,13 @@ import { getDatabase } from '@homelab/spotify-shared';
 export async function showAllArtists(req: Request, res: Response) {
   try {
     const page = parseInt(req.query.page as string) || 1;
+    const query = (req.query.q as string) || '';
     const limit = 48;
     const offset = (page - 1) * limit;
 
     const db = getDatabase();
-    const artists = db.getAllArtists(limit, offset);
-    const totalCount = db.getArtistCount();
+    const artists = db.getArtistsPage(query, limit, offset);
+    const totalCount = db.getArtistCountFiltered(query);
     const totalPages = Math.ceil(totalCount / limit);
     const stats = db.getLibraryStats();
 
@@ -21,7 +22,8 @@ export async function showAllArtists(req: Request, res: Response) {
       page,
       totalPages,
       totalCount,
-      stats
+      stats,
+      query
     });
   } catch (error) {
     console.error('Error loading all artists:', error);

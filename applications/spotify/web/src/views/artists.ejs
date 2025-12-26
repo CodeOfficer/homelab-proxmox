@@ -29,7 +29,7 @@
         <div>
           <h1 class="text-3xl font-bold text-gray-800">
             All Artists
-            <span class="text-lg font-normal text-gray-500">(<%= totalCount %> total)</span>
+            <span class="text-lg font-normal text-gray-500">(<span id="total-count"><%= totalCount %></span> total)</span>
           </h1>
           <p class="text-gray-600 mt-2">Browse artists in your library</p>
         </div>
@@ -42,6 +42,19 @@
           </div>
         </div>
       </div>
+      <form action="/artists" method="GET" class="mt-4 flex flex-wrap gap-2">
+        <input
+          id="artist-search"
+          type="text"
+          name="q"
+          value="<%= query || '' %>"
+          placeholder="Search artists..."
+          class="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+          Search
+        </button>
+      </form>
     </div>
 
     <div class="bg-white rounded-lg shadow p-6">
@@ -51,7 +64,7 @@
           <p class="text-gray-600">No artists found</p>
         </div>
       <% } else { %>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div id="artist-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <% artists.forEach(function(artist) { %>
             <div class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:shadow-md transition">
               <a href="/artist/<%= artist.id %>" class="flex items-center gap-4">
@@ -59,8 +72,14 @@
                   <% if (artist.image_url) { %>
                     <img src="<%= artist.image_url %>" alt="<%= artist.name %>" class="w-20 h-20 object-cover rounded-full">
                   <% } else { %>
-                    <div class="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center text-gray-500 text-2xl">
-                      🎤
+                    <%
+                      const palette = ['bg-emerald-200 text-emerald-900','bg-amber-200 text-amber-900','bg-sky-200 text-sky-900','bg-rose-200 text-rose-900','bg-indigo-200 text-indigo-900','bg-lime-200 text-lime-900'];
+                      const base = artist.name || 'Artist';
+                      const initials = base.split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase();
+                      const color = palette[(base.charCodeAt(0) || 0) % palette.length];
+                    %>
+                    <div class="w-20 h-20 rounded-full flex items-center justify-center text-lg font-semibold <%= color %>">
+                      <%= initials || 'AR' %>
                     </div>
                   <% } %>
                 </div>
@@ -103,9 +122,9 @@
         </div>
 
         <% if (totalPages > 1) { %>
-          <div class="flex justify-center gap-2 mt-6">
+          <div id="artist-pagination" class="flex justify-center gap-2 mt-6">
             <% if (page > 1) { %>
-              <a href="/artists?page=<%= page - 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+              <a href="/artists?page=<%= page - 1 %><% if (query) { %>&q=<%= encodeURIComponent(query) %><% } %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
                 ← Previous
               </a>
             <% } %>
@@ -118,7 +137,7 @@
 
             <% for (let i = startPage; i <= endPage; i++) { %>
               <a
-                href="/artists?page=<%= i %>"
+                href="/artists?page=<%= i %><% if (query) { %>&q=<%= encodeURIComponent(query) %><% } %>"
                 class="px-4 py-2 <%= i === page ? 'bg-blue-600 text-white' : 'bg-gray-200' %> rounded hover:bg-gray-300 transition"
               >
                 <%= i %>
@@ -128,7 +147,7 @@
             <% if (endPage < totalPages) { %>
               <span class="px-4 py-2 text-gray-500">...</span>
               <a
-                href="/artists?page=<%= totalPages %>"
+                href="/artists?page=<%= totalPages %><% if (query) { %>&q=<%= encodeURIComponent(query) %><% } %>"
                 class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
               >
                 <%= totalPages %>
@@ -136,13 +155,13 @@
             <% } %>
 
             <% if (page < totalPages) { %>
-              <a href="/artists?page=<%= page + 1 %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
+              <a href="/artists?page=<%= page + 1 %><% if (query) { %>&q=<%= encodeURIComponent(query) %><% } %>" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
                 Next →
               </a>
             <% } %>
           </div>
 
-          <p class="text-center text-sm text-gray-500 mt-4">
+          <p id="artist-page-label" class="text-center text-sm text-gray-500 mt-4">
             Page <%= page %> of <%= totalPages %> · Showing <%= artists.length %> of <%= totalCount %> artists
           </p>
         <% } %>
@@ -153,5 +172,102 @@
   <footer class="text-center text-gray-500 text-sm p-4 mt-8">
     <p>Spotify Sync PRO | <a href="/" class="text-blue-500 hover:underline">Dashboard</a></p>
   </footer>
+
+  <script>
+    const artistSearch = document.getElementById('artist-search');
+    const artistGrid = document.getElementById('artist-grid');
+    const artistPagination = document.getElementById('artist-pagination');
+    const artistPageLabel = document.getElementById('artist-page-label');
+    const artistTotal = document.getElementById('total-count');
+    let artistTimer = null;
+
+    function renderArtistCard(artist) {
+      const name = artist.name || 'Artist';
+      const initials = name.split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase() || 'AR';
+      const palette = ['bg-emerald-200 text-emerald-900','bg-amber-200 text-amber-900','bg-sky-200 text-sky-900','bg-rose-200 text-rose-900','bg-indigo-200 text-indigo-900','bg-lime-200 text-lime-900'];
+      const color = palette[(name.charCodeAt(0) || 0) % palette.length];
+      const image = artist.image_url
+        ? `<img src="${artist.image_url}" alt="${name}" class="w-20 h-20 object-cover rounded-full">`
+        : `<div class="w-20 h-20 rounded-full flex items-center justify-center text-lg font-semibold ${color}">${initials}</div>`;
+      const genres = artist.genres
+        ? (typeof artist.genres === 'string' ? JSON.parse(artist.genres) : artist.genres)
+        : [];
+      const genreTags = genres && genres.length > 0
+        ? `<div class="flex flex-wrap gap-1 mt-2">${genres.slice(0, 3).map((g) => `<span class="text-xs bg-gray-200 px-2 py-1 rounded">${g}</span>`).join('')}</div>`
+        : '';
+      const trackCount = artist.track_count ? `<p class="text-xs text-gray-500 mt-2">${artist.track_count} tracks</p>` : '';
+      const followers = artist.followers_total !== null && artist.followers_total !== undefined
+        ? `<p class="text-xs text-gray-500 mt-1">${Number(artist.followers_total).toLocaleString()} followers</p>`
+        : '';
+      const popularity = artist.popularity !== null && artist.popularity !== undefined
+        ? `<div class="mt-2"><div class="w-full bg-gray-200 rounded-full h-1"><div class="bg-green-600 h-1 rounded-full" style="width: ${artist.popularity}%"></div></div></div>`
+        : '';
+      const external = artist.external_url ? `<a href="${artist.external_url}" target="_blank" rel="noopener" class="text-xs text-green-700 mt-3 inline-block">Open in Spotify ↗</a>` : '';
+      return `
+        <div class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:shadow-md transition">
+          <a href="/artist/${artist.id}" class="flex items-center gap-4">
+            <div class="flex-shrink-0">${image}</div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-gray-800 truncate" title="${name}">${name}</h3>
+              ${genreTags}
+              ${trackCount}
+              ${followers}
+              ${popularity}
+            </div>
+          </a>
+          ${external}
+        </div>
+      `;
+    }
+
+    async function loadArtists(query, page = 1) {
+      const response = await fetch(`/api/artists?q=${encodeURIComponent(query)}&page=${page}`);
+      const data = await response.json();
+      if (artistTotal) artistTotal.textContent = data.totalCount;
+      if (artistGrid) {
+        artistGrid.innerHTML = data.items.map(renderArtistCard).join('');
+      }
+      if (!artistPagination || !artistPageLabel) return;
+
+      if (data.totalPages > 1) {
+        const links = [];
+        if (data.page > 1) {
+          links.push(`<a href="#" data-page="${data.page - 1}" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">← Previous</a>`);
+        }
+        const maxButtons = 10;
+        const startPage = Math.max(1, data.page - Math.floor(maxButtons / 2));
+        const endPage = Math.min(data.totalPages, startPage + maxButtons - 1);
+        for (let i = startPage; i <= endPage; i++) {
+          const cls = i === data.page ? 'bg-blue-600 text-white' : 'bg-gray-200';
+          links.push(`<a href="#" data-page="${i}" class="px-4 py-2 ${cls} rounded hover:bg-gray-300 transition">${i}</a>`);
+        }
+        if (endPage < data.totalPages) {
+          links.push(`<span class="px-4 py-2 text-gray-500">...</span>`);
+          links.push(`<a href="#" data-page="${data.totalPages}" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">${data.totalPages}</a>`);
+        }
+        if (data.page < data.totalPages) {
+          links.push(`<a href="#" data-page="${data.page + 1}" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">Next →</a>`);
+        }
+        artistPagination.innerHTML = links.join('');
+        artistPageLabel.textContent = `Page ${data.page} of ${data.totalPages} · Showing ${data.items.length} of ${data.totalCount} artists`;
+        artistPagination.querySelectorAll('a[data-page]').forEach((link) => {
+          link.addEventListener('click', (event) => {
+            event.preventDefault();
+            loadArtists(artistSearch.value, Number(link.dataset.page));
+          });
+        });
+      } else {
+        artistPagination.innerHTML = '';
+        artistPageLabel.textContent = '';
+      }
+    }
+
+    if (artistSearch) {
+      artistSearch.addEventListener('input', () => {
+        clearTimeout(artistTimer);
+        artistTimer = setTimeout(() => loadArtists(artistSearch.value, 1), 300);
+      });
+    }
+  </script>
 </body>
 </html>

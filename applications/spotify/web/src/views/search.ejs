@@ -27,25 +27,98 @@
     <!-- Search Bar -->
     <div class="bg-white rounded-lg shadow p-6 mb-6">
       <h1 class="text-2xl font-bold text-gray-800 mb-4">Search Your Library</h1>
-      <form action="/search" method="GET" class="flex gap-2">
-        <input
-          type="text"
-          name="q"
-          value="<%= query %>"
-          placeholder="Search tracks, artists, playlists, genres..."
-          class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-          autofocus
-        />
-        <select name="filter" class="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="all" <%= filter === 'all' ? 'selected' : '' %>>All</option>
-          <option value="tracks" <%= filter === 'tracks' ? 'selected' : '' %>>Tracks</option>
-          <option value="artists" <%= filter === 'artists' ? 'selected' : '' %>>Artists</option>
-          <option value="playlists" <%= filter === 'playlists' ? 'selected' : '' %>>Playlists</option>
-          <option value="genre" <%= filter === 'genre' ? 'selected' : '' %>>Genre</option>
-        </select>
-        <button type="submit" class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition font-semibold">
-          Search
-        </button>
+      <form id="search-form" action="/search" method="GET" class="flex flex-col gap-4">
+        <div class="flex flex-col lg:flex-row gap-3">
+          <input
+            id="search-query"
+            type="text"
+            name="q"
+            value="<%= query %>"
+            placeholder="Search tracks, artists, playlists, genres..."
+            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
+            autofocus
+          />
+          <select id="search-filter" name="filter" class="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all" <%= filter === 'all' ? 'selected' : '' %>>All</option>
+            <option value="tracks" <%= filter === 'tracks' ? 'selected' : '' %>>Tracks</option>
+            <option value="artists" <%= filter === 'artists' ? 'selected' : '' %>>Artists</option>
+            <option value="playlists" <%= filter === 'playlists' ? 'selected' : '' %>>Playlists</option>
+            <option value="genre" <%= filter === 'genre' ? 'selected' : '' %>>Genre</option>
+            <option value="tempo" <%= filter === 'tempo' ? 'selected' : '' %>>Tempo (BPM)</option>
+            <option value="energy" <%= filter === 'energy' ? 'selected' : '' %>>Energy</option>
+            <option value="danceability" <%= filter === 'danceability' ? 'selected' : '' %>>Danceability</option>
+            <option value="mood" <%= filter === 'mood' ? 'selected' : '' %>>Mood (Valence)</option>
+            <option value="popularity" <%= filter === 'popularity' ? 'selected' : '' %>>Popularity</option>
+            <option value="duration" <%= filter === 'duration' ? 'selected' : '' %>>Duration (seconds)</option>
+            <option value="explicit" <%= filter === 'explicit' ? 'selected' : '' %>>Explicit / Clean</option>
+          </select>
+          <button type="submit" class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition font-semibold">
+            Search
+          </button>
+        </div>
+
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <p class="text-sm text-gray-600 mb-3">
+            Advanced filters run directly against track metadata. Audio feature filters require the Spotify audio features API.
+          </p>
+          <div id="advanced-fields" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div data-filter="tempo" class="<%= filter === 'tempo' ? '' : 'hidden' %>">
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Tempo range (BPM)</label>
+              <div class="flex gap-2">
+                <input data-advanced-input type="number" name="min_bpm" value="<%= filters.min_bpm || '' %>" placeholder="Min" class="w-full px-3 py-2 border border-gray-300 rounded-lg" min="0" max="300">
+                <input data-advanced-input type="number" name="max_bpm" value="<%= filters.max_bpm || '' %>" placeholder="Max" class="w-full px-3 py-2 border border-gray-300 rounded-lg" min="0" max="300">
+              </div>
+            </div>
+
+            <div data-filter="energy" class="<%= filter === 'energy' ? '' : 'hidden' %>">
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Energy (0-100)</label>
+              <div class="flex gap-2">
+                <input data-advanced-input type="number" name="min_energy" value="<%= filters.min_energy || '' %>" placeholder="Min" class="w-full px-3 py-2 border border-gray-300 rounded-lg" min="0" max="100">
+                <input data-advanced-input type="number" name="max_energy" value="<%= filters.max_energy || '' %>" placeholder="Max" class="w-full px-3 py-2 border border-gray-300 rounded-lg" min="0" max="100">
+              </div>
+            </div>
+
+            <div data-filter="danceability" class="<%= filter === 'danceability' ? '' : 'hidden' %>">
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Danceability (0-100)</label>
+              <div class="flex gap-2">
+                <input data-advanced-input type="number" name="min_danceability" value="<%= filters.min_danceability || '' %>" placeholder="Min" class="w-full px-3 py-2 border border-gray-300 rounded-lg" min="0" max="100">
+                <input data-advanced-input type="number" name="max_danceability" value="<%= filters.max_danceability || '' %>" placeholder="Max" class="w-full px-3 py-2 border border-gray-300 rounded-lg" min="0" max="100">
+              </div>
+            </div>
+
+            <div data-filter="mood" class="<%= filter === 'mood' ? '' : 'hidden' %>">
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Mood (Valence 0-100)</label>
+              <div class="flex gap-2">
+                <input data-advanced-input type="number" name="min_valence" value="<%= filters.min_valence || '' %>" placeholder="Min" class="w-full px-3 py-2 border border-gray-300 rounded-lg" min="0" max="100">
+                <input data-advanced-input type="number" name="max_valence" value="<%= filters.max_valence || '' %>" placeholder="Max" class="w-full px-3 py-2 border border-gray-300 rounded-lg" min="0" max="100">
+              </div>
+            </div>
+
+            <div data-filter="popularity" class="<%= filter === 'popularity' ? '' : 'hidden' %>">
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Popularity (0-100)</label>
+              <div class="flex gap-2">
+                <input data-advanced-input type="number" name="min_popularity" value="<%= filters.min_popularity || '' %>" placeholder="Min" class="w-full px-3 py-2 border border-gray-300 rounded-lg" min="0" max="100">
+                <input data-advanced-input type="number" name="max_popularity" value="<%= filters.max_popularity || '' %>" placeholder="Max" class="w-full px-3 py-2 border border-gray-300 rounded-lg" min="0" max="100">
+              </div>
+            </div>
+
+            <div data-filter="duration" class="<%= filter === 'duration' ? '' : 'hidden' %>">
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Duration (seconds)</label>
+              <div class="flex gap-2">
+                <input data-advanced-input type="number" name="min_duration" value="<%= filters.min_duration || '' %>" placeholder="Min" class="w-full px-3 py-2 border border-gray-300 rounded-lg" min="0">
+                <input data-advanced-input type="number" name="max_duration" value="<%= filters.max_duration || '' %>" placeholder="Max" class="w-full px-3 py-2 border border-gray-300 rounded-lg" min="0">
+              </div>
+            </div>
+
+            <div data-filter="explicit" class="<%= filter === 'explicit' ? '' : 'hidden' %>">
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Explicit filter</label>
+              <select data-advanced-input name="explicit" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                <option value="true" <%= filters.explicit === 'true' ? 'selected' : '' %>>Explicit only</option>
+                <option value="false" <%= filters.explicit === 'false' ? 'selected' : '' %>>Clean only</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </form>
     </div>
 
@@ -60,13 +133,24 @@
     <% if (results) { %>
       <%
         const totalResults = (results.tracks?.length || 0) + (results.artists?.length || 0) + (results.playlists?.length || 0);
+        const hasQuery = query && query.trim().length > 0;
+        const filterLabels = {
+          tempo: 'tempo range',
+          energy: 'energy range',
+          danceability: 'danceability range',
+          mood: 'mood range',
+          popularity: 'popularity range',
+          duration: 'duration range',
+          explicit: 'explicit filter'
+        };
+        const queryLabel = hasQuery ? `"${query}"` : (filterLabels[filter] || 'current filter');
       %>
 
       <% if (totalResults === 0) { %>
         <!-- No Results -->
         <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
           <div class="text-6xl mb-4">🔍</div>
-          <h2 class="text-2xl font-bold text-yellow-900 mb-2">No results found for "<%= query %>"</h2>
+          <h2 class="text-2xl font-bold text-yellow-900 mb-2">No results found for <%= queryLabel %></h2>
           <p class="text-yellow-800 mb-4">Try these tips:</p>
           <ul class="text-left inline-block list-disc list-inside text-yellow-700 space-y-1">
             <li>Check your spelling</li>
@@ -79,7 +163,7 @@
         <!-- Result Count -->
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <p class="text-blue-900 font-semibold">
-            Found <%= totalResults %> result<%= totalResults !== 1 ? 's' : '' %> for "<%= query %>"
+            Found <%= totalResults %> result<%= totalResults !== 1 ? 's' : '' %> for <%= queryLabel %>
             <span class="text-blue-700 font-normal">
               (<%= results.tracks.length %> tracks, <%= results.artists.length %> artists, <%= results.playlists.length %> playlists)
             </span>
@@ -151,13 +235,19 @@
                 <div class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:shadow-md transition">
                   <a href="/artist/<%= artist.id %>" class="flex items-center gap-4">
                     <div class="flex-shrink-0">
-                      <% if (artist.image_url) { %>
-                        <img src="<%= artist.image_url %>" alt="<%= artist.name %>" class="w-20 h-20 object-cover rounded-full">
-                      <% } else { %>
-                        <div class="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center text-gray-500 text-2xl">
-                          🎤
-                        </div>
-                      <% } %>
+                    <% if (artist.image_url) { %>
+                      <img src="<%= artist.image_url %>" alt="<%= artist.name %>" class="w-20 h-20 object-cover rounded-full">
+                    <% } else { %>
+                      <%
+                        const palette = ['bg-emerald-200 text-emerald-900','bg-amber-200 text-amber-900','bg-sky-200 text-sky-900','bg-rose-200 text-rose-900','bg-indigo-200 text-indigo-900','bg-lime-200 text-lime-900'];
+                        const base = artist.name || 'Artist';
+                        const initials = base.split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase();
+                        const color = palette[(base.charCodeAt(0) || 0) % palette.length];
+                      %>
+                      <div class="w-20 h-20 rounded-full flex items-center justify-center text-lg font-semibold <%= color %>">
+                        <%= initials || 'AR' %>
+                      </div>
+                    <% } %>
                     </div>
                     <div class="flex-1 min-w-0">
                       <h3 class="font-semibold text-gray-800 truncate" title="<%= artist.name %>">
@@ -209,8 +299,14 @@
                     <% if (playlist.image_url) { %>
                       <img src="<%= playlist.image_url %>" alt="<%= playlist.name %>" class="w-full h-32 object-cover rounded mb-2">
                     <% } else { %>
-                      <div class="w-full h-32 bg-gray-300 rounded mb-2 flex items-center justify-center text-gray-500 text-3xl">
-                        🎵
+                      <%
+                        const palette = ['bg-emerald-200 text-emerald-900','bg-amber-200 text-amber-900','bg-sky-200 text-sky-900','bg-rose-200 text-rose-900','bg-indigo-200 text-indigo-900','bg-lime-200 text-lime-900'];
+                        const base = playlist.name || 'Playlist';
+                        const initials = base.split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase();
+                        const color = palette[(base.charCodeAt(0) || 0) % palette.length];
+                      %>
+                      <div class="w-full h-32 rounded mb-2 flex items-center justify-center text-3xl font-semibold <%= color %>">
+                        <%= initials || 'PL' %>
                       </div>
                     <% } %>
                     <h3 class="font-semibold text-gray-800 truncate" title="<%= playlist.name %>">
@@ -233,5 +329,58 @@
   <footer class="text-center text-gray-500 text-sm p-4 mt-8">
     <p>Spotify Sync PRO | <a href="/" class="text-blue-500 hover:underline">Dashboard</a></p>
   </footer>
+
+  <script>
+    const searchForm = document.getElementById('search-form');
+    const searchQuery = document.getElementById('search-query');
+    const searchFilter = document.getElementById('search-filter');
+    const advancedFields = document.getElementById('advanced-fields');
+    let searchTimer = null;
+
+    function isAdvancedFilter(value) {
+      return ['tempo', 'energy', 'danceability', 'mood', 'popularity', 'duration', 'explicit'].includes(value);
+    }
+
+    function updateAdvancedVisibility() {
+      if (!advancedFields || !searchFilter) return;
+      const selected = searchFilter.value;
+      advancedFields.querySelectorAll('[data-filter]').forEach((field) => {
+        field.classList.toggle('hidden', field.getAttribute('data-filter') !== selected);
+      });
+    }
+
+    function shouldAutoSubmit() {
+      if (!searchFilter || !searchQuery) return false;
+      if (isAdvancedFilter(searchFilter.value)) return true;
+      return searchQuery.value.trim().length > 0;
+    }
+
+    function scheduleSubmit() {
+      if (!searchForm) return;
+      clearTimeout(searchTimer);
+      if (!shouldAutoSubmit()) return;
+      searchTimer = setTimeout(() => searchForm.submit(), 400);
+    }
+
+    if (searchFilter) {
+      searchFilter.addEventListener('change', () => {
+        updateAdvancedVisibility();
+        scheduleSubmit();
+      });
+    }
+
+    if (searchQuery) {
+      searchQuery.addEventListener('input', scheduleSubmit);
+    }
+
+    if (advancedFields) {
+      advancedFields.querySelectorAll('[data-advanced-input]').forEach((input) => {
+        input.addEventListener('input', scheduleSubmit);
+        input.addEventListener('change', scheduleSubmit);
+      });
+    }
+
+    updateAdvancedVisibility();
+  </script>
 </body>
 </html>
