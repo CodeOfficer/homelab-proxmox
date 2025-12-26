@@ -8,23 +8,32 @@ cd "$SCRIPT_DIR"
 NAMESPACE="spotify"
 K3S_NODES=("10.20.11.80" "10.20.11.81" "10.20.11.85")
 
-echo "Deploying Spotify Web UI..."
+echo "Deploying Spotify services..."
 
-# 0. Build and load Docker image into K3s nodes
-echo "Building Docker image for linux/amd64..."
-docker build --no-cache --platform linux/amd64 -t spotify-web:latest -f web/Dockerfile .
-
-echo "Loading image into K3s nodes..."
-docker save spotify-web:latest -o /tmp/spotify-web.tar
 SSH_KEY="${HOME}/.ssh/id_ed25519"
 SSH_OPTS="-i ${SSH_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"
-for node in "${K3S_NODES[@]}"; do
-    echo "  -> $node"
-    scp ${SSH_OPTS} /tmp/spotify-web.tar ubuntu@$node:/tmp/
-    ssh ${SSH_OPTS} ubuntu@$node "sudo k3s ctr images import /tmp/spotify-web.tar && sudo rm /tmp/spotify-web.tar"
-done
-rm /tmp/spotify-web.tar
-echo "✓ Image loaded on all nodes"
+
+# Helper function to build and load image
+load_image() {
+    local name=$1
+    local dockerfile=$2
+    echo "Building $name for linux/amd64..."
+    docker build --platform linux/amd64 -t ${name}:latest -f "$dockerfile" .
+
+    echo "Loading $name into K3s nodes..."
+    docker save ${name}:latest -o /tmp/${name}.tar
+    for node in "${K3S_NODES[@]}"; do
+        echo "  -> $node"
+        scp ${SSH_OPTS} /tmp/${name}.tar ubuntu@$node:/tmp/
+        ssh ${SSH_OPTS} ubuntu@$node "sudo k3s ctr images import /tmp/${name}.tar && sudo rm /tmp/${name}.tar"
+    done
+    rm /tmp/${name}.tar
+    echo "✓ $name loaded on all nodes"
+}
+
+# 0. Build and load Docker images into K3s nodes
+load_image "spotify-web" "web/Dockerfile"
+load_image "spotify-mcp" "mcp/Dockerfile"
 
 # 1. Create namespace
 echo "Creating namespace..."
@@ -84,31 +93,32 @@ spec:
       secretName: spotify-web-tls
 EOF
 
-# TODO: Deploy MCP server (not built yet)
-# echo "Deploying MCP server..."
-# kubectl apply -f k8s/mcp-deployment.yaml
-# kubectl apply -f k8s/mcp-service.yaml
-# kubectl apply -f k8s/mcp-ingress.yaml
+# 5. Deploy MCP server
+echo "Deploying MCP server..."
+kubectl apply -f k8s/mcp-deployment.yaml
+kubectl apply -f k8s/mcp-service.yaml
 
 # TODO: Deploy backup CronJob (after sync job is built)
 # echo "Deploying backup CronJob..."
 # kubectl apply -f k8s/backup-cronjob.yaml
 
-# 5. Wait for rollout
+# 6. Wait for rollout
 echo "Waiting for deployments..."
 kubectl rollout status deployment/spotify-web -n "$NAMESPACE" --timeout=5m
+kubectl rollout status deployment/spotify-mcp -n "$NAMESPACE" --timeout=5m
 
 echo ""
 echo "================================================"
-echo "Spotify Web UI deployed!"
+echo "Spotify services deployed!"
 echo "================================================"
 echo ""
-echo "Web UI: https://spotify.codeofficer.com"
+echo "Web UI:     https://spotify.codeofficer.com"
+echo "MCP Server: https://spotify-mcp.codeofficer.com"
 echo ""
-echo "Next steps:"
-echo "1. Visit https://spotify.codeofficer.com"
-echo "2. Click 'Connect with Spotify' to authorize OAuth"
-echo "3. Dashboard will show connected status"
-echo ""
-echo "TODO: Build and deploy sync job + MCP server"
+echo "For Claude Desktop, add to claude_desktop_config.json:"
+echo '  "mcpServers": {'
+echo '    "spotify": {'
+echo '      "url": "https://spotify-mcp.codeofficer.com/sse"'
+echo '    }'
+echo '  }'
 echo ""

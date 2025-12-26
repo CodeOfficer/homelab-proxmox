@@ -22,14 +22,16 @@ spec:
           effect: "NoSchedule"
       containers:
         - name: mcp
-          image: ghcr.io/codeofficer/spotify-mcp:latest
-          imagePullPolicy: Always
+          image: spotify-mcp:latest
+          imagePullPolicy: Never
           ports:
-            - containerPort: 8080
+            - containerPort: 3000
               name: http
           env:
             - name: DATABASE_PATH
               value: /data/spotify.db
+            - name: PORT
+              value: "3000"
             - name: SPOTIFY_DB_ENCRYPTION_KEY
               valueFrom:
                 secretKeyRef:
@@ -38,7 +40,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: 3000
             initialDelaySeconds: 10
             periodSeconds: 30
             timeoutSeconds: 5
@@ -46,7 +48,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: 3000
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 5
