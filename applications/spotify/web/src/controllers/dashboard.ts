@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { getDatabase } from '@homelab/spotify-shared';
 
 /**
- * Display dashboard with playlists and sync status
+ * Display dashboard with playlists, sync status, and library stats
  */
 export async function showDashboard(req: Request, res: Response) {
   try {
@@ -18,11 +18,27 @@ export async function showDashboard(req: Request, res: Response) {
     // Get recent syncs
     const recentSyncs = authenticated ? db.getRecentSyncs(5) : [];
 
+    // Get library stats (always fetch, will be 0 if no data)
+    const stats = db.getLibraryStats();
+    const topGenres = db.getTopGenres(8);
+    const popularTracks = db.getMostPopularTracks(5);
+    const totalDuration = db.getTotalDuration();
+    const lastSync = db.getLastSyncTime();
+
+    // Format total duration
+    const totalHours = Math.floor(totalDuration / (1000 * 60 * 60));
+    const totalMinutes = Math.floor((totalDuration % (1000 * 60 * 60)) / (1000 * 60));
+
     // Render dashboard
     res.render('dashboard', {
       authenticated,
       playlists,
       recentSyncs,
+      stats,
+      topGenres,
+      popularTracks,
+      totalDuration: { hours: totalHours, minutes: totalMinutes },
+      lastSync,
       error: req.query.error || null,
       success: req.query.success || null
     });

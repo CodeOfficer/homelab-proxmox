@@ -31,7 +31,7 @@ export class SpotifyDatabase {
       this.db.exec(schema);
       this.db.prepare('INSERT INTO _schema_version (version) VALUES (1)').run();
       console.log('✓ Database initialized with schema version 1');
-      return;
+      // Continue to run migrations (don't return early)
     }
 
     const currentVersion = this.db.prepare(
@@ -790,5 +790,108 @@ export class SpotifyDatabase {
       WHERE artist_id = ?
     `).get(artistId) as any;
     return result?.count || 0;
+  }
+
+  // ============================================================================
+  // Dashboard Stats
+  // ============================================================================
+
+  /**
+   * Get library statistics for dashboard
+   */
+  getLibraryStats(): {
+    totalTracks: number;
+    totalPlaylists: number;
+    totalArtists: number;
+    totalAlbums: number;
+    tracksWithAudioFeatures: number;
+  } {
+    const stats = this.db.prepare(`
+      SELECT
+        (SELECT COUNT(*) FROM tracks) as totalTracks,
+        (SELECT COUNT(*) FROM playlists) as totalPlaylists,
+        (SELECT COUNT(*) FROM artists) as totalArtists,
+        (SELECT COUNT(*) FROM albums) as totalAlbums,
+        (SELECT COUNT(*) FROM audio_features) as tracksWithAudioFeatures
+    `).get() as any;
+
+    return {
+      totalTracks: stats?.totalTracks || 0,
+      totalPlaylists: stats?.totalPlaylists || 0,
+      totalArtists: stats?.totalArtists || 0,
+      totalAlbums: stats?.totalAlbums || 0,
+      tracksWithAudioFeatures: stats?.tracksWithAudioFeatures || 0
+    };
+  }
+
+  /**
+   * Get top genres from artists (aggregated count)
+   */
+  getTopGenres(limit: number = 10): { genre: string; count: number }[] {
+    // Genres are stored as JSON arrays in artists.genres
+    // We need to extract and count them
+    const artists = this.db.prepare(`
+      SELECT genres FROM artists WHERE genres IS NOT NULL
+    `).all() as { genres: string }[];
+
+    const genreCounts: Record<string, number> = {};
+
+    for (const artist of artists) {
+      try {
+        const genres = JSON.parse(artist.genres);
+        if (Array.isArray(genres)) {
+          for (const genre of genres) {
+            genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+          }
+        }
+      } catch {
+        // Skip invalid JSON
+      }
+    }
+
+    // Sort by count descending and take top N
+    return Object.entries(genreCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([genre, count]) => ({ genre, count }));
+  }
+
+  /**
+   * Get most popular tracks by Spotify popularity score
+   */
+  getMostPopularTracks(limit: number = 10) {
+    return this.db.prepare(`
+      SELECT t.*, a.name as artist_name, al.name as album_name
+      FROM tracks t
+      LEFT JOIN track_artists ta ON t.id = ta.track_id AND ta.position = 0
+      LEFT JOIN artists a ON ta.artist_id = a.id
+      LEFT JOIN albums al ON t.album_id = al.id
+      WHERE t.popularity IS NOT NULL
+      ORDER BY t.popularity DESC
+      LIMIT ?
+    `).all(limit);
+  }
+
+  /**
+   * Get total listening time in milliseconds
+   */
+  getTotalDuration(): number {
+    const result = this.db.prepare(`
+      SELECT SUM(duration_ms) as total FROM tracks
+    `).get() as any;
+    return result?.total || 0;
+  }
+
+  /**
+   * Get last successful sync time
+   */
+  getLastSyncTime(): string | null {
+    const result = this.db.prepare(`
+      SELECT completed_at FROM sync_log
+      WHERE status = 'success'
+      ORDER BY completed_at DESC
+      LIMIT 1
+    `).get() as any;
+    return result?.completed_at || null;
   }
 }
