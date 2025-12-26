@@ -7,3 +7,4 @@ export * from './genres.js';
 export * from './stats.js';
 export * from './sync.js';
 export * from './credentials.js';
+export * from './mutations.js';
