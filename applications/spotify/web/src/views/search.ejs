@@ -113,6 +113,9 @@
                         <a href="/track/<%= track.id %>" class="text-blue-600 hover:underline font-medium">
                           <%= track.name %>
                         </a>
+                        <% if (track.external_url) { %>
+                          <a href="<%= track.external_url %>" target="_blank" rel="noopener" class="ml-2 text-green-700 hover:text-green-800 text-xs">↗</a>
+                        <% } %>
                         <% if (track.explicit) { %>
                           <span class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">E</span>
                         <% } %>
@@ -140,39 +143,51 @@
             <h2 class="text-xl font-bold text-gray-800 mb-4">
               Artists (<%= results.artists.length %>)
             </h2>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <% results.artists.forEach(function(artist) { %>
-                <a href="/artist/<%= artist.id %>" class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:shadow-md transition">
-                  <% if (artist.image_url) { %>
-                    <img src="<%= artist.image_url %>" alt="<%= artist.name %>" class="w-full h-32 object-cover rounded-full mb-2">
-                  <% } else { %>
-                    <div class="w-full h-32 bg-gray-300 rounded-full mb-2 flex items-center justify-center text-gray-500 text-3xl">
-                      🎤
+                <div class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:shadow-md transition">
+                  <a href="/artist/<%= artist.id %>" class="flex items-center gap-4">
+                    <div class="flex-shrink-0">
+                      <% if (artist.image_url) { %>
+                        <img src="<%= artist.image_url %>" alt="<%= artist.name %>" class="w-20 h-20 object-cover rounded-full">
+                      <% } else { %>
+                        <div class="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center text-gray-500 text-2xl">
+                          🎤
+                        </div>
+                      <% } %>
                     </div>
-                  <% } %>
-                  <h3 class="font-semibold text-gray-800 text-center truncate" title="<%= artist.name %>">
-                    <%= artist.name %>
-                  </h3>
-                  <% if (artist.genres) { %>
-                    <%
-                      const genres = typeof artist.genres === 'string' ? JSON.parse(artist.genres) : artist.genres;
-                    %>
-                    <% if (genres && genres.length > 0) { %>
-                      <div class="flex flex-wrap gap-1 mt-2 justify-center">
-                        <% genres.slice(0, 2).forEach(function(genre) { %>
-                          <span class="text-xs bg-gray-200 px-2 py-1 rounded"><%= genre %></span>
-                        <% }); %>
-                      </div>
-                    <% } %>
-                  <% } %>
-                  <% if (artist.popularity !== null && artist.popularity !== undefined) { %>
-                    <div class="mt-2">
-                      <div class="w-full bg-gray-200 rounded-full h-1">
-                        <div class="bg-green-600 h-1 rounded-full" style="width: <%= artist.popularity %>%"></div>
-                      </div>
+                    <div class="flex-1 min-w-0">
+                      <h3 class="font-semibold text-gray-800 truncate" title="<%= artist.name %>">
+                        <%= artist.name %>
+                      </h3>
+                      <% if (artist.genres) { %>
+                        <%
+                          const genres = typeof artist.genres === 'string' ? JSON.parse(artist.genres) : artist.genres;
+                        %>
+                        <% if (genres && genres.length > 0) { %>
+                          <div class="flex flex-wrap gap-1 mt-2">
+                            <% genres.slice(0, 3).forEach(function(genre) { %>
+                              <span class="text-xs bg-gray-200 px-2 py-1 rounded"><%= genre %></span>
+                            <% }); %>
+                          </div>
+                        <% } %>
+                      <% } %>
+                      <% if (artist.followers_total !== null && artist.followers_total !== undefined) { %>
+                        <p class="text-xs text-gray-500 mt-2"><%= artist.followers_total.toLocaleString() %> followers</p>
+                      <% } %>
+                      <% if (artist.popularity !== null && artist.popularity !== undefined) { %>
+                        <div class="mt-2">
+                          <div class="w-full bg-gray-200 rounded-full h-1">
+                            <div class="bg-green-600 h-1 rounded-full" style="width: <%= artist.popularity %>%"></div>
+                          </div>
+                        </div>
+                      <% } %>
                     </div>
+                  </a>
+                  <% if (artist.external_url) { %>
+                    <a href="<%= artist.external_url %>" target="_blank" rel="noopener" class="text-xs text-green-700 mt-3 inline-block">Open in Spotify ↗</a>
                   <% } %>
-                </a>
+                </div>
               <% }); %>
             </div>
           </div>
@@ -186,19 +201,24 @@
             </h2>
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               <% results.playlists.forEach(function(playlist) { %>
-                <a href="/playlist/<%= playlist.id %>" class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:shadow-md transition">
-                  <% if (playlist.image_url) { %>
-                    <img src="<%= playlist.image_url %>" alt="<%= playlist.name %>" class="w-full h-32 object-cover rounded mb-2">
-                  <% } else { %>
-                    <div class="w-full h-32 bg-gray-300 rounded mb-2 flex items-center justify-center text-gray-500 text-3xl">
-                      🎵
-                    </div>
+                <div class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:shadow-md transition">
+                  <a href="/playlist/<%= playlist.id %>" class="block">
+                    <% if (playlist.image_url) { %>
+                      <img src="<%= playlist.image_url %>" alt="<%= playlist.name %>" class="w-full h-32 object-cover rounded mb-2">
+                    <% } else { %>
+                      <div class="w-full h-32 bg-gray-300 rounded mb-2 flex items-center justify-center text-gray-500 text-3xl">
+                        🎵
+                      </div>
+                    <% } %>
+                    <h3 class="font-semibold text-gray-800 truncate" title="<%= playlist.name %>">
+                      <%= playlist.name %>
+                    </h3>
+                    <p class="text-sm text-gray-500"><%= playlist.track_count || 0 %> tracks</p>
+                  </a>
+                  <% if (playlist.external_url) { %>
+                    <a href="<%= playlist.external_url %>" target="_blank" rel="noopener" class="text-xs text-green-700 mt-1 inline-block">Open in Spotify ↗</a>
                   <% } %>
-                  <h3 class="font-semibold text-gray-800 truncate" title="<%= playlist.name %>">
-                    <%= playlist.name %>
-                  </h3>
-                  <p class="text-sm text-gray-500"><%= playlist.track_count || 0 %> tracks</p>
-                </a>
+                </div>
               <% }); %>
             </div>
           </div>

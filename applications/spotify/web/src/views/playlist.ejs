@@ -47,13 +47,20 @@
             <% if (playlist.owner_name) { %>
               <div class="flex items-center gap-1">
                 <span class="font-semibold">Owner:</span>
-                <span><%= playlist.owner_name %></span>
+                <% if (playlist.owner_external_url) { %>
+                  <a href="<%= playlist.owner_external_url %>" target="_blank" rel="noopener" class="text-blue-600 hover:underline"><%= playlist.owner_name %></a>
+                <% } else { %>
+                  <span><%= playlist.owner_name %></span>
+                <% } %>
               </div>
             <% } %>
 
             <div class="flex items-center gap-1">
               <span class="font-semibold">Tracks:</span>
               <span><%= totalTracks %></span>
+              <% if (playlist.tracks_total && playlist.tracks_total !== totalTracks) { %>
+                <span class="text-xs text-gray-400">(Spotify: <%= playlist.tracks_total %>)</span>
+              <% } %>
             </div>
 
             <% if (playlist.public !== undefined) { %>
@@ -64,9 +71,22 @@
                 </span>
               </div>
             <% } %>
+
+            <% if (playlist.collaborative) { %>
+              <div class="flex items-center gap-1">
+                <span class="font-semibold">Collaborative:</span>
+                <span class="text-green-600">Yes</span>
+              </div>
+            <% } %>
           </div>
 
           <div class="mt-4">
+            <% if (playlist.external_url) { %>
+              <a href="<%= playlist.external_url %>" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-green-700 hover:text-green-800 font-semibold">
+                Open in Spotify ↗
+              </a>
+              <span class="text-gray-300 mx-2">•</span>
+            <% } %>
             <a href="/" class="text-blue-600 hover:underline">← Back to Dashboard</a>
           </div>
         </div>
@@ -111,8 +131,17 @@
                     <a href="/track/<%= track.id %>" class="text-blue-600 hover:underline font-medium">
                       <%= track.name %>
                     </a>
+                    <% if (track.track_number) { %>
+                      <span class="ml-2 text-xs text-gray-500">#<%= track.track_number %></span>
+                    <% } %>
                     <% if (track.explicit) { %>
                       <span class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">E</span>
+                    <% } %>
+                    <% if (track.playlist_is_local) { %>
+                      <span class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Local</span>
+                    <% } %>
+                    <% if (track.is_playable === 0) { %>
+                      <span class="ml-2 text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Unplayable</span>
                     <% } %>
                   </td>
                   <td class="py-3 px-4 text-sm text-gray-600 hidden md:table-cell">

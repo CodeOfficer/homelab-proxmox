@@ -16,10 +16,8 @@ if [[ -z "${SPOTIFY_SYNC_DUMP_PATH:-}" ]]; then
 fi
 
 # Ensure shared package is built so types stay in sync
-if [ ! -d "./shared/dist" ]; then
-  echo "Building shared package first..."
-  pnpm --filter spotify-shared build
-fi
+echo "Building shared package first..."
+pnpm --filter spotify-shared build
 
 echo "Replaying dump into local database..."
 echo "Database: $DATABASE_PATH"

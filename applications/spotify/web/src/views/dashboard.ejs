@@ -129,6 +129,9 @@
                       <span class="font-medium"><%= track.name %></span>
                       <span class="text-gray-500 text-sm"> - <%= track.artist_name || 'Unknown' %></span>
                     </a>
+                    <% if (track.external_url) { %>
+                      <a href="<%= track.external_url %>" target="_blank" rel="noopener" class="text-green-700 text-xs hover:text-green-800">↗</a>
+                    <% } %>
                     <span class="text-xs text-gray-400" title="Spotify Popularity"><%= track.popularity %></span>
                   </li>
                 <% }); %>
@@ -252,6 +255,14 @@
                 </div>
                 <% if (sync.items_synced) { %>
                   <p class="text-gray-600"><%= sync.items_synced %> items synced</p>
+                <% } %>
+                <% if (sync.duration_seconds) { %>
+                  <%
+                    const minutes = Math.floor(sync.duration_seconds / 60);
+                    const seconds = sync.duration_seconds % 60;
+                    const durationLabel = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+                  %>
+                  <p class="text-gray-500 text-xs">Duration: <%= durationLabel %></p>
                 <% } %>
                 <% if (sync.error) { %>
                   <p class="text-red-600 text-xs mt-1"><%= sync.error %></p>

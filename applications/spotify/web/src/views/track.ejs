@@ -56,7 +56,15 @@
           <!-- Album Info -->
           <% if (track.album_name) { %>
             <p class="text-gray-600 mb-4">
-              <span class="font-semibold">Album:</span> <%= track.album_name %>
+              <span class="font-semibold">Album:</span>
+              <% if (track.album_external_url) { %>
+                <a href="<%= track.album_external_url %>" target="_blank" rel="noopener" class="text-blue-600 hover:underline"><%= track.album_name %></a>
+              <% } else { %>
+                <%= track.album_name %>
+              <% } %>
+              <% if (track.album_release_date) { %>
+                <span class="text-sm text-gray-500">· <%= track.album_release_date %></span>
+              <% } %>
             </p>
           <% } %>
 
@@ -84,9 +92,43 @@
                 <p class="text-lg font-bold text-gray-800"><%= track.explicit ? 'Yes' : 'No' %></p>
               </div>
             <% } %>
+
+            <% if (track.track_number) { %>
+              <div class="bg-gray-50 p-3 rounded-lg">
+                <p class="text-xs text-gray-600 font-semibold">TRACK #</p>
+                <p class="text-lg font-bold text-gray-800"><%= track.track_number %><% if (track.disc_number) { %> (Disc <%= track.disc_number %>)<% } %></p>
+              </div>
+            <% } %>
+
+            <% if (track.isrc) { %>
+              <div class="bg-gray-50 p-3 rounded-lg">
+                <p class="text-xs text-gray-600 font-semibold">ISRC</p>
+                <p class="text-sm font-mono text-gray-800"><%= track.isrc %></p>
+              </div>
+            <% } %>
+
+            <% if (track.is_playable !== null && track.is_playable !== undefined) { %>
+              <div class="bg-gray-50 p-3 rounded-lg">
+                <p class="text-xs text-gray-600 font-semibold">PLAYABLE</p>
+                <p class="text-lg font-bold text-gray-800"><%= track.is_playable ? 'Yes' : 'No' %></p>
+              </div>
+            <% } %>
+
+            <% if (track.is_local) { %>
+              <div class="bg-gray-50 p-3 rounded-lg">
+                <p class="text-xs text-gray-600 font-semibold">LOCAL TRACK</p>
+                <p class="text-lg font-bold text-gray-800">Yes</p>
+              </div>
+            <% } %>
           </div>
 
           <div class="mt-4">
+            <% if (track.external_url) { %>
+              <a href="<%= track.external_url %>" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-green-700 hover:text-green-800 font-semibold">
+                Open in Spotify ↗
+              </a>
+              <span class="text-gray-300 mx-2">•</span>
+            <% } %>
             <button onclick="history.back()" class="text-blue-600 hover:underline">← Back</button>
           </div>
         </div>

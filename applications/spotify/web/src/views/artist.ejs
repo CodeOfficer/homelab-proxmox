@@ -75,9 +75,22 @@
               <h4 class="text-sm font-semibold text-gray-600 mb-2">TRACKS IN LIBRARY</h4>
               <p class="text-2xl font-bold text-gray-800"><%= totalTracks %></p>
             </div>
+
+            <% if (artist.followers_total !== null && artist.followers_total !== undefined) { %>
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="text-sm font-semibold text-gray-600 mb-2">FOLLOWERS</h4>
+                <p class="text-2xl font-bold text-gray-800"><%= artist.followers_total.toLocaleString() %></p>
+              </div>
+            <% } %>
           </div>
 
           <div class="mt-4">
+            <% if (artist.external_url) { %>
+              <a href="<%= artist.external_url %>" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-green-700 hover:text-green-800 font-semibold">
+                Open in Spotify ↗
+              </a>
+              <span class="text-gray-300 mx-2">•</span>
+            <% } %>
             <button onclick="history.back()" class="text-blue-600 hover:underline">← Back</button>
           </div>
         </div>

@@ -840,7 +840,12 @@ export class SpotifyDatabase {
    */
   getTrackDetails(trackId: string) {
     const track = this.db.prepare(`
-      SELECT t.*, al.name as album_name, al.image_url as album_image
+      SELECT t.*, al.name as album_name, al.image_url as album_image,
+             al.external_url as album_external_url,
+             al.release_date as album_release_date,
+             al.release_date_precision as album_release_date_precision,
+             al.uri as album_uri,
+             al.href as album_href
       FROM tracks t
       LEFT JOIN albums al ON t.album_id = al.id
       WHERE t.id = ?
@@ -871,7 +876,8 @@ export class SpotifyDatabase {
     if (!playlist) return null;
 
     const tracks = this.db.prepare(`
-      SELECT t.*, pt.position, pt.added_at,
+      SELECT t.*, pt.position, pt.added_at, pt.added_by,
+             pt.is_local as playlist_is_local,
              a.name as artist_name,
              al.name as album_name,
              af.tempo, af.energy, af.danceability

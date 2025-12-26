@@ -14,9 +14,9 @@ if [[ -n "$latest_dump" ]]; then
   if (( age <= max_age_seconds )); then
     echo "Recent dump found (${latest_dump}). Replaying into local DB..."
     export SPOTIFY_SYNC_DUMP_PATH="$latest_dump"
-    exec ./scripts/dev-sync-replay.sh
+    exec bash ./scripts/dev-sync-replay.sh
   fi
 fi
 
 echo "No recent dump found. Running full sync..."
-exec ./scripts/dev-sync-local.sh
+exec bash ./scripts/dev-sync-local.sh
