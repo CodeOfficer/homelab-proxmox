@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import { searchTracks, formatDuration, formatNumber, type Track, type PaginatedResponse, type SearchFilters } from '$lib';
+  import { searchTracks, formatDuration, formatNumber, debounce, type Track, type PaginatedResponse, type SearchFilters } from '$lib';
   import VuMeter from '$lib/components/ui/VuMeter.svelte';
 
   let data: PaginatedResponse<Track> | null = $state(null);
@@ -18,6 +18,7 @@
   let explicit = $state<boolean | undefined>(undefined);
 
   let showFilters = $state(false);
+  let initialized = $state(false);
 
   function getFilters(): SearchFilters {
     return {
@@ -29,7 +30,18 @@
     };
   }
 
-  async function performSearch() {
+  function hasAnyFilter(): boolean {
+    return !!(query || genre || popularityMin !== undefined || popularityMax !== undefined || explicit !== undefined);
+  }
+
+  async function performSearch(resetPage = false) {
+    if (resetPage) currentPage = 1;
+
+    if (!hasAnyFilter()) {
+      data = null;
+      return;
+    }
+
     loading = true;
     error = null;
     try {
@@ -41,20 +53,36 @@
     }
   }
 
+  // Debounced search for live updates (300ms delay)
+  const debouncedSearch = debounce(() => performSearch(true), 300);
+
+  // Watch for filter changes and trigger debounced search
+  $effect(() => {
+    // Access reactive values to track them
+    const _ = [query, genre, popularityMin, popularityMax, explicit];
+
+    // Skip initial render, only react to changes after mount
+    if (initialized) {
+      debouncedSearch();
+    }
+  });
+
   onMount(() => {
     // Check for genre query param from genres page
     const genreParam = $page.url.searchParams.get('genre');
     if (genreParam) {
       genre = genreParam;
-      performSearch();
     }
-  });
 
-  function handleSearch(e: Event) {
-    e.preventDefault();
-    currentPage = 1;
-    performSearch();
-  }
+    // Mark as initialized after setting initial values
+    // Use setTimeout to avoid triggering effect on initial genre set
+    setTimeout(() => {
+      initialized = true;
+      if (hasAnyFilter()) {
+        performSearch();
+      }
+    }, 0);
+  });
 
   function clearFilters() {
     query = '';
@@ -67,15 +95,10 @@
 
   function clearGenre() {
     genre = undefined;
-    if (query || hasActiveFilters()) {
-      performSearch();
-    } else {
-      data = null;
-    }
   }
 
-  function goToPage(page: number) {
-    currentPage = page;
+  function goToPage(newPage: number) {
+    currentPage = newPage;
     performSearch();
   }
 
@@ -97,26 +120,27 @@
   </div>
 
   <!-- Search Form -->
-  <form onsubmit={handleSearch} class="space-y-3">
+  <div class="space-y-3">
     <div class="flex gap-2">
-      <input
-        type="text"
-        placeholder="Search tracks, artists, albums..."
-        bind:value={query}
-        class="flex-1 rounded border border-[hsl(var(--border))] bg-[hsl(var(--input))] px-3 py-2 font-mono text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
-      />
+      <div class="relative flex-1">
+        <input
+          type="text"
+          placeholder="Search tracks, artists, albums..."
+          bind:value={query}
+          class="w-full rounded border border-[hsl(var(--border))] bg-[hsl(var(--input))] px-3 py-2 pr-8 font-mono text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
+        />
+        {#if loading}
+          <div class="absolute right-2 top-1/2 -translate-y-1/2">
+            <div class="h-4 w-4 animate-spin rounded-full border-2 border-[hsl(var(--primary))] border-t-transparent"></div>
+          </div>
+        {/if}
+      </div>
       <button
         type="button"
         onclick={() => showFilters = !showFilters}
         class="rounded border border-[hsl(var(--border))] px-4 py-2 font-mono text-xs text-[hsl(var(--foreground))] hover:bg-[hsl(var(--accent))] {hasActiveFilters() ? 'border-[hsl(var(--primary))] text-[hsl(var(--primary))]' : ''}"
       >
         Filters {hasActiveFilters() ? '(active)' : ''}
-      </button>
-      <button
-        type="submit"
-        class="rounded bg-[hsl(var(--primary))] px-6 py-2 font-mono text-xs font-medium text-[hsl(var(--primary-foreground))] uppercase tracking-wide hover:bg-[hsl(var(--primary))]/90"
-      >
-        Search
       </button>
     </div>
 
@@ -176,7 +200,7 @@
         </div>
       </div>
     {/if}
-  </form>
+  </div>
 
   <!-- Active Genre Filter -->
   {#if genre}
@@ -197,14 +221,7 @@
   {/if}
 
   <!-- Results -->
-  {#if loading}
-    <div class="flex items-center justify-center py-12">
-      <div class="flex items-center gap-3 text-[hsl(var(--muted-foreground))]">
-        <div class="h-5 w-5 animate-spin rounded-full border-2 border-[hsl(var(--primary))] border-t-transparent"></div>
-        <span class="font-mono text-xs uppercase tracking-wide">Searching...</span>
-      </div>
-    </div>
-  {:else if error}
+  {#if error}
     <div class="console-panel p-4">
       <p class="font-mono text-sm text-[hsl(var(--destructive))]">{error}</p>
     </div>
