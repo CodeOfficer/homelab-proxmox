@@ -89,8 +89,14 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       decorateReply: false, // Don't conflict with other static handlers
     });
 
-    // SPA fallback: serve index.html for non-API routes
-    app.setNotFoundHandler(async (_request, reply) => {
+    // SPA fallback: serve index.html for non-API routes only
+    app.setNotFoundHandler(async (request, reply) => {
+      // API routes should return JSON 404, not HTML
+      if (request.url.startsWith('/api/')) {
+        reply.code(404);
+        return { error: 'Not found' };
+      }
+
       const indexPath = join(uiBuildPath, 'index.html');
       if (existsSync(indexPath)) {
         reply.type('text/html');

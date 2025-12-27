@@ -11,8 +11,8 @@ const SCOPES = [
 ].join(' ');
 
 export function registerAuthRoutes(app: FastifyInstance) {
-  // GET /auth/status - Check authentication status
-  app.get('/auth/status', async () => {
+  // GET /api/auth/status - Check authentication status
+  app.get('/api/auth/status', async () => {
     const creds = await getCredentials();
     return {
       authenticated: creds !== null,
@@ -20,8 +20,8 @@ export function registerAuthRoutes(app: FastifyInstance) {
     };
   });
 
-  // GET /auth/spotify - Initiate OAuth
-  app.get('/auth/spotify', async (_request, reply) => {
+  // GET /api/auth/spotify - Initiate OAuth
+  app.get('/api/auth/spotify', async (_request, reply) => {
     const clientId = process.env.SPOTIFY_CLIENT_ID;
     const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
 
@@ -47,10 +47,10 @@ export function registerAuthRoutes(app: FastifyInstance) {
     reply.redirect(authUrl);
   });
 
-  // GET /auth/callback - OAuth callback
+  // GET /api/auth/callback - OAuth callback
   app.get<{
     Querystring: { code?: string; error?: string; state?: string };
-  }>('/auth/callback', async (request, reply) => {
+  }>('/api/auth/callback', async (request, reply) => {
     const { code, error } = request.query;
     const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
     const appBaseUrl = process.env.APP_BASE_URL;
@@ -128,8 +128,8 @@ export function registerAuthRoutes(app: FastifyInstance) {
     reply.redirect(appBaseUrl);
   });
 
-  // POST /auth/logout - Clear credentials
-  app.post('/auth/logout', async () => {
+  // POST /api/auth/logout - Clear credentials
+  app.post('/api/auth/logout', async () => {
     await clearCredentials();
     return { success: true };
   });

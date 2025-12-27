@@ -114,11 +114,12 @@
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <!-- Popularity -->
           <div>
-            <label class="font-mono text-xs text-[hsl(var(--foreground))] uppercase tracking-wide block mb-2">Popularity</label>
+            <span class="font-mono text-xs text-[hsl(var(--foreground))] uppercase tracking-wide block mb-2">Popularity</span>
             <div class="flex gap-2 items-center">
               <input
                 type="number"
                 placeholder="Min"
+                aria-label="Minimum popularity"
                 bind:value={popularityMin}
                 min="0"
                 max="100"
@@ -128,6 +129,7 @@
               <input
                 type="number"
                 placeholder="Max"
+                aria-label="Maximum popularity"
                 bind:value={popularityMax}
                 min="0"
                 max="100"
@@ -138,8 +140,9 @@
 
           <!-- Explicit -->
           <div>
-            <label class="font-mono text-xs text-[hsl(var(--foreground))] uppercase tracking-wide block mb-2">Explicit Content</label>
+            <label for="explicit-filter" class="font-mono text-xs text-[hsl(var(--foreground))] uppercase tracking-wide block mb-2">Explicit Content</label>
             <select
+              id="explicit-filter"
               bind:value={explicit}
               class="w-full rounded border border-[hsl(var(--border))] bg-[hsl(var(--input))] px-2 py-1.5 font-mono text-sm text-[hsl(var(--foreground))]"
             >
