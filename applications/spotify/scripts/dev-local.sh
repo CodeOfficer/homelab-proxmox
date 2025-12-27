@@ -44,11 +44,18 @@ export SPOTIFY_REDIRECT_URI="${SPOTIFY_REDIRECT_URI:-https://127.0.0.1:3000/auth
 export APP_BASE_URL="${APP_BASE_URL:-https://127.0.0.1:3000}"
 export SPOTIFY_DB_PATH="${SPOTIFY_DB_PATH:-./.local/spotify.db}"
 
-echo "Starting Spotify API (local dev)..."
+echo "Starting Spotify Sync PRO (local dev)..."
 echo "  Database: $SPOTIFY_DB_PATH"
 echo "  Server: https://$HOST:$PORT"
 echo "  Redirect URI: $SPOTIFY_REDIRECT_URI"
 echo ""
 
-# Run API in dev mode with tsx watch
+# Build UI if needed (check for build directory)
+if [[ ! -d "$REPO_ROOT/apps/ui/build" ]]; then
+  echo "Building UI..."
+  pnpm --filter @spotify/ui build
+  echo ""
+fi
+
+# Run API in dev mode with tsx watch (serves static UI files)
 exec pnpm --filter @spotify/api dev

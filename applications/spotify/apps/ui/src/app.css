@@ -1,48 +1,74 @@
 @import 'tailwindcss';
 
+/*
+ * Pro Audio Console Design System
+ * Palette: #1a1a1a (bg) + #ffb800 (amber) + #00d4ff (cyan)
+ * Typography: IBM Plex Mono (data) + system sans (body)
+ */
+
+/* Google Fonts - IBM Plex Mono */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
 :root {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-  --primary: 142.1 76.2% 36.3%;
-  --primary-foreground: 355.7 100% 97.3%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
-  --destructive: 0 84.2% 60.2%;
+  /* Pro Audio Console - Dark by default */
+  --background: 0 0% 10.2%;           /* #1a1a1a */
+  --foreground: 0 0% 90%;             /* Light gray text */
+
+  --card: 0 0% 12%;                   /* Slightly lighter than bg */
+  --card-foreground: 0 0% 90%;
+
+  --popover: 0 0% 8%;
+  --popover-foreground: 0 0% 90%;
+
+  --primary: 43 100% 50%;             /* #ffb800 amber */
+  --primary-foreground: 0 0% 5%;      /* Dark text on amber */
+
+  --secondary: 191 100% 50%;          /* #00d4ff cyan */
+  --secondary-foreground: 0 0% 5%;    /* Dark text on cyan */
+
+  --muted: 0 0% 18%;                  /* Muted backgrounds */
+  --muted-foreground: 0 0% 60%;       /* Muted text */
+
+  --accent: 0 0% 15%;                 /* Hover states */
+  --accent-foreground: 0 0% 95%;
+
+  --destructive: 0 72% 51%;           /* Red for errors */
   --destructive-foreground: 0 0% 98%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 142.1 76.2% 36.3%;
-  --radius: 0.5rem;
+
+  --border: 0 0% 20%;                 /* Subtle borders */
+  --input: 0 0% 15%;                  /* Input backgrounds */
+  --ring: 43 100% 50%;                /* Focus ring - amber */
+
+  --radius: 0.375rem;                 /* 6px - tighter radius for console look */
+
+  /* VU meter colors */
+  --vu-green: 120 60% 45%;            /* Green zone */
+  --vu-yellow: 50 100% 50%;           /* Yellow zone */
+  --vu-red: 0 72% 51%;                /* Red zone (clipping) */
+
+  /* Typography */
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
-.dark {
-  --background: 20 14.3% 4.1%;
-  --foreground: 0 0% 95%;
-  --card: 24 9.8% 10%;
-  --card-foreground: 0 0% 95%;
-  --popover: 0 0% 9%;
-  --popover-foreground: 0 0% 95%;
-  --primary: 142.1 70.6% 45.3%;
-  --primary-foreground: 144.9 80.4% 10%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 0 0% 15%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 12 6.5% 15.1%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 85.7% 97.3%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 142.4 71.8% 29.2%;
+/* Light mode override (optional, rarely used for audio apps) */
+.light {
+  --background: 0 0% 96%;
+  --foreground: 0 0% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 10%;
+  --primary: 43 100% 45%;
+  --primary-foreground: 0 0% 5%;
+  --secondary: 191 100% 40%;
+  --secondary-foreground: 0 0% 5%;
+  --muted: 0 0% 92%;
+  --muted-foreground: 0 0% 45%;
+  --accent: 0 0% 95%;
+  --accent-foreground: 0 0% 10%;
+  --border: 0 0% 85%;
+  --input: 0 0% 90%;
+  --ring: 43 100% 45%;
 }
 
 * {
@@ -57,10 +83,106 @@ body {
     BlinkMacSystemFont,
     'Segoe UI',
     Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Open Sans',
-    'Helvetica Neue',
     sans-serif;
+}
+
+/* Mono font utility class */
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* VU Meter component styles */
+.vu-meter {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  align-items: flex-end;
+}
+
+.vu-meter .segment {
+  width: 4px;
+  border-radius: 1px;
+  background-color: hsl(var(--muted));
+  transition: background-color 0.1s ease;
+}
+
+.vu-meter .segment.active.green {
+  background-color: hsl(var(--vu-green));
+}
+
+.vu-meter .segment.active.yellow {
+  background-color: hsl(var(--vu-yellow));
+}
+
+.vu-meter .segment.active.red {
+  background-color: hsl(var(--vu-red));
+}
+
+/* Table styles for dense data display */
+.data-table {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.data-table th {
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.data-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
+}
+
+.data-table tr:hover {
+  background-color: hsl(var(--accent));
+}
+
+/* Console panel styling */
+.console-panel {
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+/* Amber link styling */
+a {
+  color: hsl(var(--primary));
+  text-decoration: none;
+}
+
+a:hover {
+  color: hsl(var(--secondary));
+}
+
+/* Focus states with amber ring */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling for console aesthetic */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
 }

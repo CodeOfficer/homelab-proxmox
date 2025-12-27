@@ -50,7 +50,7 @@ test.describe('Navigation', () => {
     await page.goto('/');
     await page.click('a[href="/search"]');
     await expect(page).toHaveURL('/search');
-    await expect(page.getByRole('heading', { name: 'Advanced Search' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Search' })).toBeVisible();
   });
 });
 
@@ -60,16 +60,16 @@ test.describe('Playlists Page', () => {
     await expect(page.getByPlaceholder('Search playlists...')).toBeVisible();
   });
 
-  test('has search button', async ({ page }) => {
+  test('has filter button', async ({ page }) => {
     await page.goto('/playlists');
-    await expect(page.getByRole('button', { name: 'Search' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Filter' })).toBeVisible();
   });
 });
 
 test.describe('Tracks Page', () => {
-  test('has search input', async ({ page }) => {
+  test('has filter input', async ({ page }) => {
     await page.goto('/tracks');
-    await expect(page.getByPlaceholder('Search tracks...')).toBeVisible();
+    await expect(page.getByPlaceholder('Filter tracks...')).toBeVisible();
   });
 
   test('shows column headers', async ({ page }) => {
@@ -113,9 +113,8 @@ test.describe('Search Page', () => {
     await page.goto('/search');
     await page.click('button:has-text("Filters")');
     // Filter labels should now be visible
-    await expect(page.locator('text=Tempo (BPM)')).toBeVisible();
-    await expect(page.locator('text=Energy (%)')).toBeVisible();
-    await expect(page.locator('text=Danceability (%)')).toBeVisible();
+    await expect(page.locator('text=Popularity')).toBeVisible();
+    await expect(page.locator('text=Explicit Content')).toBeVisible();
   });
 
   test('can clear filters', async ({ page }) => {

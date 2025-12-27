@@ -9,15 +9,13 @@
   },
   "packageManager": "pnpm@10.26.0",
   "scripts": {
-    "dev": "concurrently -k -n api,ui -c cyan,magenta \"pnpm --filter @spotify/api dev\" \"pnpm --filter @spotify/ui dev\"",
+    "dev": "bash scripts/dev-local.sh",
+    "dev:ui": "pnpm --filter @spotify/ui dev",
     "dev:cert": "bash scripts/dev-cert.sh",
-    "dev:local": "bash scripts/dev-local.sh",
     "dev:sync": "bash scripts/dev-sync.sh",
-    "dev:sync:force": "SPOTIFY_SYNC_FORCE=1 bash scripts/dev-sync-local.sh",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "test:e2e": "pnpm --filter @spotify/ui test:e2e",
-    "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "clean": "pnpm -r clean && rm -rf node_modules"
   },

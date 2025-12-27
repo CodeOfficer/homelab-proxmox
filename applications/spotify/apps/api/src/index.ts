@@ -1,8 +1,13 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
+import fastifyStatic from '@fastify/static';
 import { initializeDatabase, closeDatabase } from '@spotify/shared';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface BuildAppOptions {
   logger?: boolean;
@@ -50,47 +55,6 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     timestamp: new Date().toISOString(),
   }));
 
-  // Root route - simple landing page
-  app.get('/', async (_request, reply) => {
-    const { getCredentials, getLibraryStats } = await import('@spotify/shared');
-    const creds = await getCredentials();
-    const stats = await getLibraryStats();
-    const authenticated = creds !== null;
-
-    reply.type('text/html');
-    return `<!DOCTYPE html>
-<html>
-<head>
-  <title>Spotify Sync PRO</title>
-  <style>
-    body { font-family: system-ui; max-width: 600px; margin: 40px auto; padding: 20px; }
-    h1 { color: #1DB954; }
-    .status { padding: 10px; border-radius: 4px; margin: 10px 0; }
-    .ok { background: #d4edda; color: #155724; }
-    .warn { background: #fff3cd; color: #856404; }
-    a { color: #1DB954; }
-    pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
-  </style>
-</head>
-<body>
-  <h1>Spotify Sync PRO</h1>
-  <div class="status ${authenticated ? 'ok' : 'warn'}">
-    ${authenticated ? 'Authenticated with Spotify' : 'Not authenticated - <a href="/auth/spotify">Connect to Spotify</a>'}
-  </div>
-  <h2>Stats</h2>
-  <pre>${JSON.stringify(stats, null, 2)}</pre>
-  <h2>Actions</h2>
-  <ul>
-    ${authenticated ? '<li><a href="/api/sync/trigger" onclick="fetch(this.href,{method:\'POST\'}).then(r=>r.json()).then(d=>alert(JSON.stringify(d)));return false;">Trigger Sync</a></li>' : ''}
-    ${authenticated ? '<li><a href="/auth/logout" onclick="fetch(this.href,{method:\'POST\'}).then(()=>location.reload());return false;">Logout</a></li>' : ''}
-    <li><a href="/api/stats">API: Stats</a></li>
-    <li><a href="/api/playlists">API: Playlists</a></li>
-    <li><a href="/health">Health Check</a></li>
-  </ul>
-</body>
-</html>`;
-  });
-
   // Register route modules
   const { registerStatsRoutes } = await import('./routes/stats.js');
   const { registerPlaylistRoutes } = await import('./routes/playlists.js');
@@ -113,6 +77,33 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   registerSearchRoutes(appAny);
   registerSyncRoutes(appAny);
   registerAuthRoutes(appAny);
+
+  // Serve SvelteKit static files (built UI)
+  // Path: apps/api/src -> apps/ui/build (3 levels up, then into ui/build)
+  const uiBuildPath = join(__dirname, '..', '..', 'ui', 'build');
+
+  if (existsSync(uiBuildPath)) {
+    await app.register(fastifyStatic, {
+      root: uiBuildPath,
+      prefix: '/',
+      decorateReply: false, // Don't conflict with other static handlers
+    });
+
+    // SPA fallback: serve index.html for non-API routes
+    app.setNotFoundHandler(async (_request, reply) => {
+      const indexPath = join(uiBuildPath, 'index.html');
+      if (existsSync(indexPath)) {
+        reply.type('text/html');
+        return reply.send(readFileSync(indexPath));
+      }
+      reply.code(404);
+      return { error: 'Not found' };
+    });
+
+    app.log.info(`Serving static files from ${uiBuildPath}`);
+  } else {
+    app.log.warn(`UI build not found at ${uiBuildPath} - run 'pnpm build --filter @spotify/ui' first`);
+  }
 
   return app;
 }

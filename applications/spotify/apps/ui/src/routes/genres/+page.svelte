@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { getGenres, formatNumber, type GenreCount } from '$lib';
+  import VuMeter from '$lib/components/ui/VuMeter.svelte';
 
   let genres: GenreCount[] = $state([]);
   let loading = $state(true);
@@ -34,26 +35,23 @@
     return Math.max(...genres.map(g => g.count));
   }
 
-  function getSizeClass(count: number): string {
-    const max = getMaxCount();
-    const ratio = count / max;
-    if (ratio > 0.8) return 'text-2xl font-bold';
-    if (ratio > 0.5) return 'text-xl font-semibold';
-    if (ratio > 0.3) return 'text-lg font-medium';
-    if (ratio > 0.1) return 'text-base';
-    return 'text-sm';
+  function getVuValue(count: number): number {
+    return Math.round((count / getMaxCount()) * 100);
   }
 </script>
 
 <svelte:head>
-  <title>Genres - Spotify Sync</title>
+  <title>Genres - Spotify Sync PRO</title>
 </svelte:head>
 
-<div class="space-y-6">
+<div class="space-y-4">
+  <!-- Header -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h1 class="text-3xl font-bold text-[hsl(var(--foreground))]">Genres</h1>
-      <p class="mt-1 text-[hsl(var(--muted-foreground))]">{formatNumber(genres.length)} genres</p>
+    <div class="flex items-baseline gap-3">
+      <h1 class="font-mono text-xl font-semibold text-[hsl(var(--foreground))] uppercase tracking-wide">Genres</h1>
+      <span class="font-mono text-xs text-[hsl(var(--muted-foreground))]">
+        {formatNumber(genres.length)} total
+      </span>
     </div>
 
     <form onsubmit={handleSearch} class="flex gap-2">
@@ -61,75 +59,91 @@
         type="text"
         placeholder="Search genres..."
         bind:value={searchQuery}
-        class="rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-2 text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
+        class="w-64 rounded border border-[hsl(var(--border))] bg-[hsl(var(--input))] px-3 py-1.5 font-mono text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
       />
       <button
         type="submit"
-        class="rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/90"
+        class="rounded bg-[hsl(var(--primary))] px-4 py-1.5 font-mono text-xs font-medium text-[hsl(var(--primary-foreground))] uppercase tracking-wide hover:bg-[hsl(var(--primary))]/90"
       >
-        Search
+        Filter
       </button>
     </form>
   </div>
 
   {#if loading}
     <div class="flex items-center justify-center py-12">
-      <div class="h-8 w-8 animate-spin rounded-full border-4 border-[hsl(var(--primary))] border-t-transparent"></div>
+      <div class="flex items-center gap-3 text-[hsl(var(--muted-foreground))]">
+        <div class="h-5 w-5 animate-spin rounded-full border-2 border-[hsl(var(--primary))] border-t-transparent"></div>
+        <span class="font-mono text-xs uppercase tracking-wide">Loading...</span>
+      </div>
     </div>
   {:else if error}
-    <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-      {error}
+    <div class="console-panel p-4">
+      <p class="font-mono text-sm text-[hsl(var(--destructive))]">{error}</p>
     </div>
   {:else if genres.length === 0}
-    <div class="py-12 text-center text-[hsl(var(--muted-foreground))]">
-      {searchQuery ? `No genres found for "${searchQuery}"` : 'No genres found'}
+    <div class="py-12 text-center">
+      <p class="font-mono text-sm text-[hsl(var(--muted-foreground))]">
+        {searchQuery ? `No results for "${searchQuery}"` : 'No genres found'}
+      </p>
     </div>
   {:else}
-    <!-- Genre Cloud -->
-    <div class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
-      <div class="flex flex-wrap gap-3">
-        {#each genres as genre}
+    <!-- Genre Tags Cloud -->
+    <div class="console-panel p-4">
+      <div class="flex items-center justify-between border-b border-[hsl(var(--border))] pb-3 mb-4">
+        <h2 class="font-mono text-xs font-medium text-[hsl(var(--foreground))] uppercase tracking-wide">Tag Cloud</h2>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        {#each genres.slice(0, 50) as genre}
           <a
             href="/search?genre={encodeURIComponent(genre.genre)}"
-            class="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-2 transition-colors hover:bg-[hsl(var(--accent))] {getSizeClass(genre.count)}"
+            class="rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2 py-1 font-mono text-xs text-[hsl(var(--foreground))] transition-colors hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]"
           >
-            <span class="text-[hsl(var(--foreground))]">{genre.genre}</span>
-            <span class="text-[hsl(var(--muted-foreground))] text-sm font-normal">{formatNumber(genre.count)}</span>
+            {genre.genre}
           </a>
         {/each}
       </div>
     </div>
 
-    <!-- Genre List -->
-    <div class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-      <div class="grid grid-cols-[1fr_auto] gap-4 border-b border-[hsl(var(--border))] px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">
-        <span>Genre</span>
-        <span class="w-20 text-right">Tracks</span>
-      </div>
-
-      <div class="divide-y divide-[hsl(var(--border))]">
-        {#each genres.slice(0, 100) as genre}
-          <a
-            href="/search?genre={encodeURIComponent(genre.genre)}"
-            class="grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-[hsl(var(--accent))]"
-          >
-            <span class="font-medium text-[hsl(var(--foreground))]">{genre.genre}</span>
-            <div class="flex items-center gap-3 w-40">
-              <div class="flex-1 h-2 overflow-hidden rounded-full bg-[hsl(var(--muted))]">
-                <div
-                  class="h-full rounded-full bg-[hsl(var(--primary))]"
-                  style="width: {(genre.count / getMaxCount()) * 100}%"
-                ></div>
-              </div>
-              <span class="w-12 text-right text-sm text-[hsl(var(--muted-foreground))]">{formatNumber(genre.count)}</span>
-            </div>
-          </a>
-        {/each}
-      </div>
+    <!-- Genre List with VU Meters -->
+    <div class="console-panel overflow-hidden">
+      <table class="data-table w-full">
+        <thead>
+          <tr class="bg-[hsl(var(--muted))]">
+            <th class="w-10">#</th>
+            <th>Genre</th>
+            <th class="w-32">Level</th>
+            <th class="w-20 text-right">Tracks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each genres.slice(0, 100) as genre, i}
+            <tr class="group">
+              <td class="text-[hsl(var(--muted-foreground))] tabular-nums">{i + 1}</td>
+              <td>
+                <a
+                  href="/search?genre={encodeURIComponent(genre.genre)}"
+                  class="group-hover:text-[hsl(var(--primary))]"
+                >
+                  {genre.genre}
+                </a>
+              </td>
+              <td>
+                <VuMeter value={getVuValue(genre.count)} segments={10} size="sm" />
+              </td>
+              <td class="text-right tabular-nums text-[hsl(var(--muted-foreground))]">
+                {formatNumber(genre.count)}
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
 
       {#if genres.length > 100}
-        <div class="border-t border-[hsl(var(--border))] px-4 py-3 text-center text-sm text-[hsl(var(--muted-foreground))]">
-          Showing 100 of {formatNumber(genres.length)} genres. Use search to filter.
+        <div class="border-t border-[hsl(var(--border))] px-4 py-3 text-center">
+          <span class="font-mono text-xs text-[hsl(var(--muted-foreground))]">
+            Showing 100 of {formatNumber(genres.length)} genres
+          </span>
         </div>
       {/if}
     </div>

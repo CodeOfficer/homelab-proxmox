@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { getTracks, formatDuration, formatNumber, type Track, type PaginatedResponse } from '$lib';
+  import VuMeter from '$lib/components/ui/VuMeter.svelte';
 
   let data: PaginatedResponse<Track> | null = $state(null);
   let loading = $state(true);
@@ -38,114 +39,134 @@
 </script>
 
 <svelte:head>
-  <title>Tracks - Spotify Sync</title>
+  <title>Tracks - Spotify Sync PRO</title>
 </svelte:head>
 
-<div class="space-y-6">
+<div class="space-y-4">
+  <!-- Header -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h1 class="text-3xl font-bold text-[hsl(var(--foreground))]">Tracks</h1>
+    <div class="flex items-baseline gap-3">
+      <h1 class="font-mono text-xl font-semibold text-[hsl(var(--foreground))] uppercase tracking-wide">Tracks</h1>
       {#if data}
-        <p class="mt-1 text-[hsl(var(--muted-foreground))]">{formatNumber(data.total)} tracks</p>
+        <span class="font-mono text-xs text-[hsl(var(--muted-foreground))]">
+          {formatNumber(data.total)} total
+        </span>
       {/if}
     </div>
 
     <form onsubmit={handleSearch} class="flex gap-2">
       <input
         type="text"
-        placeholder="Search tracks..."
+        placeholder="Filter tracks..."
         bind:value={searchQuery}
-        class="rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-2 text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
+        class="w-64 rounded border border-[hsl(var(--border))] bg-[hsl(var(--input))] px-3 py-1.5 font-mono text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
       />
       <button
         type="submit"
-        class="rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/90"
+        class="rounded bg-[hsl(var(--primary))] px-4 py-1.5 font-mono text-xs font-medium text-[hsl(var(--primary-foreground))] uppercase tracking-wide hover:bg-[hsl(var(--primary))]/90"
       >
-        Search
+        Filter
       </button>
     </form>
   </div>
 
   {#if loading}
     <div class="flex items-center justify-center py-12">
-      <div class="h-8 w-8 animate-spin rounded-full border-4 border-[hsl(var(--primary))] border-t-transparent"></div>
+      <div class="flex items-center gap-3 text-[hsl(var(--muted-foreground))]">
+        <div class="h-5 w-5 animate-spin rounded-full border-2 border-[hsl(var(--primary))] border-t-transparent"></div>
+        <span class="font-mono text-xs uppercase tracking-wide">Loading...</span>
+      </div>
     </div>
   {:else if error}
-    <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-      {error}
+    <div class="console-panel p-4">
+      <p class="font-mono text-sm text-[hsl(var(--destructive))]">{error}</p>
     </div>
   {:else if data}
     {#if data.items.length === 0}
-      <div class="py-12 text-center text-[hsl(var(--muted-foreground))]">
-        {searchQuery ? `No tracks found for "${searchQuery}"` : 'No tracks found'}
+      <div class="py-12 text-center">
+        <p class="font-mono text-sm text-[hsl(var(--muted-foreground))]">
+          {searchQuery ? `No results for "${searchQuery}"` : 'No tracks found'}
+        </p>
       </div>
     {:else}
-      <div class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-        <div class="grid grid-cols-[1fr_1fr_auto_auto] gap-4 border-b border-[hsl(var(--border))] px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">
-          <span>Title</span>
-          <span>Album</span>
-          <span class="w-16 text-center">Pop.</span>
-          <span class="w-16 text-right">Duration</span>
-        </div>
-
-        <div class="divide-y divide-[hsl(var(--border))]">
-          {#each data.items as track}
-            <a
-              href="/tracks/{track.id}"
-              class="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-[hsl(var(--accent))]"
-            >
-              <div class="flex items-center gap-3 overflow-hidden">
-                {#if track.albumImageUrl}
-                  <img
-                    src={track.albumImageUrl}
-                    alt={track.albumName ?? ''}
-                    class="h-10 w-10 flex-shrink-0 rounded object-cover"
-                  />
-                {:else}
-                  <div class="h-10 w-10 flex-shrink-0 rounded bg-[hsl(var(--muted))]"></div>
-                {/if}
-                <div class="min-w-0">
-                  <p class="truncate font-medium text-[hsl(var(--foreground))]">
-                    {track.name}
-                    {#if track.explicit}
-                      <span class="ml-1 rounded bg-[hsl(var(--muted))] px-1 text-xs text-[hsl(var(--muted-foreground))]">E</span>
+      <!-- Data Table -->
+      <div class="console-panel overflow-hidden">
+        <table class="data-table w-full">
+          <thead>
+            <tr class="bg-[hsl(var(--muted))]">
+              <th class="w-10">#</th>
+              <th>Title</th>
+              <th>Artist</th>
+              <th>Album</th>
+              <th class="w-24">Level</th>
+              <th class="w-16 text-right">Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each data.items as track, i}
+              <tr class="group">
+                <td class="text-[hsl(var(--muted-foreground))] tabular-nums">
+                  {(currentPage - 1) * pageSize + i + 1}
+                </td>
+                <td>
+                  <a href="/tracks/{track.id}" class="flex items-center gap-3 group-hover:text-[hsl(var(--primary))]">
+                    {#if track.albumImageUrl}
+                      <img
+                        src={track.albumImageUrl}
+                        alt=""
+                        class="h-8 w-8 flex-shrink-0 rounded object-cover"
+                      />
+                    {:else}
+                      <div class="h-8 w-8 flex-shrink-0 rounded bg-[hsl(var(--muted))]"></div>
                     {/if}
-                  </p>
-                  {#if track.primaryArtistName}
-                    <p class="truncate text-sm text-[hsl(var(--muted-foreground))]">{track.primaryArtistName}</p>
-                  {/if}
-                </div>
-              </div>
-              <span class="truncate text-sm text-[hsl(var(--muted-foreground))]">{track.albumName ?? ''}</span>
-              <span class="w-16 text-center text-sm text-[hsl(var(--muted-foreground))]">{track.popularity ?? '-'}</span>
-              <span class="w-16 text-right text-sm text-[hsl(var(--muted-foreground))]">
-                {track.durationMs ? formatDuration(track.durationMs) : '--:--'}
-              </span>
-            </a>
-          {/each}
-        </div>
+                    <span class="truncate">
+                      {track.name}
+                      {#if track.explicit}
+                        <span class="ml-1 rounded bg-[hsl(var(--destructive))] px-1 text-[10px] font-bold text-[hsl(var(--destructive-foreground))]">E</span>
+                      {/if}
+                    </span>
+                  </a>
+                </td>
+                <td class="truncate text-[hsl(var(--muted-foreground))]">
+                  {track.primaryArtistName ?? '-'}
+                </td>
+                <td class="truncate text-[hsl(var(--muted-foreground))]">
+                  {track.albumName ?? '-'}
+                </td>
+                <td>
+                  <VuMeter value={track.popularity ?? 0} segments={10} size="sm" />
+                </td>
+                <td class="text-right tabular-nums text-[hsl(var(--muted-foreground))]">
+                  {track.durationMs ? formatDuration(track.durationMs) : '--:--'}
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
       </div>
 
       <!-- Pagination -->
       {#if data.totalPages > 1}
-        <div class="flex items-center justify-center gap-2 pt-6">
-          <button
-            onclick={() => goToPage(currentPage - 1)}
-            disabled={currentPage === 1}
-            class="rounded-md border border-[hsl(var(--border))] px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <span class="px-4 text-sm text-[hsl(var(--muted-foreground))]">
+        <div class="flex items-center justify-between pt-2">
+          <span class="font-mono text-xs text-[hsl(var(--muted-foreground))]">
             Page {currentPage} of {data.totalPages}
           </span>
-          <button
-            onclick={() => goToPage(currentPage + 1)}
-            disabled={currentPage === data.totalPages}
-            class="rounded-md border border-[hsl(var(--border))] px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Next
-          </button>
+          <div class="flex gap-2">
+            <button
+              onclick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              class="rounded border border-[hsl(var(--border))] px-3 py-1 font-mono text-xs text-[hsl(var(--foreground))] hover:bg-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <button
+              onclick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === data.totalPages}
+              class="rounded border border-[hsl(var(--border))] px-3 py-1 font-mono text-xs text-[hsl(var(--foreground))] hover:bg-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
       {/if}
     {/if}
