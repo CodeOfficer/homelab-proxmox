@@ -9,6 +9,7 @@ export function registerSearchRoutes(app: FastifyInstance) {
 
     const filters: SearchFilters = {
       query: query.q,
+      genres: query.genre ? [query.genre] : undefined,
       popularityMin: query.popularityMin ? Number(query.popularityMin) : undefined,
       popularityMax: query.popularityMax ? Number(query.popularityMax) : undefined,
       durationMinMs: query.durationMinMs ? Number(query.durationMinMs) : undefined,

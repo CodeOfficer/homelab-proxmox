@@ -109,6 +109,14 @@ export async function searchTracks(
     );
   }
 
+  // Genre filter - artists.genres is JSON array like '["hip hop", "old school hip hop"]'
+  if (filters.genres && filters.genres.length > 0) {
+    const genreConditions = filters.genres.map(
+      (genre) => like(artists.genres, `%"${genre}"%`)
+    );
+    conditions.push(or(...genreConditions)!);
+  }
+
   if (filters.popularityMin !== undefined) {
     conditions.push(gte(tracks.popularity, filters.popularityMin));
   }

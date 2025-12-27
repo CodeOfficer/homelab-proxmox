@@ -12,6 +12,7 @@
 
   // Search filters
   let query = $state('');
+  let genre = $state<string | undefined>(undefined);
   let popularityMin = $state<number | undefined>(undefined);
   let popularityMax = $state<number | undefined>(undefined);
   let explicit = $state<boolean | undefined>(undefined);
@@ -21,6 +22,7 @@
   function getFilters(): SearchFilters {
     return {
       q: query || undefined,
+      genre,
       popularityMin,
       popularityMax,
       explicit,
@@ -43,7 +45,7 @@
     // Check for genre query param from genres page
     const genreParam = $page.url.searchParams.get('genre');
     if (genreParam) {
-      query = genreParam;
+      genre = genreParam;
       performSearch();
     }
   });
@@ -56,10 +58,20 @@
 
   function clearFilters() {
     query = '';
+    genre = undefined;
     popularityMin = undefined;
     popularityMax = undefined;
     explicit = undefined;
     data = null;
+  }
+
+  function clearGenre() {
+    genre = undefined;
+    if (query || hasActiveFilters()) {
+      performSearch();
+    } else {
+      data = null;
+    }
   }
 
   function goToPage(page: number) {
@@ -165,6 +177,24 @@
       </div>
     {/if}
   </form>
+
+  <!-- Active Genre Filter -->
+  {#if genre}
+    <div class="flex items-center gap-2">
+      <span class="font-mono text-xs text-[hsl(var(--muted-foreground))] uppercase">Genre:</span>
+      <span class="inline-flex items-center gap-1 rounded border border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10 px-2 py-1 font-mono text-xs text-[hsl(var(--primary))]">
+        {genre}
+        <button
+          type="button"
+          onclick={clearGenre}
+          class="ml-1 hover:text-[hsl(var(--destructive))]"
+          aria-label="Clear genre filter"
+        >
+          &times;
+        </button>
+      </span>
+    </div>
+  {/if}
 
   <!-- Results -->
   {#if loading}

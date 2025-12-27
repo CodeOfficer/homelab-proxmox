@@ -156,6 +156,7 @@ export function getTopGenres(limit = 10): Promise<{ items: GenreCount[] }> {
 // Search
 export interface SearchFilters {
   q?: string;
+  genre?: string;
   popularityMin?: number;
   popularityMax?: number;
   durationMinMs?: number;
