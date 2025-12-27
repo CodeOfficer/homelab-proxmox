@@ -32,40 +32,6 @@
       loadTrack(id);
     }
   });
-
-  interface FeatureDisplay {
-    label: string;
-    value: number;
-    max: number;
-    unit?: string;
-    description: string;
-  }
-
-  function getFeatures(): FeatureDisplay[] {
-    const af = track?.audioFeatures;
-    if (!af) return [];
-
-    return [
-      { label: 'Danceability', value: af.danceability ?? 0, max: 1, description: 'How suitable for dancing' },
-      { label: 'Energy', value: af.energy ?? 0, max: 1, description: 'Intensity and activity level' },
-      { label: 'Valence', value: af.valence ?? 0, max: 1, description: 'Musical positiveness (happy vs sad)' },
-      { label: 'Acousticness', value: af.acousticness ?? 0, max: 1, description: 'Likelihood of being acoustic' },
-      { label: 'Instrumentalness', value: af.instrumentalness ?? 0, max: 1, description: 'Lack of vocals' },
-      { label: 'Speechiness', value: af.speechiness ?? 0, max: 1, description: 'Presence of spoken words' },
-      { label: 'Liveness', value: af.liveness ?? 0, max: 1, description: 'Presence of live audience' },
-    ];
-  }
-
-  function getKeyName(key: number | null): string {
-    if (key === null) return '-';
-    const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    return keys[key] ?? '-';
-  }
-
-  function getModeName(mode: number | null): string {
-    if (mode === null) return '';
-    return mode === 1 ? 'Major' : 'Minor';
-  }
 </script>
 
 <svelte:head>
@@ -147,65 +113,5 @@
       </div>
     </div>
 
-    <!-- Audio Features -->
-    {#if track.audioFeatures}
-      <div class="grid gap-6 lg:grid-cols-2">
-        <!-- Bar Chart -->
-        <div class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
-          <h2 class="text-lg font-semibold text-[hsl(var(--foreground))]">Audio Features</h2>
-          <div class="mt-4 space-y-4">
-            {#each getFeatures() as feature}
-              <div>
-                <div class="flex justify-between text-sm">
-                  <span class="text-[hsl(var(--foreground))]">{feature.label}</span>
-                  <span class="text-[hsl(var(--muted-foreground))]">{Math.round(feature.value * 100)}%</span>
-                </div>
-                <div class="mt-1 h-2 overflow-hidden rounded-full bg-[hsl(var(--muted))]">
-                  <div
-                    class="h-full rounded-full bg-[hsl(var(--primary))]"
-                    style="width: {(feature.value / feature.max) * 100}%"
-                  ></div>
-                </div>
-              </div>
-            {/each}
-          </div>
-        </div>
-
-        <!-- Technical Details -->
-        <div class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
-          <h2 class="text-lg font-semibold text-[hsl(var(--foreground))]">Technical Details</h2>
-          <dl class="mt-4 grid grid-cols-2 gap-4">
-            <div>
-              <dt class="text-sm text-[hsl(var(--muted-foreground))]">Tempo</dt>
-              <dd class="mt-1 text-lg font-medium text-[hsl(var(--foreground))]">
-                {track.audioFeatures.tempo !== null ? `${Math.round(track.audioFeatures.tempo)} BPM` : '-'}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-sm text-[hsl(var(--muted-foreground))]">Key</dt>
-              <dd class="mt-1 text-lg font-medium text-[hsl(var(--foreground))]">
-                {getKeyName(track.audioFeatures.key)} {getModeName(track.audioFeatures.mode)}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-sm text-[hsl(var(--muted-foreground))]">Time Signature</dt>
-              <dd class="mt-1 text-lg font-medium text-[hsl(var(--foreground))]">
-                {track.audioFeatures.timeSignature !== null ? `${track.audioFeatures.timeSignature}/4` : '-'}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-sm text-[hsl(var(--muted-foreground))]">Loudness</dt>
-              <dd class="mt-1 text-lg font-medium text-[hsl(var(--foreground))]">
-                {track.audioFeatures.loudness !== null ? `${track.audioFeatures.loudness.toFixed(1)} dB` : '-'}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-    {:else}
-      <div class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
-        <p class="text-[hsl(var(--muted-foreground))]">No audio features available for this track</p>
-      </div>
-    {/if}
   {/if}
 </div>

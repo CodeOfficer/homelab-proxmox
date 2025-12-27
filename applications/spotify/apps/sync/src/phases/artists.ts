@@ -5,6 +5,7 @@ import {
   upsertArtist,
   getArtistsNeedingEnrichment,
 } from '@spotify/shared';
+import { dumpResponse } from '../lib/dump.js';
 
 const BATCH_SIZE = 50;
 const RATE_LIMIT_DELAY = 100;
@@ -56,13 +57,14 @@ export async function syncArtistDetails(
 
     try {
       const response = await spotifyApi.artists.get(batch);
+      dumpResponse('artists.batch', { batchIndex: i, batch, response });
 
       for (const artist of response) {
         if (artist) {
           await upsertArtist({
             id: artist.id,
             name: artist.name,
-            genres: artist.genres?.join(',') || null,
+            genres: artist.genres?.length ? JSON.stringify(artist.genres) : null,
             popularity: artist.popularity || 0,
             imageUrl: artist.images?.[0]?.url || null,
             externalUrl: artist.external_urls?.spotify || null,

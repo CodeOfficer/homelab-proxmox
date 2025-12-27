@@ -11,14 +11,6 @@
 
   // Search filters
   let query = $state('');
-  let tempoMin = $state<number | undefined>(undefined);
-  let tempoMax = $state<number | undefined>(undefined);
-  let energyMin = $state<number | undefined>(undefined);
-  let energyMax = $state<number | undefined>(undefined);
-  let danceabilityMin = $state<number | undefined>(undefined);
-  let danceabilityMax = $state<number | undefined>(undefined);
-  let valenceMin = $state<number | undefined>(undefined);
-  let valenceMax = $state<number | undefined>(undefined);
   let popularityMin = $state<number | undefined>(undefined);
   let popularityMax = $state<number | undefined>(undefined);
   let explicit = $state<boolean | undefined>(undefined);
@@ -28,14 +20,6 @@
   function getFilters(): SearchFilters {
     return {
       q: query || undefined,
-      tempoMin,
-      tempoMax,
-      energyMin: energyMin !== undefined ? energyMin / 100 : undefined,
-      energyMax: energyMax !== undefined ? energyMax / 100 : undefined,
-      danceabilityMin: danceabilityMin !== undefined ? danceabilityMin / 100 : undefined,
-      danceabilityMax: danceabilityMax !== undefined ? danceabilityMax / 100 : undefined,
-      valenceMin: valenceMin !== undefined ? valenceMin / 100 : undefined,
-      valenceMax: valenceMax !== undefined ? valenceMax / 100 : undefined,
       popularityMin,
       popularityMax,
       explicit,
@@ -71,14 +55,6 @@
 
   function clearFilters() {
     query = '';
-    tempoMin = undefined;
-    tempoMax = undefined;
-    energyMin = undefined;
-    energyMax = undefined;
-    danceabilityMin = undefined;
-    danceabilityMax = undefined;
-    valenceMin = undefined;
-    valenceMax = undefined;
     popularityMin = undefined;
     popularityMax = undefined;
     explicit = undefined;
@@ -91,11 +67,7 @@
   }
 
   function hasActiveFilters(): boolean {
-    return tempoMin !== undefined || tempoMax !== undefined ||
-           energyMin !== undefined || energyMax !== undefined ||
-           danceabilityMin !== undefined || danceabilityMax !== undefined ||
-           valenceMin !== undefined || valenceMax !== undefined ||
-           popularityMin !== undefined || popularityMax !== undefined ||
+    return popularityMin !== undefined || popularityMax !== undefined ||
            explicit !== undefined;
   }
 </script>
@@ -106,8 +78,8 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-3xl font-bold text-[hsl(var(--foreground))]">Advanced Search</h1>
-    <p class="mt-1 text-[hsl(var(--muted-foreground))]">Find tracks by name, artist, or audio features</p>
+    <h1 class="text-3xl font-bold text-[hsl(var(--foreground))]">Search</h1>
+    <p class="mt-1 text-[hsl(var(--muted-foreground))]">Find tracks by name or artist</p>
   </div>
 
   <form onsubmit={handleSearch} class="space-y-4">
@@ -138,102 +110,6 @@
     {#if showFilters}
       <div class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4">
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <!-- Tempo -->
-          <div>
-            <label class="text-sm font-medium text-[hsl(var(--foreground))]">Tempo (BPM)</label>
-            <div class="mt-1 flex gap-2">
-              <input
-                type="number"
-                placeholder="Min"
-                bind:value={tempoMin}
-                min="0"
-                max="300"
-                class="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-1.5 text-sm text-[hsl(var(--foreground))]"
-              />
-              <span class="py-1.5 text-[hsl(var(--muted-foreground))]">-</span>
-              <input
-                type="number"
-                placeholder="Max"
-                bind:value={tempoMax}
-                min="0"
-                max="300"
-                class="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-1.5 text-sm text-[hsl(var(--foreground))]"
-              />
-            </div>
-          </div>
-
-          <!-- Energy -->
-          <div>
-            <label class="text-sm font-medium text-[hsl(var(--foreground))]">Energy (%)</label>
-            <div class="mt-1 flex gap-2">
-              <input
-                type="number"
-                placeholder="Min"
-                bind:value={energyMin}
-                min="0"
-                max="100"
-                class="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-1.5 text-sm text-[hsl(var(--foreground))]"
-              />
-              <span class="py-1.5 text-[hsl(var(--muted-foreground))]">-</span>
-              <input
-                type="number"
-                placeholder="Max"
-                bind:value={energyMax}
-                min="0"
-                max="100"
-                class="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-1.5 text-sm text-[hsl(var(--foreground))]"
-              />
-            </div>
-          </div>
-
-          <!-- Danceability -->
-          <div>
-            <label class="text-sm font-medium text-[hsl(var(--foreground))]">Danceability (%)</label>
-            <div class="mt-1 flex gap-2">
-              <input
-                type="number"
-                placeholder="Min"
-                bind:value={danceabilityMin}
-                min="0"
-                max="100"
-                class="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-1.5 text-sm text-[hsl(var(--foreground))]"
-              />
-              <span class="py-1.5 text-[hsl(var(--muted-foreground))]">-</span>
-              <input
-                type="number"
-                placeholder="Max"
-                bind:value={danceabilityMax}
-                min="0"
-                max="100"
-                class="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-1.5 text-sm text-[hsl(var(--foreground))]"
-              />
-            </div>
-          </div>
-
-          <!-- Valence (Mood) -->
-          <div>
-            <label class="text-sm font-medium text-[hsl(var(--foreground))]">Mood/Valence (%)</label>
-            <div class="mt-1 flex gap-2">
-              <input
-                type="number"
-                placeholder="Min"
-                bind:value={valenceMin}
-                min="0"
-                max="100"
-                class="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-1.5 text-sm text-[hsl(var(--foreground))]"
-              />
-              <span class="py-1.5 text-[hsl(var(--muted-foreground))]">-</span>
-              <input
-                type="number"
-                placeholder="Max"
-                bind:value={valenceMax}
-                min="0"
-                max="100"
-                class="w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-1.5 text-sm text-[hsl(var(--foreground))]"
-              />
-            </div>
-          </div>
-
           <!-- Popularity -->
           <div>
             <label class="text-sm font-medium text-[hsl(var(--foreground))]">Popularity</label>

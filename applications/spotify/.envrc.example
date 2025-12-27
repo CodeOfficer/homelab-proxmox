@@ -1,0 +1,23 @@
+# Spotify Sync PRO - Environment Variables
+# Copy to .envrc and fill in values, then run: direnv allow
+
+# Required - Get from Spotify Developer Dashboard
+# https://developer.spotify.com/dashboard
+export SPOTIFY_CLIENT_ID=""
+export SPOTIFY_CLIENT_SECRET=""
+
+# Required - Generate with: openssl rand -hex 32
+export SPOTIFY_DB_ENCRYPTION_KEY=""
+
+# Optional - Database path (defaults to ./.local/spotify.db)
+# export SPOTIFY_DB_PATH="./.local/spotify.db"
+
+# Local dev only (auto-set by scripts/dev-local.sh)
+# export HTTPS_KEY_PATH=".certs/localhost-key.pem"
+# export HTTPS_CERT_PATH=".certs/localhost.pem"
+# export SPOTIFY_REDIRECT_URI="https://127.0.0.1:3000/auth/callback"
+# export APP_BASE_URL="https://127.0.0.1:3000"
+
+# Production (K8s) - Set these in your deployment
+# export SPOTIFY_REDIRECT_URI="https://spotify.codeofficer.com/auth/callback"
+# export APP_BASE_URL="https://spotify.codeofficer.com"

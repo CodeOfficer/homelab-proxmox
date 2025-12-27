@@ -4,7 +4,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(pnpm install:*)",
-      "Bash(timeout 3 pnpm dev:*)"
+      "Bash(timeout 3 pnpm dev:*)",
+      "Bash(pnpm --filter @spotify/shared build:*)",
+      "Bash(pnpm --filter @spotify/api typecheck:*)"
     ]
   }
 }

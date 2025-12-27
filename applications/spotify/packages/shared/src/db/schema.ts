@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, primaryKey, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 // =============================================================================
@@ -120,37 +120,6 @@ export const playlistTracks = sqliteTable('playlist_tracks', {
   index('idx_playlist_tracks_playlist').on(table.playlistId),
   index('idx_playlist_tracks_track').on(table.trackId),
   index('idx_playlist_tracks_playlist_position').on(table.playlistId, table.position),
-]);
-
-// =============================================================================
-// Audio Features
-// =============================================================================
-
-export const audioFeatures = sqliteTable('audio_features', {
-  trackId: text('track_id').primaryKey().references(() => tracks.id, { onDelete: 'cascade' }),
-  danceability: real('danceability'),
-  energy: real('energy'),
-  key: integer('key'),
-  loudness: real('loudness'),
-  mode: integer('mode'),
-  speechiness: real('speechiness'),
-  acousticness: real('acousticness'),
-  instrumentalness: real('instrumentalness'),
-  liveness: real('liveness'),
-  valence: real('valence'),
-  tempo: real('tempo'),
-  timeSignature: integer('time_signature'),
-  durationMs: integer('duration_ms'),
-  analysisUrl: text('analysis_url'),
-  trackHref: text('track_href'),
-  uri: text('uri'),
-  syncedAt: text('synced_at').default(sql`CURRENT_TIMESTAMP`),
-}, (table) => [
-  index('idx_audio_features_tempo').on(table.tempo),
-  index('idx_audio_features_energy').on(table.energy),
-  index('idx_audio_features_danceability').on(table.danceability),
-  index('idx_audio_features_valence').on(table.valence),
-  index('idx_audio_features_key').on(table.key),
 ]);
 
 // =============================================================================

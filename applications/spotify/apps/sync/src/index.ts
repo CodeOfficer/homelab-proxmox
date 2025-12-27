@@ -1,14 +1,12 @@
 import { initializeDatabase } from '@spotify/shared';
 import { syncPlaylists } from './phases/playlists.js';
 import { syncArtistDetails } from './phases/artists.js';
-import { syncAudioFeatures } from './phases/audioFeatures.js';
 
 /**
- * Main sync orchestrator - runs 3-phase sync with progress tracking
+ * Main sync orchestrator - runs 2-phase sync with progress tracking
  *
  * Phase 1: Playlists + Tracks (core data)
  * Phase 2: Artist enrichment (genres, popularity, images)
- * Phase 3: Audio features (tempo, energy, danceability) - gracefully skipped if API blocked
  */
 async function main() {
   // Validate required environment variables
@@ -59,31 +57,11 @@ async function main() {
     const artistResult = await syncArtistDetails(syncLogId);
     console.log('');
 
-    // Phase 3: Fetch audio features (tempo, energy, danceability, etc.)
-    console.log('Phase 3: Fetching audio features...');
-    const audioResult = await syncAudioFeatures(syncLogId);
-    console.log('');
-
     // Summary
     console.log('============================================================');
     console.log('  Sync Summary');
     console.log('============================================================');
     console.log('  Artists enriched:', artistResult.processed, '(' + artistResult.failed + ' failed)');
-    console.log('  Audio features synced:', audioResult.processed, '(' + audioResult.failed + ' failed)');
-
-    if (!audioResult.available) {
-      console.log('');
-      console.log('  Warning: Audio features API is not accessible.');
-      console.log('     Your PRO tool will work with:');
-      console.log('       - Full artist details (genres, popularity)');
-      console.log('       - Text search (tracks, artists, playlists)');
-      console.log('       - Genre filtering');
-      console.log('       X Tempo/energy/mood filtering (requires audio features)');
-    } else {
-      console.log('');
-      console.log('  All features available!');
-    }
-
     console.log('');
     console.log('Sync completed successfully!');
     process.exit(0);

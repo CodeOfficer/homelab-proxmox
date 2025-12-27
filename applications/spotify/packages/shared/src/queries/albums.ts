@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { getDatabase } from '../db/client.js';
-import { albums, tracks, trackArtists, artists, audioFeatures } from '../db/schema.js';
+import { albums, tracks, trackArtists, artists } from '../db/schema.js';
 import type { Album, AlbumWithTracks, TrackWithDetails } from '../types/index.js';
 
 export async function getAlbumById(id: string): Promise<Album | null> {
@@ -20,12 +20,10 @@ export async function getAlbumWithTracks(id: string): Promise<AlbumWithTracks | 
     .select({
       track: tracks,
       artist: artists,
-      audio: audioFeatures,
     })
     .from(tracks)
     .leftJoin(trackArtists, eq(trackArtists.trackId, tracks.id))
     .leftJoin(artists, eq(trackArtists.artistId, artists.id))
-    .leftJoin(audioFeatures, eq(tracks.id, audioFeatures.trackId))
     .where(eq(tracks.albumId, id))
     .orderBy(tracks.discNumber, tracks.trackNumber);
 
@@ -40,7 +38,6 @@ export async function getAlbumWithTracks(id: string): Promise<AlbumWithTracks | 
         primaryArtistId: row.artist?.id,
         albumName: album.name,
         albumImageUrl: album.imageUrl,
-        audioFeatures: row.audio,
       });
     }
   }

@@ -6,7 +6,9 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
+    "restore": "node dist/restore.js",
     "dev": "tsx src/index.ts",
+    "dev:restore": "tsx src/restore.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {

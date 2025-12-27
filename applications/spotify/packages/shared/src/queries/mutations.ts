@@ -7,7 +7,6 @@ import {
   trackArtists,
   playlists,
   playlistTracks,
-  audioFeatures,
 } from '../db/schema.js';
 import type {
   NewArtist,
@@ -15,7 +14,6 @@ import type {
   NewTrack,
   NewPlaylist,
   NewPlaylistTrack,
-  NewAudioFeatures,
 } from '../types/index.js';
 
 // =============================================================================
@@ -118,17 +116,6 @@ export async function upsertTrack(data: NewTrack): Promise<void> {
     });
 }
 
-export async function getTracksNeedingAudioFeatures(limit = 1000): Promise<string[]> {
-  const db = getDatabase();
-  const result = await db
-    .select({ id: tracks.id })
-    .from(tracks)
-    .leftJoin(audioFeatures, eq(tracks.id, audioFeatures.trackId))
-    .where(isNull(audioFeatures.trackId))
-    .limit(limit);
-  return result.map((r) => r.id);
-}
-
 // =============================================================================
 // Track-Artist Mutations
 // =============================================================================
@@ -196,37 +183,4 @@ export async function addPlaylistTrack(data: NewPlaylistTrack): Promise<void> {
 export async function clearPlaylistTracks(playlistId: string): Promise<void> {
   const db = getDatabase();
   await db.delete(playlistTracks).where(eq(playlistTracks.playlistId, playlistId));
-}
-
-// =============================================================================
-// Audio Features Mutations
-// =============================================================================
-
-export async function upsertAudioFeatures(data: NewAudioFeatures): Promise<void> {
-  const db = getDatabase();
-  await db
-    .insert(audioFeatures)
-    .values({ ...data, syncedAt: sql`CURRENT_TIMESTAMP` })
-    .onConflictDoUpdate({
-      target: audioFeatures.trackId,
-      set: {
-        danceability: data.danceability,
-        energy: data.energy,
-        key: data.key,
-        loudness: data.loudness,
-        mode: data.mode,
-        speechiness: data.speechiness,
-        acousticness: data.acousticness,
-        instrumentalness: data.instrumentalness,
-        liveness: data.liveness,
-        valence: data.valence,
-        tempo: data.tempo,
-        timeSignature: data.timeSignature,
-        durationMs: data.durationMs,
-        analysisUrl: data.analysisUrl,
-        trackHref: data.trackHref,
-        uri: data.uri,
-        syncedAt: sql`CURRENT_TIMESTAMP`,
-      },
-    });
 }

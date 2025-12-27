@@ -195,27 +195,6 @@ function getSchemaSQL(): string[] {
       PRIMARY KEY (playlist_id, track_id, position)
     );
 
-    CREATE TABLE IF NOT EXISTS audio_features (
-      track_id TEXT PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
-      danceability REAL,
-      energy REAL,
-      key INTEGER,
-      loudness REAL,
-      mode INTEGER,
-      speechiness REAL,
-      acousticness REAL,
-      instrumentalness REAL,
-      liveness REAL,
-      valence REAL,
-      tempo REAL,
-      time_signature INTEGER,
-      duration_ms INTEGER,
-      analysis_url TEXT,
-      track_href TEXT,
-      uri TEXT,
-      synced_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-
     CREATE TABLE IF NOT EXISTS spotify_credentials (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       access_token TEXT,
@@ -261,10 +240,6 @@ function getSchemaSQL(): string[] {
     CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist ON playlist_tracks(playlist_id);
     CREATE INDEX IF NOT EXISTS idx_playlist_tracks_track ON playlist_tracks(track_id);
     CREATE INDEX IF NOT EXISTS idx_sync_log_status ON sync_log(status, started_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_audio_features_tempo ON audio_features(tempo);
-    CREATE INDEX IF NOT EXISTS idx_audio_features_energy ON audio_features(energy);
-    CREATE INDEX IF NOT EXISTS idx_audio_features_danceability ON audio_features(danceability);
-    CREATE INDEX IF NOT EXISTS idx_audio_features_valence ON audio_features(valence);
   `];
 }
 

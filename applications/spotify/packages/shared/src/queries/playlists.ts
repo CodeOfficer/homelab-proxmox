@@ -1,6 +1,6 @@
 import { eq, like, desc, sql, count } from 'drizzle-orm';
 import { getDatabase } from '../db/client.js';
-import { playlists, playlistTracks, tracks, trackArtists, artists, albums, audioFeatures } from '../db/schema.js';
+import { playlists, playlistTracks, tracks, trackArtists, artists, albums } from '../db/schema.js';
 import type { Playlist, PlaylistWithTracks, PaginatedResult, TrackWithDetails } from '../types/index.js';
 
 export async function getAllPlaylists(
@@ -61,14 +61,12 @@ export async function getPlaylistWithTracks(id: string): Promise<PlaylistWithTra
       addedAt: playlistTracks.addedAt,
       artist: artists,
       album: albums,
-      audio: audioFeatures,
     })
     .from(playlistTracks)
     .innerJoin(tracks, eq(playlistTracks.trackId, tracks.id))
     .leftJoin(trackArtists, sql`${trackArtists.trackId} = ${tracks.id} AND ${trackArtists.position} = 0`)
     .leftJoin(artists, eq(trackArtists.artistId, artists.id))
     .leftJoin(albums, eq(tracks.albumId, albums.id))
-    .leftJoin(audioFeatures, eq(tracks.id, audioFeatures.trackId))
     .where(eq(playlistTracks.playlistId, id))
     .orderBy(playlistTracks.position);
 
@@ -78,7 +76,6 @@ export async function getPlaylistWithTracks(id: string): Promise<PlaylistWithTra
     primaryArtistId: row.artist?.id,
     albumName: row.album?.name,
     albumImageUrl: row.album?.imageUrl,
-    audioFeatures: row.audio,
   }));
 
   return {

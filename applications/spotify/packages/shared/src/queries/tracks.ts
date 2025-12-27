@@ -1,6 +1,6 @@
 import { eq, like, desc, sql, count, and, gte, lte, or } from 'drizzle-orm';
 import { getDatabase } from '../db/client.js';
-import { tracks, trackArtists, artists, albums, audioFeatures } from '../db/schema.js';
+import { tracks, trackArtists, artists, albums } from '../db/schema.js';
 import type { TrackWithDetails, PaginatedResult, SearchFilters } from '../types/index.js';
 
 export async function getAllTracks(
@@ -22,13 +22,11 @@ export async function getAllTracks(
         track: tracks,
         artist: artists,
         album: albums,
-        audio: audioFeatures,
       })
       .from(tracks)
       .leftJoin(trackArtists, sql`${trackArtists.trackId} = ${tracks.id} AND ${trackArtists.position} = 0`)
       .leftJoin(artists, eq(trackArtists.artistId, artists.id))
       .leftJoin(albums, eq(tracks.albumId, albums.id))
-      .leftJoin(audioFeatures, eq(tracks.id, audioFeatures.trackId))
       .where(whereClause)
       .orderBy(desc(tracks.popularity))
       .limit(pageSize)
@@ -45,7 +43,6 @@ export async function getAllTracks(
     primaryArtistId: row.artist?.id,
     albumName: row.album?.name,
     albumImageUrl: row.album?.imageUrl,
-    audioFeatures: row.audio,
   }));
 
   const total = totalResult[0]?.count ?? 0;
@@ -66,11 +63,9 @@ export async function getTrackById(id: string): Promise<TrackWithDetails | null>
     .select({
       track: tracks,
       album: albums,
-      audio: audioFeatures,
     })
     .from(tracks)
     .leftJoin(albums, eq(tracks.albumId, albums.id))
-    .leftJoin(audioFeatures, eq(tracks.id, audioFeatures.trackId))
     .where(eq(tracks.id, id))
     .limit(1);
 
@@ -92,7 +87,6 @@ export async function getTrackById(id: string): Promise<TrackWithDetails | null>
     albumName: row.album?.name,
     albumImageUrl: row.album?.imageUrl,
     artists: trackArtistRows.map((r) => r.artist),
-    audioFeatures: row.audio,
   };
 }
 
@@ -115,30 +109,6 @@ export async function searchTracks(
     );
   }
 
-  if (filters.tempoMin !== undefined) {
-    conditions.push(gte(audioFeatures.tempo, filters.tempoMin));
-  }
-  if (filters.tempoMax !== undefined) {
-    conditions.push(lte(audioFeatures.tempo, filters.tempoMax));
-  }
-  if (filters.energyMin !== undefined) {
-    conditions.push(gte(audioFeatures.energy, filters.energyMin));
-  }
-  if (filters.energyMax !== undefined) {
-    conditions.push(lte(audioFeatures.energy, filters.energyMax));
-  }
-  if (filters.danceabilityMin !== undefined) {
-    conditions.push(gte(audioFeatures.danceability, filters.danceabilityMin));
-  }
-  if (filters.danceabilityMax !== undefined) {
-    conditions.push(lte(audioFeatures.danceability, filters.danceabilityMax));
-  }
-  if (filters.valenceMin !== undefined) {
-    conditions.push(gte(audioFeatures.valence, filters.valenceMin));
-  }
-  if (filters.valenceMax !== undefined) {
-    conditions.push(lte(audioFeatures.valence, filters.valenceMax));
-  }
   if (filters.popularityMin !== undefined) {
     conditions.push(gte(tracks.popularity, filters.popularityMin));
   }
@@ -163,13 +133,11 @@ export async function searchTracks(
         track: tracks,
         artist: artists,
         album: albums,
-        audio: audioFeatures,
       })
       .from(tracks)
       .leftJoin(trackArtists, sql`${trackArtists.trackId} = ${tracks.id} AND ${trackArtists.position} = 0`)
       .leftJoin(artists, eq(trackArtists.artistId, artists.id))
       .leftJoin(albums, eq(tracks.albumId, albums.id))
-      .leftJoin(audioFeatures, eq(tracks.id, audioFeatures.trackId))
       .where(whereClause)
       .orderBy(desc(tracks.popularity))
       .limit(pageSize)
@@ -179,7 +147,6 @@ export async function searchTracks(
       .from(tracks)
       .leftJoin(trackArtists, sql`${trackArtists.trackId} = ${tracks.id} AND ${trackArtists.position} = 0`)
       .leftJoin(artists, eq(trackArtists.artistId, artists.id))
-      .leftJoin(audioFeatures, eq(tracks.id, audioFeatures.trackId))
       .where(whereClause),
   ]);
 
@@ -189,7 +156,6 @@ export async function searchTracks(
     primaryArtistId: row.artist?.id,
     albumName: row.album?.name,
     albumImageUrl: row.album?.imageUrl,
-    audioFeatures: row.audio,
   }));
 
   const total = totalResult[0]?.count ?? 0;

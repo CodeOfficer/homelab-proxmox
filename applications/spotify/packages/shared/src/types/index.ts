@@ -6,7 +6,6 @@ import type {
   trackArtists,
   playlists,
   playlistTracks,
-  audioFeatures,
   spotifyCredentials,
   syncLog,
   syncProgress,
@@ -34,9 +33,6 @@ export type NewPlaylist = InferInsertModel<typeof playlists>;
 export type PlaylistTrack = InferSelectModel<typeof playlistTracks>;
 export type NewPlaylistTrack = InferInsertModel<typeof playlistTracks>;
 
-export type AudioFeatures = InferSelectModel<typeof audioFeatures>;
-export type NewAudioFeatures = InferInsertModel<typeof audioFeatures>;
-
 export type SpotifyCredentials = InferSelectModel<typeof spotifyCredentials>;
 export type NewSpotifyCredentials = InferInsertModel<typeof spotifyCredentials>;
 
@@ -56,7 +52,6 @@ export interface TrackWithDetails extends Track {
   albumName?: string | null;
   albumImageUrl?: string | null;
   artists?: Artist[];
-  audioFeatures?: AudioFeatures | null;
 }
 
 export interface PlaylistWithTracks extends Playlist {
@@ -99,14 +94,6 @@ export interface SyncStatus {
 export interface SearchFilters {
   query?: string;
   genres?: string[];
-  tempoMin?: number;
-  tempoMax?: number;
-  energyMin?: number;
-  energyMax?: number;
-  danceabilityMin?: number;
-  danceabilityMax?: number;
-  valenceMin?: number;
-  valenceMax?: number;
   popularityMin?: number;
   popularityMax?: number;
   durationMinMs?: number;

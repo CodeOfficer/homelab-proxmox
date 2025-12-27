@@ -17,6 +17,10 @@ build/
 .env
 .env.local
 .env.*.local
+.envrc
+
+# HTTPS dev certs
+.certs/
 
 # IDE
 .idea/

@@ -12,6 +12,7 @@ import {
   addPlaylistTrack,
   clearPlaylistTracks,
 } from '@spotify/shared';
+import { dumpResponse } from '../lib/dump.js';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -52,6 +53,7 @@ export async function syncPlaylists(): Promise<number | null> {
 
     while (hasMore) {
       const response = await spotifyApi.currentUser.playlists.playlists(limit, offset);
+      dumpResponse('playlists.page', { offset, limit, response });
 
       for (const playlist of response.items) {
         totalPlaylists++;
@@ -110,6 +112,7 @@ export async function syncPlaylists(): Promise<number | null> {
             trackLimit,
             trackOffset
           );
+          dumpResponse('playlists.items.page', { playlistId: playlist.id, trackOffset, trackLimit, tracks });
 
           for (const item of tracks.items) {
             // Skip local files, null tracks, and non-track items

@@ -2,15 +2,17 @@ import { type FastifyInstance } from 'fastify';
 import { initializeDatabase, closeDatabase } from '@spotify/shared';
 import { buildApp } from '../index.js';
 
-let app: FastifyInstance | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let app: FastifyInstance<any> | null = null;
 
-export async function getTestApp(): Promise<FastifyInstance> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getTestApp(): Promise<FastifyInstance<any>> {
   if (!app) {
     initializeDatabase();
     app = await buildApp({ logger: false });
     await app.ready();
   }
-  return app;
+  return app!;
 }
 
 export async function closeTestApp(): Promise<void> {

@@ -1,6 +1,6 @@
 import { eq, like, desc, sql, count } from 'drizzle-orm';
 import { getDatabase } from '../db/client.js';
-import { artists, trackArtists, tracks, albums, audioFeatures } from '../db/schema.js';
+import { artists, trackArtists, tracks, albums } from '../db/schema.js';
 import type { Artist, ArtistWithTracks, PaginatedResult, TrackWithDetails } from '../types/index.js';
 
 export async function getAllArtists(
@@ -58,12 +58,10 @@ export async function getArtistWithTracks(id: string): Promise<ArtistWithTracks 
     .select({
       track: tracks,
       album: albums,
-      audio: audioFeatures,
     })
     .from(trackArtists)
     .innerJoin(tracks, eq(trackArtists.trackId, tracks.id))
     .leftJoin(albums, eq(tracks.albumId, albums.id))
-    .leftJoin(audioFeatures, eq(tracks.id, audioFeatures.trackId))
     .where(eq(trackArtists.artistId, id))
     .orderBy(desc(tracks.popularity));
 
@@ -73,7 +71,6 @@ export async function getArtistWithTracks(id: string): Promise<ArtistWithTracks 
     primaryArtistId: artist.id,
     albumName: row.album?.name,
     albumImageUrl: row.album?.imageUrl,
-    audioFeatures: row.audio,
   }));
 
   return {

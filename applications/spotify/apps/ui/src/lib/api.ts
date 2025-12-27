@@ -81,22 +81,6 @@ export interface Track {
 
 export interface TrackWithDetails extends Track {
   artists: Array<{ id: string; name: string }>;
-  audioFeatures?: AudioFeatures | null;
-}
-
-export interface AudioFeatures {
-  danceability: number | null;
-  energy: number | null;
-  tempo: number | null;
-  valence: number | null;
-  acousticness: number | null;
-  instrumentalness: number | null;
-  speechiness: number | null;
-  liveness: number | null;
-  loudness: number | null;
-  key: number | null;
-  mode: number | null;
-  timeSignature: number | null;
 }
 
 export function getTracks(page = 1, pageSize = 50, q?: string): Promise<PaginatedResponse<Track>> {
@@ -172,14 +156,6 @@ export function getTopGenres(limit = 10): Promise<{ items: GenreCount[] }> {
 // Search
 export interface SearchFilters {
   q?: string;
-  tempoMin?: number;
-  tempoMax?: number;
-  energyMin?: number;
-  energyMax?: number;
-  danceabilityMin?: number;
-  danceabilityMax?: number;
-  valenceMin?: number;
-  valenceMax?: number;
   popularityMin?: number;
   popularityMax?: number;
   durationMinMs?: number;

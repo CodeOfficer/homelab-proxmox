@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { getTestApp, closeTestApp } from './setup.js';
 import type { FastifyInstance } from 'fastify';
 
-let app: FastifyInstance;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let app: FastifyInstance<any>;
 
 beforeAll(async () => {
   app = await getTestApp();
