@@ -13,6 +13,7 @@
     "dev:ui": "pnpm --filter @spotify/ui dev",
     "dev:cert": "bash scripts/dev-cert.sh",
     "dev:sync": "bash scripts/dev-sync.sh",
+    "dev:sync:force": "SPOTIFY_SYNC_FORCE=1 bash scripts/dev-sync-local.sh",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "test:e2e": "pnpm --filter @spotify/ui test:e2e",
